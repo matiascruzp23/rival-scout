@@ -1,0 +1,179 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../api';
+import type { RivalListItem } from '../types';
+import { Modal, ConfirmDialog } from '../components/Modal';
+import { SystemSelect } from '../components/SystemSelect';
+import { AppLogo } from '../components/AppLogo';
+
+export default function RivalsList() {
+  const [rivals, setRivals] = useState<RivalListItem[] | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [toDelete, setToDelete] = useState<RivalListItem | null>(null);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const load = () => {
+    api.rivals.list().then(setRivals).catch((e) => setError(e.message));
+  };
+
+  useEffect(load, []);
+
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <AppLogo />
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Rival Scout</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Informes de rival · organiza los últimos 10 partidos, jugadores, XI y sustituciones.
+            </p>
+          </div>
+        </div>
+        <button className="btn-primary" onClick={() => setShowCreate(true)}>
+          + Nuevo rival
+        </button>
+      </div>
+
+      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+
+      {rivals === null ? (
+        <p className="text-sm text-slate-400">Cargando…</p>
+      ) : rivals.length === 0 ? (
+        <div className="card p-10 text-center text-slate-500">
+          <p>No hay rivales creados todavía.</p>
+          <button className="btn-primary mt-4" onClick={() => setShowCreate(true)}>
+            Crear el primer rival
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {rivals.map((r) => (
+            <div key={r.id} className="card p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-2">
+                {r.escudoUrl && <img src={r.escudoUrl} alt="" className="w-8 h-8 object-contain shrink-0" />}
+                <Link to={`/rivales/${r.id}`} className="font-semibold text-slate-900 hover:text-emerald-700">
+                  {r.nombre}
+                </Link>
+              </div>
+              <div className="text-xs text-slate-500 flex gap-4">
+                <span>{r.matchCount} partido{r.matchCount === 1 ? '' : 's'}</span>
+                <span>{r.playerCount} jugador{r.playerCount === 1 ? '' : 'es'}</span>
+              </div>
+              <div className="flex gap-2 mt-1">
+                <button className="btn-secondary text-xs" onClick={() => navigate(`/rivales/${r.id}`)}>
+                  Abrir
+                </button>
+                <button className="btn-danger text-xs" onClick={() => setToDelete(r)}>
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showCreate && (
+        <CreateRivalModal
+          onClose={() => setShowCreate(false)}
+          onCreated={(id) => {
+            setShowCreate(false);
+            navigate(`/rivales/${id}`);
+          }}
+        />
+      )}
+
+      {toDelete && (
+        <ConfirmDialog
+          title="Eliminar rival"
+          message={`Se eliminará "${toDelete.nombre}" junto con todos sus jugadores y partidos. Esta acción no se puede deshacer.`}
+          onCancel={() => setToDelete(null)}
+          onConfirm={async () => {
+            await api.rivals.remove(toDelete.id);
+            setToDelete(null);
+            load();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function CreateRivalModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+  const [nombre, setNombre] = useState('');
+  const [entrenador, setEntrenador] = useState('');
+  const [sistemaPrincipal, setSistemaPrincipal] = useState('');
+  const [sistemaAlternativo, setSistemaAlternativo] = useState('');
+  const [escudo, setEscudo] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    if (!nombre.trim()) return;
+    setSaving(true);
+    try {
+      const rival = await api.rivals.create({ nombre: nombre.trim(), entrenador, sistemaPrincipal, sistemaAlternativo });
+      if (escudo) await api.rivals.uploadEscudo(rival.id, escudo);
+      onCreated(rival.id);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title="Nuevo rival" onClose={onClose}>
+      <div className="space-y-3">
+        <div>
+          <label className="label">Nombre del equipo rival</label>
+          <input
+            autoFocus
+            className="input"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submit()}
+            placeholder="Ej: Everton"
+          />
+        </div>
+        <div>
+          <label className="label">Escudo (opcional)</label>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="input"
+            onChange={(e) => setEscudo(e.target.files?.[0] || null)}
+          />
+        </div>
+        <div>
+          <label className="label">Entrenador (opcional)</label>
+          <input
+            className="input"
+            value={entrenador}
+            onChange={(e) => setEntrenador(e.target.value)}
+            placeholder="Nombre del entrenador"
+          />
+        </div>
+        <div>
+          <label className="label">Sistema predilecto</label>
+          <SystemSelect value={sistemaPrincipal} onChange={setSistemaPrincipal} emptyLabel="Elegir más tarde" />
+          <p className="text-xs text-slate-400 mt-1">Define qué 11 posiciones se muestran en el plantel.</p>
+        </div>
+        <div>
+          <label className="label">Sistema alternativo (opcional)</label>
+          <SystemSelect value={sistemaAlternativo} onChange={setSistemaAlternativo} emptyLabel="Sin alternativo" />
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="btn-primary" disabled={saving || !nombre.trim()} onClick={submit}>
+            Crear
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

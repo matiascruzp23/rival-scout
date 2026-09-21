@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+}
+
+table {
+  @apply w-full text-sm border-collapse;
+}
+
+th {
+  @apply text-left font-semibold text-slate-500 uppercase text-[11px] tracking-wide py-2 px-3 border-b border-slate-200 bg-slate-100 sticky top-0;
+}
+
+td {
+  @apply py-2 px-3 border-b border-slate-100;
+}
+
+tr:hover td {
+  @apply bg-slate-50;
+}
+
+/*
+ * En @layer components para que las utilidades de Tailwind (w-48, flex-1,
+ * etc.) aplicadas junto a estas clases en un elemento siempre puedan
+ * sobreescribirlas. Sin esta capa, estas reglas quedan "sin capa" y ganan
+ * por sobre CUALQUIER utilidad en la cascada, aunque se vea más específica
+ * (p. ej. w-full de .input le ganaba a w-48, colapsando selects a ~0).
+ */
+@layer components {
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    @apply inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-emerald-700 text-white hover:bg-emerald-800;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-100;
+  }
+
+  .btn-danger {
+    @apply bg-white text-red-600 border border-red-200 hover:bg-red-50;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600;
+  }
+
+  .label {
+    @apply block text-xs font-medium text-slate-500 mb-1;
+  }
+
+  .card {
+    @apply bg-white border border-slate-200 rounded-lg;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold leading-none;
+  }
+}
+
+@media print {
+  /*
+   * @page anidado dentro de @media print (en vez de @page suelto a nivel de
+   * hoja de estilos) y ancho x alto explícitos (A4 apaisado) en vez del
+   * keyword "landscape": en algunas versiones de Chromium, un @page suelto
+   * con "size: landscape" guarda la página con ancho/alto de retrato y un
+   * flag interno de rotación en vez de intercambiar las dimensiones, lo que
+   * en el PDF final se traduce en páginas que hay que girar una por una al
+   * verlas. Esta forma evita ese flag de manera más consistente.
+   */
+  @page {
+    size: 297mm 210mm;
+    margin: 12mm;
+  }
+  html,
+  body {
+    width: 297mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .informe-container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .informe-section {
+    break-inside: avoid;
+  }
+  .informe-page {
+    break-before: page;
+  }
+  .informe-cover {
+    break-after: page;
+  }
+}
