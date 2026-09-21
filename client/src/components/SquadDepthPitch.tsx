@@ -38,6 +38,25 @@ export function labelsForSquadDepth(sistema: string | undefined): string[] {
   return slots ? Array.from(new Set(slots)) : POSITIONS.map((p) => p.label);
 }
 
+// Ajuste vertical propio de este campograma: a diferencia del resto (que
+// muestran un solo jugador por posición), acá cada puesto apila una lista
+// de nombres debajo del círculo, así que necesita más aire del que da el
+// catálogo compartido (lib/positions.ts) — el arquero llegaba a cortarse
+// contra el borde inferior y la mediapunta quedaba pegada a los mediocentros.
+// Los defensores suben más que el arquero para que el margen entre ambas
+// líneas no se cierre al subir el arquero.
+const Y_ADJUST: Record<string, number> = {
+  Arquero: -5,
+  'Lateral derecho': -8,
+  'Lateral izquierdo': -8,
+  'Carrilero derecho': -8,
+  'Carrilero izquierdo': -8,
+  'Central derecho': -8,
+  'Central izquierdo': -8,
+  Central: -8,
+  Mediapunta: -8,
+};
+
 function layoutForSystem(sistema: string | undefined): LayoutSpot[] {
   const layout = labelsForSquadDepth(sistema)
     .map((label) => {
@@ -52,6 +71,10 @@ function layoutForSystem(sistema: string | undefined): LayoutSpot[] {
   // respecto a los centrales.
   symmetrizeForwardPair(layout);
   symmetrizeDoublePivote(layout);
+  for (const spot of layout) {
+    const adjust = Y_ADJUST[spot.label];
+    if (adjust) spot.y += adjust;
+  }
   return layout;
 }
 
