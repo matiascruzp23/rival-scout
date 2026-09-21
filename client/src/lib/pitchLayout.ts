@@ -47,12 +47,12 @@ function withDefaults(lineup: LineupEntry[]): LineupEntry[] {
   const sdEntry = lineup.find((e) => e.posicion === 'Segundo delantero');
   const parSimetrico = !!dcEntry && !!sdEntry && sinCoord(dcEntry) && sinCoord(sdEntry);
 
-  // Mismo criterio para el doble pivote de un 4-2-3-1 (Interior derecho +
-  // Interior izquierdo sin Volante central): si ninguno tiene coordenada
+  // Mismo criterio para el doble pivote de un 4-2-3-1 (Medio centro derecho +
+  // Medio centro izquierdo sin Volante central): si ninguno tiene coordenada
   // guardada, se ajustan juntos al ancho de los centrales.
   const hasVolanteCentral = lineup.some((e) => e.posicion === 'Volante central');
-  const interDerEntry = lineup.find((e) => e.posicion === 'Interior derecho');
-  const interIzqEntry = lineup.find((e) => e.posicion === 'Interior izquierdo');
+  const interDerEntry = lineup.find((e) => e.posicion === 'Medio centro derecho');
+  const interIzqEntry = lineup.find((e) => e.posicion === 'Medio centro izquierdo');
   const parPivote =
     !hasVolanteCentral &&
     !!interDerEntry &&

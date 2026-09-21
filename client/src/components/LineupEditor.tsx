@@ -111,8 +111,8 @@ export function LineupEditor({
   const parSimetrico = !!dcEntry && !!sdEntry && sinCoord(dcEntry) && sinCoord(sdEntry);
 
   const hasVolanteCentral = lineup.some((l) => l.posicion === 'Volante central');
-  const interDerEntry = lineup.find((l) => l.posicion === 'Interior derecho');
-  const interIzqEntry = lineup.find((l) => l.posicion === 'Interior izquierdo');
+  const interDerEntry = lineup.find((l) => l.posicion === 'Medio centro derecho');
+  const interIzqEntry = lineup.find((l) => l.posicion === 'Medio centro izquierdo');
   const parPivote =
     !hasVolanteCentral && !!interDerEntry && !!interIzqEntry && sinCoord(interDerEntry) && sinCoord(interIzqEntry);
 

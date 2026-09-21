@@ -29,9 +29,9 @@ export const POSITIONS: PositionDef[] = [
   // El volante central queda más retrasado que los interiores (no a la
   // misma altura) para que un 4-3-3/4-3-1-2 se lea como 1 volante + 2
   // interiores en vez de 3 fichas apretadas en una sola línea.
-  { label: 'Interior derecho', group: 'MED', x: 64, y: 50 },
+  { label: 'Medio centro derecho', group: 'MED', x: 64, y: 50 },
   { label: 'Volante central', group: 'MED', x: 50, y: 62 },
-  { label: 'Interior izquierdo', group: 'MED', x: 36, y: 50 },
+  { label: 'Medio centro izquierdo', group: 'MED', x: 36, y: 50 },
   { label: 'Mediapunta', group: 'MED', x: 50, y: 36 },
   { label: 'Extremo derecho', group: 'MED', x: 80, y: 22 },
   { label: 'Extremo izquierdo', group: 'MED', x: 20, y: 22 },
@@ -52,9 +52,9 @@ export const POSITION_LABELS = POSITIONS.map((p) => p.label);
 const ALIASES: Record<string, string> = {
   Delantero: 'Delantero centro',
   'Defensa central': 'Central izquierdo',
-  Volante: 'Interior izquierdo',
-  'Volante derecho': 'Interior derecho',
-  'Volante izquierdo': 'Interior izquierdo',
+  Volante: 'Medio centro izquierdo',
+  'Volante derecho': 'Medio centro derecho',
+  'Volante izquierdo': 'Medio centro izquierdo',
   'Volante defensivo': 'Volante central',
   'Volante ofensivo': 'Mediapunta',
   Enganche: 'Mediapunta',
@@ -110,20 +110,20 @@ export function symmetrizeForwardPair(entries: { posicion: string; x?: number; y
   sd.y = delantero.y;
 }
 
-// En un 4-2-3-1 el doble pivote lo forman "Interior derecho"/"Interior
-// izquierdo" (no hay "Volante central" en ese sistema, a diferencia de un
-// 4-3-3 o 4-3-1-2 donde esos mismos interiores sí acompañan a un volante
+// En un 4-2-3-1 el doble pivote lo forman "Medio centro derecho"/"Medio
+// centro izquierdo" (no hay "Volante central" en ese sistema, a diferencia
+// de un 4-3-3 o 4-3-1-2 donde esos mismos medios sí acompañan a un volante
 // central y van más abiertos que los centrales a propósito). En ese caso
 // deben quedar exactamente al mismo ancho que los centrales, no más afuera.
 export function symmetrizeDoublePivote(entries: { posicion: string; x?: number; y?: number }[]): void {
   if (entries.some((e) => e.posicion === 'Volante central')) return;
-  const der = entries.find((e) => e.posicion === 'Interior derecho');
-  const izq = entries.find((e) => e.posicion === 'Interior izquierdo');
+  const der = entries.find((e) => e.posicion === 'Medio centro derecho');
+  const izq = entries.find((e) => e.posicion === 'Medio centro izquierdo');
   if (!der || !izq) return;
   const centralDer = positionDef('Central derecho');
   const centralIzq = positionDef('Central izquierdo');
-  const interDer = positionDef('Interior derecho');
-  const interIzq = positionDef('Interior izquierdo');
+  const interDer = positionDef('Medio centro derecho');
+  const interIzq = positionDef('Medio centro izquierdo');
   if (!centralDer || !centralIzq || !interDer || !interIzq) return;
   der.x = centralDer.x;
   der.y = interDer.y;
