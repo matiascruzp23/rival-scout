@@ -90,20 +90,22 @@ export function groupColor(group: PositionGroup | undefined): string {
 
 // Ajusta, después de construir los 11 puestos de un XI, al dúo Delantero
 // centro + Segundo delantero para que queden simétricos con respecto al
-// centro (cada uno al ancho de un central), en vez de uno centrado y el
-// otro a un costado. Si el sistema usa un solo delantero, no hay "Segundo
-// delantero" en la lista y esta función no hace nada (el delantero solitario
-// se queda centrado).
+// centro, en vez de uno centrado y el otro a un costado. Van más separados
+// que un central de cada lado (FORWARD_HALF_WIDTH > ancho de los centrales):
+// sus etiquetas ("Segundo delantero", "Delantero centro") son más largas y,
+// al ancho de los centrales, los nombres se superponían en el medio. Si el
+// sistema usa un solo delantero, no hay "Segundo delantero" en la lista y
+// esta función no hace nada (el delantero solitario se queda centrado).
+const FORWARD_HALF_WIDTH = 20;
+
 export function symmetrizeForwardPair(entries: { posicion: string; x?: number; y?: number }[]): void {
   const dc = entries.find((e) => e.posicion === 'Delantero centro');
   const sd = entries.find((e) => e.posicion === 'Segundo delantero');
   if (!dc || !sd) return;
-  const der = positionDef('Central derecho');
-  const izq = positionDef('Central izquierdo');
   const delantero = positionDef('Delantero centro');
-  if (!der || !izq || !delantero) return;
-  dc.x = der.x;
-  sd.x = izq.x;
+  if (!delantero) return;
+  dc.x = 50 + FORWARD_HALF_WIDTH;
+  sd.x = 50 - FORWARD_HALF_WIDTH;
   dc.y = delantero.y;
   sd.y = delantero.y;
 }
