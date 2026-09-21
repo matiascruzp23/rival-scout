@@ -530,6 +530,7 @@ app.post('/api/rivals/:rivalId/players/import', async (req, res) => {
     .map((r) =>
       playerInsertRow(newId(), rival.id, {
         nombre: r.nombre,
+        dorsal: r.dorsal ?? null,
         posicion: r.posicion || '',
         estatura: r.estatura ?? null,
         pie: r.pie ?? null,

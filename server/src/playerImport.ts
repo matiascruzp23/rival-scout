@@ -91,8 +91,110 @@ function esExtranjero(pasaporte: string, paisNacimiento: string): boolean | null
   return !paises.includes(PAIS_LOCAL);
 }
 
+// Posiciones tal como aparecen en una tabla de plantel de Transfermarkt
+// (en español). A diferencia de Wyscout, sus laterales/extremos ya
+// distinguen lado; solo "Defensa central" no lo hace, igual que el CB de
+// Wyscout, así que queda igual marcada para revisión.
+const TRANSFERMARKT_POSITION_MAP: Record<string, { posicion: string; needsReview?: boolean }> = {
+  portero: { posicion: 'Arquero' },
+  'defensa central': { posicion: 'Central', needsReview: true },
+  'lateral derecho': { posicion: 'Lateral derecho' },
+  'lateral izquierdo': { posicion: 'Lateral izquierdo' },
+  'carrilero derecho': { posicion: 'Carrilero derecho' },
+  'carrilero izquierdo': { posicion: 'Carrilero izquierdo' },
+  pivote: { posicion: 'Volante central' },
+  mediocentro: { posicion: 'Volante central' },
+  'mediocentro defensivo': { posicion: 'Volante central' },
+  'interior derecho': { posicion: 'Interior derecho' },
+  'interior izquierdo': { posicion: 'Interior izquierdo' },
+  'mediocentro ofensivo': { posicion: 'Mediapunta' },
+  'extremo derecho': { posicion: 'Extremo derecho' },
+  'extremo izquierdo': { posicion: 'Extremo izquierdo' },
+  'segundo delantero': { posicion: 'Segundo delantero' },
+  'delantero centro': { posicion: 'Delantero centro' },
+};
+
+function mapTransfermarktPosicion(raw: string): { posicion: string; needsReview: boolean } {
+  const mapped = TRANSFERMARKT_POSITION_MAP[normalizeHeader(raw)];
+  if (!mapped) return { posicion: '', needsReview: true };
+  return { posicion: mapped.posicion, needsReview: !!mapped.needsReview };
+}
+
+// Una tabla de plantel de Transfermarkt copiada/pegada directo a Excel no
+// trae fila de encabezado, y cada jugador ocupa 2 filas (datos, posición) o
+// 3 cuando el nombre no entra en la fila de datos (queda en la fila
+// siguiente) — se ve al copiar filas con un escudo de club en la celda de
+// procedencia. Se detecta esta forma por su ausencia de encabezados
+// reconocibles (ver looksLikeTransfermarktPaste) y se reconstruye cada
+// jugador recorriendo filas: columna A = dorsal marca el inicio de un
+// jugador nuevo; columnas D–G (misma fila) traen nacimiento+edad,
+// nacionalidad, altura y pie; el nombre está en la propia fila (columna B)
+// salvo que la columna C venga vacía, en cuyo caso está en la fila
+// siguiente; la fila después de eso trae la posición.
+function looksLikeTransfermarktPaste(headers: string[]): boolean {
+  if (headers.length < 5) return false;
+  if (!/^\d{1,3}$/.test(headers[0].trim())) return false;
+  return headers.some((h) => /\(\d+\)/.test(h));
+}
+
+function parseTransfermarktRows(aoa: string[][]): ImportedPlayerRow[] {
+  const result: ImportedPlayerRow[] = [];
+  let i = 0;
+  while (i < aoa.length) {
+    const row = aoa[i] || [];
+    const dorsalRaw = (row[0] || '').trim();
+    if (!/^\d+$/.test(dorsalRaw)) {
+      i++;
+      continue;
+    }
+
+    const dorsal = Number(dorsalRaw);
+    const birthCell = row[3] || '';
+    const nacionalidad = (row[4] || '').trim();
+    const alturaCell = row[5] || '';
+    const pieCell = row[6] || '';
+    const hasNameInline = !!(row[2] || '').trim();
+
+    i++;
+    let nombre: string;
+    if (hasNameInline) {
+      nombre = (row[1] || '').trim();
+    } else {
+      const nameRow = aoa[i] || [];
+      nombre = (nameRow[1] || '').trim();
+      i++;
+    }
+
+    const posRow = aoa[i] || [];
+    const posicionRaw = (posRow[1] || '').trim();
+    i++;
+
+    const edadMatch = birthCell.match(/\((\d+)\)/);
+    const edad = edadMatch ? Number(edadMatch[1]) : null;
+    const alturaMatch = alturaCell.match(/([\d]+(?:[,.]\d+)?)\s*m/i);
+    const estatura = alturaMatch ? Number(alturaMatch[1].replace(',', '.')) : null;
+    const posicionInfo = mapTransfermarktPosicion(posicionRaw);
+
+    result.push({
+      nombre,
+      dorsal: Number.isNaN(dorsal) ? null : dorsal,
+      posicion: posicionInfo.posicion,
+      posicionOriginal: posicionRaw,
+      posicionNecesitaRevision: posicionInfo.needsReview,
+      edad,
+      estatura,
+      pie: mapPie(pieCell),
+      sub21: edad !== null && edad < 21,
+      sub18: edad !== null && edad < 18,
+      extranjero: nacionalidad ? normalizeHeader(nacionalidad) !== PAIS_LOCAL : false,
+    });
+  }
+  return result.filter((r) => r.nombre);
+}
+
 export interface ImportedPlayerRow {
   nombre: string;
+  dorsal: number | null;
   posicion: string;
   posicionOriginal: string;
   posicionNecesitaRevision: boolean;
@@ -120,6 +222,12 @@ export function parsePlayerImportFile(buffer: Buffer): ParsePlayerImportResult {
   }
 
   const headers = Object.keys(raw[0]);
+
+  if (looksLikeTransfermarktPaste(headers)) {
+    const aoa = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, raw: false, defval: '' });
+    return { rows: parseTransfermarktRows(aoa), columnasReconocidas: [], columnasNoReconocidas: [] };
+  }
+
   const col = {
     nombre: findColumn(headers, 'nombre'),
     posicion: findColumn(headers, 'posicion'),
@@ -147,6 +255,7 @@ export function parsePlayerImportFile(buffer: Buffer): ParsePlayerImportResult {
 
       return {
         nombre,
+        dorsal: null,
         posicion: posicionInfo.posicion,
         posicionOriginal: posicionInfo.original,
         posicionNecesitaRevision: posicionInfo.needsReview,

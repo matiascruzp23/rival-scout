@@ -6,6 +6,7 @@ export type PieHabil = 'Derecho' | 'Izquierdo' | 'Ambidiestro';
 // crear los jugadores de verdad.
 export interface ImportedPlayerRow {
   nombre: string;
+  dorsal: number | null;
   posicion: string;
   posicionOriginal: string;
   posicionNecesitaRevision: boolean;

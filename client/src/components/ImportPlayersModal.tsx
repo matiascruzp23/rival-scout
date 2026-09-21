@@ -108,6 +108,7 @@ export function ImportPlayersModal({
                   <tr>
                     <th className="p-2 text-left">Incluir</th>
                     <th className="p-2 text-left">Nombre</th>
+                    <th className="p-2 text-left">Dorsal</th>
                     <th className="p-2 text-left">Posición</th>
                     <th className="p-2 text-left">Pie</th>
                     <th className="p-2 text-left">Altura (m)</th>
@@ -127,6 +128,14 @@ export function ImportPlayersModal({
                           className="input"
                           value={r.nombre}
                           onChange={(e) => update(i, { nombre: e.target.value })}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <input
+                          type="number"
+                          className="input w-16"
+                          value={r.dorsal ?? ''}
+                          onChange={(e) => update(i, { dorsal: e.target.value === '' ? null : Number(e.target.value) })}
                         />
                       </td>
                       <td className="p-2">
