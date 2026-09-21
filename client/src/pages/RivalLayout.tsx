@@ -49,7 +49,7 @@ export default function RivalLayout() {
       <header className="no-print bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between relative">
           <div className="flex items-center gap-3">
-            <AppLogo />
+            {rival.escudoUrl && <img src={rival.escudoUrl} alt="" className="w-10 h-10 object-contain" />}
             <div>
               <Link to="/" className="text-xs text-slate-400 hover:text-slate-600">
                 ← Rivales
@@ -57,13 +57,7 @@ export default function RivalLayout() {
               <h1 className="text-xl font-bold text-slate-900">{rival.nombre}</h1>
             </div>
           </div>
-          {rival.escudoUrl && (
-            <img
-              src={rival.escudoUrl}
-              alt=""
-              className="w-10 h-10 object-contain absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            />
-          )}
+          <AppLogo className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
           <div className="text-xs text-slate-500 text-right">
             <div>{rival.matches.length} partido{rival.matches.length === 1 ? '' : 's'} registrado{rival.matches.length === 1 ? '' : 's'}</div>
             <div>{rival.players.length} jugador{rival.players.length === 1 ? '' : 'es'} en plantilla</div>
