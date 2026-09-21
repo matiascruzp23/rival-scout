@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../supabaseClient';
+import { usernameToEmail } from '../lib/username';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -12,8 +13,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) setError(error.message);
+      const { error } = await supabase.auth.signInWithPassword({ email: usernameToEmail(username), password });
+      if (error) setError('Usuario o contraseña incorrectos');
     } finally {
       setLoading(false);
     }
@@ -27,13 +28,15 @@ export default function LoginPage() {
           <h1 className="text-lg font-bold text-slate-900">Rival Scout</h1>
         </div>
         <div>
-          <label className="label">Email</label>
+          <label className="label">Usuario</label>
           <input
             autoFocus
-            type="email"
+            type="text"
+            autoCapitalize="off"
+            autoCorrect="off"
             className="input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
           />
         </div>
