@@ -1,7 +1,11 @@
 import type { Match, MatchCsv, Player, Rival, RivalDetail, RivalListItem } from './types';
 import { supabase } from './supabaseClient';
 
-const BASE = '/api';
+// En desarrollo, '/api' relativo funciona por el proxy de Vite
+// (vite.config.ts) hacia el servidor local. En producción (Vercel), cliente
+// y servidor son proyectos separados con dominios distintos, así que se
+// necesita la URL absoluta del servidor desplegado.
+const BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { data } = await supabase.auth.getSession();
