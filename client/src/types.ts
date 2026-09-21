@@ -1,5 +1,28 @@
 export type PieHabil = 'Derecho' | 'Izquierdo' | 'Ambidiestro';
 
+// Una fila ya convertida desde una planilla importada (Wyscout u otra),
+// antes de confirmarse: el analista puede corregir cualquier campo (sobre
+// todo posicion, cuando posicionNecesitaRevision viene en true) antes de
+// crear los jugadores de verdad.
+export interface ImportedPlayerRow {
+  nombre: string;
+  posicion: string;
+  posicionOriginal: string;
+  posicionNecesitaRevision: boolean;
+  edad: number | null;
+  estatura: number | null;
+  pie: PieHabil | null;
+  sub21: boolean;
+  sub18: boolean;
+  extranjero: boolean | null;
+}
+
+export interface ImportPreviewResult {
+  rows: ImportedPlayerRow[];
+  columnasReconocidas: string[];
+  columnasNoReconocidas: string[];
+}
+
 export interface Player {
   id: string;
   rivalId: string;

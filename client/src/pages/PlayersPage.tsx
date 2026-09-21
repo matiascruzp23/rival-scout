@@ -6,6 +6,7 @@ import type { Player, PieHabil } from '../types';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import { PlayerBadges } from '../components/PlayerBadges';
 import { PositionSelect } from '../components/PositionSelect';
+import { ImportPlayersModal } from '../components/ImportPlayersModal';
 import { computeAllPlayerStats, computePlayerEventStats, formatPct, lastN, type PlayerStats } from '../lib/stats';
 import { positionOrderIndex } from '../lib/positions';
 import { useIsViewer } from '../lib/authContext';
@@ -26,6 +27,7 @@ export default function PlayersPage() {
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [editing, setEditing] = useState<Player | 'new' | null>(null);
   const [toDelete, setToDelete] = useState<Player | null>(null);
+  const [importing, setImporting] = useState(false);
   const isViewer = useIsViewer();
 
   const matchesWindow = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
@@ -73,9 +75,14 @@ export default function PlayersPage() {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-lg font-semibold text-slate-900">Jugadores</h2>
         {!isViewer && (
-          <button className="btn-primary" onClick={() => setEditing('new')}>
-            + Nuevo jugador
-          </button>
+          <div className="flex gap-2">
+            <button className="btn-secondary" onClick={() => setImporting(true)}>
+              Importar planilla
+            </button>
+            <button className="btn-primary" onClick={() => setEditing('new')}>
+              + Nuevo jugador
+            </button>
+          </div>
         )}
       </div>
 
@@ -192,6 +199,17 @@ export default function PlayersPage() {
           }}
           rivalId={rival.id}
           sistemaAlternativo={rival.sistemaAlternativo}
+        />
+      )}
+
+      {importing && (
+        <ImportPlayersModal
+          rivalId={rival.id}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            reload();
+          }}
         />
       )}
 

@@ -1,4 +1,4 @@
-import type { Match, MatchCsv, Player, Rival, RivalDetail, RivalListItem } from './types';
+import type { ImportedPlayerRow, ImportPreviewResult, Match, MatchCsv, Player, Rival, RivalDetail, RivalListItem } from './types';
 import { supabase } from './supabaseClient';
 
 // '/api' relativo: en desarrollo lo resuelve el proxy de Vite
@@ -45,6 +45,13 @@ export const api = {
     update: (id: string, data: Partial<Player>) =>
       request<Player>(`/players/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: string) => request<void>(`/players/${id}`, { method: 'DELETE' }),
+    importPreview: (rivalId: string, file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      return request<ImportPreviewResult>(`/rivals/${rivalId}/players/import-preview`, { method: 'POST', body: form });
+    },
+    importConfirm: (rivalId: string, rows: ImportedPlayerRow[]) =>
+      request<Player[]>(`/rivals/${rivalId}/players/import`, { method: 'POST', body: JSON.stringify({ rows }) }),
   },
   matches: {
     list: (rivalId: string) => request<Match[]>(`/rivals/${rivalId}/matches`),

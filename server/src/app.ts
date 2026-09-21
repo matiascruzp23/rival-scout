@@ -4,6 +4,7 @@ import multer from 'multer';
 import { supabase, newId } from './supabaseClient.js';
 import { requireAuth } from './auth.js';
 import { parseCsv, isExcludedCategory } from './csv.js';
+import { parsePlayerImportFile, type ImportedPlayerRow } from './playerImport.js';
 import type { Player, Match, Rival, TorneoRegla, LineupEntry, Substitution, MatchEvent, MatchBaja, MatchCsv } from './types.js';
 
 const app = express();
@@ -498,6 +499,50 @@ app.post('/api/rivals/:rivalId/players', async (req, res) => {
   const { data, error } = await supabase.from('players').insert(row).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(toPlayer(data));
+});
+
+// Sube una planilla (Wyscout u otra, .xlsx/.xls/.csv) y devuelve las filas
+// ya convertidas a nuestro formato, sin crear nada todavía — el analista
+// las revisa/corrige en el cliente antes de confirmar la importación.
+app.post('/api/rivals/:rivalId/players/import-preview', upload.single('file'), async (req, res) => {
+  const { data: rival } = await supabase.from('rivals').select('id').eq('id', req.params.rivalId).maybeSingle();
+  if (!rival) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
+  try {
+    const result = parsePlayerImportFile(req.file.buffer);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: 'No se pudo leer el archivo (¿es un .xlsx/.xls/.csv válido?)' });
+  }
+});
+
+// Crea de una vez todos los jugadores ya revisados/corregidos en el
+// cliente (mismo formato que ImportedPlayerRow, sin las columnas de solo
+// referencia como posicionOriginal/posicionNecesitaRevision).
+app.post('/api/rivals/:rivalId/players/import', async (req, res) => {
+  const { data: rival } = await supabase.from('rivals').select('id').eq('id', req.params.rivalId).maybeSingle();
+  if (!rival) return res.status(404).json({ error: 'Rival no encontrado' });
+  const rows = req.body.rows as Partial<ImportedPlayerRow>[];
+  if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: 'No hay jugadores para importar' });
+
+  const toInsert = rows
+    .filter((r) => r.nombre && r.nombre.trim())
+    .map((r) =>
+      playerInsertRow(newId(), rival.id, {
+        nombre: r.nombre,
+        posicion: r.posicion || '',
+        estatura: r.estatura ?? null,
+        pie: r.pie ?? null,
+        sub21: !!r.sub21,
+        sub18: !!r.sub18,
+        extranjero: !!r.extranjero,
+      })
+    );
+  if (toInsert.length === 0) return res.status(400).json({ error: 'No hay jugadores para importar' });
+
+  const { data, error } = await supabase.from('players').insert(toInsert).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json((data || []).map(toPlayer));
 });
 
 app.put('/api/players/:id', async (req, res) => {
