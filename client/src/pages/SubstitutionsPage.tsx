@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import {
-  allSubstitutions,
   cambiosTacticos,
   lastN,
   minutoPromedioCambiosTacticos,
   minutoPromedioPorEstado,
+  minutoPromedioPrimerCambio,
   minutoPromedioSustituciones,
   sortMatchesDesc,
   substitutionCountsByState,
@@ -35,7 +35,7 @@ export default function SubstitutionsPage() {
   const sistemas = useMemo(() => topSistemasResultantes(matches), [matches]);
   const minutoTactico = useMemo(() => minutoPromedioCambiosTacticos(matches), [matches]);
   const combosTacticos = useMemo(() => topCombosConCambioTactico(matches), [matches]);
-  const totalSubs = useMemo(() => allSubstitutions(matches).length, [matches]);
+  const primerCambioProm = useMemo(() => minutoPromedioPrimerCambio(matches), [matches]);
   const tramos = useMemo(() => sustitucionesPorTramo(matches), [matches]);
   const estadoCounts = useMemo(() => substitutionCountsByState(matches), [matches]);
   const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
@@ -62,7 +62,7 @@ export default function SubstitutionsPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Sustituciones totales" value={totalSubs} />
+        <StatCard label="Minuto prom. primer cambio" value={primerCambioProm ? `${primerCambioProm.toFixed(0)}'` : '—'} />
         <StatCard label="Minuto promedio" value={minutoProm ? `${minutoProm.toFixed(0)}'` : '—'} />
         <StatCard label="Con cambio táctico" value={tacticos.length} />
         <StatCard label="Minuto prom. cambio táctico" value={minutoTactico ? `${minutoTactico.toFixed(0)}'` : '—'} />

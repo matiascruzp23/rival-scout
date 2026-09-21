@@ -301,6 +301,18 @@ export function minutoPromedioSustituciones(matches: Match[]): number {
   return subs.reduce((sum, x) => sum + x.sub.minuto, 0) / subs.length;
 }
 
+// Promedio del minuto del PRIMER cambio de cada partido (no de todos los
+// cambios juntos, a diferencia de minutoPromedioSustituciones): qué tan
+// temprano suele reaccionar el entrenador, más que cuánto dura reaccionando
+// en general.
+export function minutoPromedioPrimerCambio(matches: Match[]): number {
+  const primeros = matches
+    .map((m) => (m.substitutions.length === 0 ? null : Math.min(...m.substitutions.map((s) => s.minuto))))
+    .filter((m): m is number => m !== null);
+  if (primeros.length === 0) return 0;
+  return primeros.reduce((sum, m) => sum + m, 0) / primeros.length;
+}
+
 export interface TramoSustituciones {
   tramo: string;
   count: number;
