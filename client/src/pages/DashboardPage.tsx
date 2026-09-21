@@ -20,10 +20,10 @@ import {
 } from '../lib/stats';
 import { playerMap, playerName } from '../lib/lookup';
 import { PlayerBadges } from '../components/PlayerBadges';
-import { SquadDepthPitch } from '../components/SquadDepthPitch';
+import { SquadDepthPitch, labelsForSquadDepth } from '../components/SquadDepthPitch';
 import { PlantelView } from '../components/PlantelView';
 import { Pitch, type PitchToken } from '../components/Pitch';
-import { POSITION_LABELS, defaultCoordsFor, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
+import { defaultCoordsFor, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
 import { TorneoReglasEditor } from '../components/TorneoReglasEditor';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
 import type { TorneoRegla } from '../types';
@@ -92,6 +92,7 @@ export default function DashboardPage() {
   };
 
   const rotation = useMemo(() => positionRotation(matches), [matches]);
+  const squadDepthLabels = useMemo(() => labelsForSquadDepth(rival.sistemaPrincipal), [rival.sistemaPrincipal]);
   const combos = useMemo(() => topCombosSaleEntra(matches), [matches]);
   const tacticos = useMemo(() => cambiosTacticos(matches), [matches]);
 
@@ -324,16 +325,16 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-400">Sin datos de XI todavía.</p>
         ) : (
           <>
-            <SquadDepthPitch rotation={rotation} players={rival.players} />
+            <SquadDepthPitch rotation={rotation} players={rival.players} sistema={rival.sistemaPrincipal} />
             <p className="text-xs text-slate-400 mt-2">
               A diferencia del plantel de arriba (que muestra a todos los jugadores por posición asignada), esto
               refleja solo a quienes efectivamente jugaron ahí: el número indica cuántos jugadores distintos ocuparon
               cada posición y, debajo, quien más veces lo hizo.
             </p>
-            {rotation.some((r) => !POSITION_LABELS.includes(r.posicion)) && (
+            {rotation.some((r) => !squadDepthLabels.includes(r.posicion)) && (
               <div className="mt-3 flex flex-wrap gap-3">
                 {rotation
-                  .filter((r) => !POSITION_LABELS.includes(r.posicion))
+                  .filter((r) => !squadDepthLabels.includes(r.posicion))
                   .map((r) => (
                     <div key={r.posicion} className="border border-slate-200 rounded-md px-3 py-2 text-sm">
                       <div className="font-medium">{r.posicion} (posición personalizada)</div>

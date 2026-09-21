@@ -1,7 +1,8 @@
 import type { PositionRotation } from '../lib/stats';
 import { playerMap } from '../lib/lookup';
 import type { Player } from '../types';
-import { groupColor, type PositionGroup } from '../lib/positions';
+import { groupColor, positionDef, POSITIONS, type PositionGroup } from '../lib/positions';
+import { formationSlots } from '../lib/formations';
 
 const VIEW_W = 90;
 const VIEW_H = 118;
@@ -13,31 +14,45 @@ interface LayoutSpot {
   y: number;
 }
 
-// Distribución propia (no la del campograma táctico): separada lo justo
-// para que quepan varias líneas de jugadores por posición sin que se
-// encimen con las posiciones vecinas, y sin sobrar espacio bajo el arquero.
-const LAYOUT: LayoutSpot[] = [
-  { label: 'Delantero centro', group: 'DEL', x: 45, y: 9 },
-  { label: 'Extremo izquierdo', group: 'MED', x: 10, y: 25 },
-  { label: 'Extremo derecho', group: 'MED', x: 80, y: 25 },
-  { label: 'Mediapunta', group: 'MED', x: 45, y: 43 },
-  { label: 'Interior izquierdo', group: 'MED', x: 18, y: 61 },
-  { label: 'Interior derecho', group: 'MED', x: 72, y: 61 },
-  { label: 'Lateral izquierdo', group: 'DEF', x: 8, y: 83 },
-  { label: 'Central izquierdo', group: 'DEF', x: 32, y: 87 },
-  { label: 'Central derecho', group: 'DEF', x: 58, y: 87 },
-  { label: 'Lateral derecho', group: 'DEF', x: 82, y: 83 },
-  { label: 'Arquero', group: 'POR', x: 45, y: 104 },
-];
+// Las posiciones a mostrar: si el rival tiene un sistema reconocido, solo
+// las 11 que reparte ese sistema (mismo criterio que el plantel — ver
+// PlantelView.boxesForSystem); si no hay sistema definido, el catálogo
+// completo, igual que antes. Se exporta para que DashboardPage pueda usar
+// exactamente este mismo conjunto al decidir qué posiciones son "no
+// reconocidas por el sistema actual" en vez de comparar contra el catálogo
+// completo.
+export function labelsForSquadDepth(sistema: string | undefined): string[] {
+  const slots = sistema ? formationSlots(sistema) : null;
+  return slots ? Array.from(new Set(slots)) : POSITIONS.map((p) => p.label);
+}
+
+function layoutForSystem(sistema: string | undefined): LayoutSpot[] {
+  return labelsForSquadDepth(sistema)
+    .map((label) => {
+      const def = positionDef(label);
+      if (!def) return null;
+      return { label, group: def.group, x: (def.x / 100) * VIEW_W, y: (def.y / 100) * VIEW_H };
+    })
+    .filter((s): s is LayoutSpot => s !== null);
+}
 
 function apellido(nombre: string): string {
   const parts = nombre.trim().split(/\s+/);
   return parts[parts.length - 1] || nombre;
 }
 
-export function SquadDepthPitch({ rotation, players }: { rotation: PositionRotation[]; players: Player[] }) {
+export function SquadDepthPitch({
+  rotation,
+  players,
+  sistema,
+}: {
+  rotation: PositionRotation[];
+  players: Player[];
+  sistema?: string;
+}) {
   const map = playerMap(players);
   const byPosicion = new Map(rotation.map((r) => [r.posicion, r]));
+  const layout = layoutForSystem(sistema);
 
   return (
     <svg
@@ -49,7 +64,7 @@ export function SquadDepthPitch({ rotation, players }: { rotation: PositionRotat
         <line x1={1} y1={VIEW_H / 2} x2={VIEW_W - 1} y2={VIEW_H / 2} />
         <circle cx={VIEW_W / 2} cy={VIEW_H / 2} r={11} />
       </g>
-      {LAYOUT.map((spot) => {
+      {layout.map((spot) => {
         const r = byPosicion.get(spot.label);
         const color = groupColor(spot.group);
         return (

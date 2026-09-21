@@ -11,7 +11,7 @@ import {
   recentPlayers,
   sortMatchesDesc,
 } from '../lib/stats';
-import { playerMap, playerName } from '../lib/lookup';
+import { playerMap } from '../lib/lookup';
 import { PlayerBadges } from '../components/PlayerBadges';
 import { Pitch, type PitchToken } from '../components/Pitch';
 import { MatchPitchTimeline } from '../components/MatchPitchTimeline';
@@ -28,6 +28,18 @@ export default function LineupsPage() {
   const matches = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
   const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
   const common = useMemo(() => mostCommonLineup(matches), [matches]);
+  const commonTokens: PitchToken[] = useMemo(() => {
+    if (!common) return [];
+    const tokens: PitchToken[] = [];
+    for (const p of common.players) {
+      const { x, y } = defaultCoordsFor(p.posicion, tokens);
+      tokens.push({ key: p.playerId, x, y, posicion: p.posicion, player: players.get(p.playerId) });
+    }
+    symmetrizeForwardPair(tokens);
+    symmetrizeDoublePivote(tokens);
+    return tokens;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [common]);
   const reglaAplicable = useMemo(
     () => findReglaTorneo(rival.reglasTorneo, rival.proximoPartido?.competicion),
     [rival.reglasTorneo, rival.proximoPartido]
@@ -81,14 +93,7 @@ export default function LineupsPage() {
             <p className="text-xs text-slate-500 mb-2">
               Se repitió en {common.count} de {matches.length} partidos analizados.
             </p>
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              {common.players.map((p) => (
-                <li key={p.playerId} className="flex justify-between border-b border-slate-100 py-1">
-                  <span>{playerName(players, p.playerId)}</span>
-                  <span className="text-slate-400">{p.posicion}</span>
-                </li>
-              ))}
-            </ul>
+            <Pitch tokens={commonTokens} height={320} />
           </>
         ) : estimate.picks.length > 0 ? (
           <>

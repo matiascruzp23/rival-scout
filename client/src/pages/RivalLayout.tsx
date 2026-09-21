@@ -15,7 +15,7 @@ const tabs = [
   { to: 'partidos', label: 'Partidos' },
   { to: 'xi-rotaciones', label: 'XI y Rotaciones' },
   { to: 'sustituciones', label: 'Sustituciones' },
-  { to: 'analisis-csv', label: 'Análisis CSV' },
+  { to: 'analisis-csv', label: 'Análisis' },
   { to: 'informe', label: 'Informe' },
 ];
 
