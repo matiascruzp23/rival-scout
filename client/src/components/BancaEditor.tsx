@@ -6,12 +6,14 @@ export function BancaEditor({
   substitutions,
   banca,
   onChange,
+  readOnly = false,
 }: {
   players: Player[];
   lineup: LineupEntry[];
   substitutions: Substitution[];
   banca: string[];
   onChange: (banca: string[]) => void;
+  readOnly?: boolean;
 }) {
   const enXI = new Set(lineup.map((l) => l.playerId).filter(Boolean));
   const entraronDeCambio = new Set(substitutions.map((s) => s.jugadorEntraId).filter(Boolean));
@@ -25,7 +27,7 @@ export function BancaEditor({
   const remove = (index: number) => onChange(banca.filter((_, i) => i !== index));
 
   return (
-    <div className="space-y-2">
+    <fieldset disabled={readOnly} className="space-y-2">
       <p className="text-xs text-slate-400 -mt-1 mb-1">
         Suplentes que fueron convocados (banca) pero no llegaron a jugar. Quien no esté ni en el XI, ni acá, ni entró de
         cambio, se considera no citado a este partido.
@@ -47,14 +49,18 @@ export function BancaEditor({
               </option>
             ))}
           </select>
-          <button className="text-slate-400 hover:text-red-600 text-lg leading-none px-1" onClick={() => remove(i)}>
-            &times;
-          </button>
+          {!readOnly && (
+            <button className="text-slate-400 hover:text-red-600 text-lg leading-none px-1" onClick={() => remove(i)}>
+              &times;
+            </button>
+          )}
         </div>
       ))}
-      <button className="btn-secondary" onClick={() => onChange([...banca, ''])}>
-        + Agregar suplente a la banca
-      </button>
-    </div>
+      {!readOnly && (
+        <button className="btn-secondary" onClick={() => onChange([...banca, ''])}>
+          + Agregar suplente a la banca
+        </button>
+      )}
+    </fieldset>
   );
 }

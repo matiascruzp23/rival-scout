@@ -13,9 +13,11 @@ function newRegla(): TorneoRegla {
 export function TorneoReglasEditor({
   reglas,
   onChange,
+  readOnly = false,
 }: {
   reglas: TorneoRegla[];
   onChange: (reglas: TorneoRegla[]) => void;
+  readOnly?: boolean;
 }) {
   const update = (index: number, patch: Partial<TorneoRegla>) => {
     const next = [...reglas];
@@ -26,7 +28,7 @@ export function TorneoReglasEditor({
   const remove = (index: number) => onChange(reglas.filter((_, i) => i !== index));
 
   return (
-    <div className="space-y-2">
+    <fieldset disabled={readOnly} className="space-y-2">
       <p className="text-xs text-slate-400 -mt-1 mb-1">
         Cupos de cada torneo en el que compite este rival (ej. máximo de extranjeros en cancha, mínimo de Sub-21), para
         contrastarlos contra el XI estimado cuando el próximo partido sea en ese torneo. La exención por seleccionado
@@ -88,14 +90,18 @@ export function TorneoReglasEditor({
               placeholder="Sin exención"
             />
           </div>
-          <button className="text-slate-400 hover:text-red-600 text-lg leading-none px-1 pb-2" onClick={() => remove(i)}>
-            &times;
-          </button>
+          {!readOnly && (
+            <button className="text-slate-400 hover:text-red-600 text-lg leading-none px-1 pb-2" onClick={() => remove(i)}>
+              &times;
+            </button>
+          )}
         </div>
       ))}
-      <button className="btn-secondary" onClick={() => onChange([...reglas, newRegla()])}>
-        + Agregar regla de torneo
-      </button>
-    </div>
+      {!readOnly && (
+        <button className="btn-secondary" onClick={() => onChange([...reglas, newRegla()])}>
+          + Agregar regla de torneo
+        </button>
+      )}
+    </fieldset>
   );
 }

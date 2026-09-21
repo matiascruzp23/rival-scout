@@ -25,6 +25,7 @@ export function SubstitutionsEditor({
   banca,
   events,
   onChange,
+  readOnly = false,
 }: {
   players: Player[];
   lineup: LineupEntry[];
@@ -32,6 +33,7 @@ export function SubstitutionsEditor({
   banca: string[];
   events: MatchEvent[];
   onChange: (subs: Substitution[]) => void;
+  readOnly?: boolean;
 }) {
   const [editingLayout, setEditingLayout] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ export function SubstitutionsEditor({
     .sort((a, b) => a.s.minuto - b.s.minuto);
 
   return (
-    <div className="space-y-3">
+    <fieldset disabled={readOnly} className="space-y-3">
       {sorted.map(({ s, i }) => {
         const enCancha = onFieldBefore({ lineup, substitutions, events }, s.minuto, s.id);
         const enCanchaIds = new Set(enCancha.map((l) => l.playerId));
@@ -123,19 +125,21 @@ export function SubstitutionsEditor({
                 />
               </div>
             )}
-            <div className="col-span-12 flex justify-between items-center">
-              <button
-                className="text-xs text-emerald-700 hover:underline"
-                onClick={() => setEditingLayout(editingLayout === s.id ? null : s.id)}
-                disabled={!s.jugadorSaleId || !s.jugadorEntraId}
-                title={!s.jugadorSaleId || !s.jugadorEntraId ? 'Selecciona quién sale y quién entra primero' : ''}
-              >
-                {editingLayout === s.id ? 'Ocultar campograma' : 'Ajustar distribución en el campograma'}
-              </button>
-              <button className="text-xs text-red-600 hover:underline" onClick={() => remove(i)}>
-                Eliminar sustitución
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="col-span-12 flex justify-between items-center">
+                <button
+                  className="text-xs text-emerald-700 hover:underline"
+                  onClick={() => setEditingLayout(editingLayout === s.id ? null : s.id)}
+                  disabled={!s.jugadorSaleId || !s.jugadorEntraId}
+                  title={!s.jugadorSaleId || !s.jugadorEntraId ? 'Selecciona quién sale y quién entra primero' : ''}
+                >
+                  {editingLayout === s.id ? 'Ocultar campograma' : 'Ajustar distribución en el campograma'}
+                </button>
+                <button className="text-xs text-red-600 hover:underline" onClick={() => remove(i)}>
+                  Eliminar sustitución
+                </button>
+              </div>
+            )}
           </div>
 
           {editingLayout === s.id && (
@@ -155,10 +159,12 @@ export function SubstitutionsEditor({
         </div>
         );
       })}
-      <button className="btn-secondary" onClick={() => onChange([...substitutions, newSub()])}>
-        + Agregar sustitución
-      </button>
-    </div>
+      {!readOnly && (
+        <button className="btn-secondary" onClick={() => onChange([...substitutions, newSub()])}>
+          + Agregar sustitución
+        </button>
+      )}
+    </fieldset>
   );
 }
 

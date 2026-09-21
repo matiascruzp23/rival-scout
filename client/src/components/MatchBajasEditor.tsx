@@ -14,10 +14,12 @@ export function MatchBajasEditor({
   players,
   bajas,
   onChange,
+  readOnly = false,
 }: {
   players: Player[];
   bajas: MatchBaja[];
   onChange: (bajas: MatchBaja[]) => void;
+  readOnly?: boolean;
 }) {
   const update = (index: number, patch: Partial<MatchBaja>) => {
     const next = [...bajas];
@@ -30,7 +32,7 @@ export function MatchBajasEditor({
   }
 
   return (
-    <div className="space-y-2">
+    <fieldset disabled={readOnly} className="space-y-2">
       {bajas.map((b, i) => {
         const player = players.find((p) => p.id === b.jugadorId);
         return (
@@ -54,6 +56,6 @@ export function MatchBajasEditor({
           </div>
         );
       })}
-    </div>
+    </fieldset>
   );
 }

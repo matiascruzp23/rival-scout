@@ -53,10 +53,12 @@ export function MatchEventsEditor({
   players,
   events,
   onChange,
+  readOnly = false,
 }: {
   players: Player[];
   events: MatchEvent[];
   onChange: (events: MatchEvent[]) => void;
+  readOnly?: boolean;
 }) {
   const update = (index: number, patch: Partial<MatchEvent>) => {
     const next = [...events];
@@ -69,7 +71,7 @@ export function MatchEventsEditor({
   const sorted = events.map((e, i) => ({ e, i })).sort((a, b) => a.e.minuto - b.e.minuto);
 
   return (
-    <div className="space-y-3">
+    <fieldset disabled={readOnly} className="space-y-3">
       {sorted.map(({ e, i }) => (
         <div key={e.id} className="card p-3 border-slate-200">
           <div className="grid grid-cols-12 gap-2 items-end">
@@ -112,28 +114,32 @@ export function MatchEventsEditor({
                 onChange={(ev) => update(i, { descripcion: ev.target.value })}
               />
             </div>
-            <div className="col-span-12 flex justify-end">
-              <button className="text-xs text-red-600 hover:underline" onClick={() => remove(i)}>
-                Eliminar evento
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="col-span-12 flex justify-end">
+                <button className="text-xs text-red-600 hover:underline" onClick={() => remove(i)}>
+                  Eliminar evento
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ))}
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('gol_favor')])}>
-          <BallIcon color="#111827" /> Agregar gol
-        </button>
-        <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('gol_contra')])}>
-          <BallIcon color="#dc2626" /> Gol en contra
-        </button>
-        <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('amarilla')])}>
-          <CardIcon color="#eab308" /> Tarjeta amarilla
-        </button>
-        <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('roja')])}>
-          <CardIcon color="#dc2626" /> Tarjeta roja
-        </button>
-      </div>
-    </div>
+      {!readOnly && (
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('gol_favor')])}>
+            <BallIcon color="#111827" /> Agregar gol
+          </button>
+          <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('gol_contra')])}>
+            <BallIcon color="#dc2626" /> Gol en contra
+          </button>
+          <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('amarilla')])}>
+            <CardIcon color="#eab308" /> Tarjeta amarilla
+          </button>
+          <button className="btn-secondary flex items-center gap-1.5" onClick={() => onChange([...events, newEvent('roja')])}>
+            <CardIcon color="#dc2626" /> Tarjeta roja
+          </button>
+        </div>
+      )}
+    </fieldset>
   );
 }

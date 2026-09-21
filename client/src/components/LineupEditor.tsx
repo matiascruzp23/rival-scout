@@ -21,12 +21,14 @@ export function LineupEditor({
   system,
   previousLineup,
   onChange,
+  readOnly = false,
 }: {
   players: Player[];
   lineup: LineupEntry[];
   system: string;
   previousLineup?: { fecha: string; oponente: string; lineup: LineupEntry[] } | null;
   onChange: (lineup: LineupEntry[]) => void;
+  readOnly?: boolean;
 }) {
   const [showBaja, setShowBaja] = useState(false);
   const [view, setView] = useState<'lista' | 'campograma'>('lista');
@@ -161,13 +163,13 @@ export function LineupEditor({
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <span className="text-sm text-slate-500">{lineup.length}/11 jugadores en el XI</span>
         <div className="flex items-center gap-3">
-          {previousLineup && (
+          {!readOnly && previousLineup && (
             <button className="btn-secondary text-xs" onClick={copyPrevious}>
               Copiar XI de {previousLineup.fecha}
               {previousLineup.oponente ? ` (vs ${previousLineup.oponente})` : ''}
             </button>
           )}
-          {template && (
+          {!readOnly && template && (
             <button className="btn-secondary text-xs" onClick={applyTemplate}>
               Aplicar posiciones de {system}
             </button>
@@ -202,12 +204,14 @@ export function LineupEditor({
 
       {view === 'campograma' && (
         <div className="mb-3">
-          <Pitch tokens={tokens} onMove={moveToken} />
-          <p className="text-xs text-slate-400 mt-1">Arrastra a cada jugador para ubicarlo según cómo se paró realmente en cancha.</p>
+          <Pitch tokens={tokens} onMove={readOnly ? undefined : moveToken} />
+          {!readOnly && (
+            <p className="text-xs text-slate-400 mt-1">Arrastra a cada jugador para ubicarlo según cómo se paró realmente en cancha.</p>
+          )}
         </div>
       )}
 
-      <div className="space-y-2">
+      <fieldset disabled={readOnly} className="space-y-2">
         {lineup.map((entry, i) => {
           const player = players.find((p) => p.id === entry.playerId);
           return (
@@ -234,18 +238,20 @@ export function LineupEditor({
                 <PositionSelect className="input w-48" value={entry.posicion} onChange={(v) => update(i, { posicion: v })} />
               )}
               {player?.baja && <span className="badge bg-red-100 text-red-700 text-[10px]">BAJA</span>}
-              <button className="text-slate-400 hover:text-red-600 text-lg leading-none px-1" onClick={() => remove(i)}>
-                &times;
-              </button>
+              {!readOnly && (
+                <button className="text-slate-400 hover:text-red-600 text-lg leading-none px-1" onClick={() => remove(i)}>
+                  &times;
+                </button>
+              )}
             </div>
           );
         })}
-      </div>
-      {!template && (
-        <button className="btn-secondary mt-3" onClick={addSlot} disabled={lineup.length >= 14}>
-          + Agregar jugador al XI
-        </button>
-      )}
+        {!template && !readOnly && (
+          <button className="btn-secondary mt-3" onClick={addSlot} disabled={lineup.length >= 14}>
+            + Agregar jugador al XI
+          </button>
+        )}
+      </fieldset>
     </div>
   );
 }

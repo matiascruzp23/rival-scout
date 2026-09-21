@@ -8,6 +8,7 @@ import { PlayerBadges } from '../components/PlayerBadges';
 import { PositionSelect } from '../components/PositionSelect';
 import { computeAllPlayerStats, computePlayerEventStats, formatPct, lastN, type PlayerStats } from '../lib/stats';
 import { positionOrderIndex } from '../lib/positions';
+import { useIsViewer } from '../lib/authContext';
 
 type SortKey = 'nombre' | 'posicion' | 'partidosJugados' | 'titularidades' | 'minutosJugados' | 'porcentajeMinutos';
 
@@ -25,6 +26,7 @@ export default function PlayersPage() {
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [editing, setEditing] = useState<Player | 'new' | null>(null);
   const [toDelete, setToDelete] = useState<Player | null>(null);
+  const isViewer = useIsViewer();
 
   const matchesWindow = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
   const stats = useMemo(() => computeAllPlayerStats(rival.players, matchesWindow), [rival.players, matchesWindow]);
@@ -70,9 +72,11 @@ export default function PlayersPage() {
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-lg font-semibold text-slate-900">Jugadores</h2>
-        <button className="btn-primary" onClick={() => setEditing('new')}>
-          + Nuevo jugador
-        </button>
+        {!isViewer && (
+          <button className="btn-primary" onClick={() => setEditing('new')}>
+            + Nuevo jugador
+          </button>
+        )}
       </div>
 
       <div className="card p-3 mb-4 flex flex-wrap items-center gap-3">
@@ -164,6 +168,7 @@ export default function PlayersPage() {
                 onEdit={() => setEditing(s.player)}
                 onDelete={() => setToDelete(s.player)}
                 onToggleBaja={() => quickToggleBaja(s.player)}
+                isViewer={isViewer}
               />
             ))}
             {filtered.length === 0 && (
@@ -232,12 +237,14 @@ function PlayerRow({
   onEdit,
   onDelete,
   onToggleBaja,
+  isViewer,
 }: {
   stats: PlayerStats;
   events: { goles: number; amarillas: number; rojas: number };
   onEdit: () => void;
   onDelete: () => void;
   onToggleBaja: () => void;
+  isViewer: boolean;
 }) {
   const { player } = stats;
   return (
@@ -260,15 +267,19 @@ function PlayerRow({
         <PlayerBadges player={player} size="md" />
       </td>
       <td className="whitespace-nowrap">
-        <button className="text-xs text-emerald-700 hover:underline mr-3" onClick={onToggleBaja}>
-          {player.baja ? 'Quitar baja' : 'Marcar baja'}
-        </button>
-        <button className="text-xs text-slate-500 hover:underline mr-3" onClick={onEdit}>
-          Editar
-        </button>
-        <button className="text-xs text-red-600 hover:underline" onClick={onDelete}>
-          Eliminar
-        </button>
+        {!isViewer && (
+          <>
+            <button className="text-xs text-emerald-700 hover:underline mr-3" onClick={onToggleBaja}>
+              {player.baja ? 'Quitar baja' : 'Marcar baja'}
+            </button>
+            <button className="text-xs text-slate-500 hover:underline mr-3" onClick={onEdit}>
+              Editar
+            </button>
+            <button className="text-xs text-red-600 hover:underline" onClick={onDelete}>
+              Eliminar
+            </button>
+          </>
+        )}
       </td>
     </tr>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../supabaseClient';
 import LoginPage from '../pages/LoginPage';
+import { IsViewerContext } from '../lib/authContext';
 
 // Envuelve toda la app: sin sesión de Supabase Auth muestra el login: con
 // sesión, muestra la app normal más un botón para cerrar sesión.
@@ -20,7 +21,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const isViewer = session.user.app_metadata?.role === 'viewer';
 
   return (
-    <>
+    <IsViewerContext.Provider value={isViewer}>
       {children}
       {isViewer && (
         <div className="no-print fixed bottom-3 left-1/2 -translate-x-1/2 z-50 text-xs text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-full shadow-sm">
@@ -33,6 +34,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
       >
         Cerrar sesión
       </button>
-    </>
+    </IsViewerContext.Provider>
   );
 }

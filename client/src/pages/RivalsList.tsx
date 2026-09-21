@@ -5,6 +5,7 @@ import type { RivalListItem } from '../types';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import { SystemSelect } from '../components/SystemSelect';
 import { AppLogo } from '../components/AppLogo';
+import { useIsViewer } from '../lib/authContext';
 
 export default function RivalsList() {
   const [rivals, setRivals] = useState<RivalListItem[] | null>(null);
@@ -12,6 +13,7 @@ export default function RivalsList() {
   const [toDelete, setToDelete] = useState<RivalListItem | null>(null);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const isViewer = useIsViewer();
 
   const load = () => {
     api.rivals.list().then(setRivals).catch((e) => setError(e.message));
@@ -31,9 +33,11 @@ export default function RivalsList() {
             </p>
           </div>
         </div>
-        <button className="btn-primary" onClick={() => setShowCreate(true)}>
-          + Nuevo rival
-        </button>
+        {!isViewer && (
+          <button className="btn-primary" onClick={() => setShowCreate(true)}>
+            + Nuevo rival
+          </button>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
@@ -43,9 +47,11 @@ export default function RivalsList() {
       ) : rivals.length === 0 ? (
         <div className="card p-10 text-center text-slate-500">
           <p>No hay rivales creados todavía.</p>
-          <button className="btn-primary mt-4" onClick={() => setShowCreate(true)}>
-            Crear el primer rival
-          </button>
+          {!isViewer && (
+            <button className="btn-primary mt-4" onClick={() => setShowCreate(true)}>
+              Crear el primer rival
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -65,9 +71,11 @@ export default function RivalsList() {
                 <button className="btn-secondary text-xs" onClick={() => navigate(`/rivales/${r.id}`)}>
                   Abrir
                 </button>
-                <button className="btn-danger text-xs" onClick={() => setToDelete(r)}>
-                  Eliminar
-                </button>
+                {!isViewer && (
+                  <button className="btn-danger text-xs" onClick={() => setToDelete(r)}>
+                    Eliminar
+                  </button>
+                )}
               </div>
             </div>
           ))}

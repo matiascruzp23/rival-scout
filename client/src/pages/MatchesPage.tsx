@@ -6,12 +6,14 @@ import { sortMatchesDesc } from '../lib/stats';
 import { ConfirmDialog } from '../components/Modal';
 import { playerMap, playerName } from '../lib/lookup';
 import type { Match } from '../types';
+import { useIsViewer } from '../lib/authContext';
 
 export default function MatchesPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [toDelete, setToDelete] = useState<Match | null>(null);
+  const isViewer = useIsViewer();
 
   const matches = sortMatchesDesc(rival.matches);
   const players = playerMap(rival.players);
@@ -39,9 +41,11 @@ export default function MatchesPage() {
             Últimos {matches.length} de 10 recomendados. Se ordenan por fecha, del más reciente al más antiguo.
           </p>
         </div>
-        <button className="btn-primary" disabled={creating} onClick={createMatch}>
-          + Agregar partido
-        </button>
+        {!isViewer && (
+          <button className="btn-primary" disabled={creating} onClick={createMatch}>
+            + Agregar partido
+          </button>
+        )}
       </div>
 
       {matches.length > 10 && (
@@ -100,9 +104,11 @@ export default function MatchesPage() {
                       : '—'}
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
-                    <button className="text-xs text-red-600 hover:underline" onClick={() => setToDelete(m)}>
-                      Eliminar
-                    </button>
+                    {!isViewer && (
+                      <button className="text-xs text-red-600 hover:underline" onClick={() => setToDelete(m)}>
+                        Eliminar
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

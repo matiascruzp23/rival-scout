@@ -35,6 +35,7 @@ import {
 } from '../lib/csvAnalysis';
 import { playerMap, playerName } from '../lib/lookup';
 import { PlantelView } from '../components/PlantelView';
+import { useIsViewer } from '../lib/authContext';
 import { Pitch, type PitchToken } from '../components/Pitch';
 import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
 import { situationDiagramFor } from '../components/SituationDiagrams';
@@ -579,6 +580,7 @@ function Portada({
   gep: RecordGEP;
   onSaved: () => void;
 }) {
+  const isViewer = useIsViewer();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<ProximoPartido>(rival.proximoPartido || EMPTY_PROXIMO);
   const [entrenador, setEntrenador] = useState(rival.entrenador || '');
@@ -640,13 +642,15 @@ function Portada({
 
   return (
     <div className="informe-section informe-cover mb-8">
-      <div className="no-print flex justify-end mb-2">
-        <button className="text-xs text-emerald-700 hover:underline" onClick={() => setEditing((v) => !v)}>
-          {editing ? 'Cerrar' : 'Editar portada'}
-        </button>
-      </div>
+      {!isViewer && (
+        <div className="no-print flex justify-end mb-2">
+          <button className="text-xs text-emerald-700 hover:underline" onClick={() => setEditing((v) => !v)}>
+            {editing ? 'Cerrar' : 'Editar portada'}
+          </button>
+        </div>
+      )}
 
-      {editing && (
+      {editing && !isViewer && (
         <div className="no-print card p-4 mb-4 space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div>

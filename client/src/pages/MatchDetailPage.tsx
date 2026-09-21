@@ -12,6 +12,7 @@ import { MatchPitchTimeline } from '../components/MatchPitchTimeline';
 import { SystemSelect } from '../components/SystemSelect';
 import { CsvViewer } from '../components/CsvViewer';
 import { sortMatchesDesc } from '../lib/stats';
+import { useIsViewer } from '../lib/authContext';
 
 function SavedTick({ show }: { show: boolean }) {
   if (!show) return null;
@@ -23,6 +24,7 @@ export default function MatchDetailPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
+  const isViewer = useIsViewer();
 
   const [match, setMatch] = useState<Match | null>(null);
   const [error, setError] = useState('');
@@ -166,7 +168,7 @@ export default function MatchDetailPage() {
           <h2 className="font-semibold text-slate-900">Datos generales</h2>
           <SavedTick show={savedFlag === 'general'} />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <fieldset disabled={isViewer} className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="label">Fecha</label>
             <input
@@ -274,12 +276,14 @@ export default function MatchDetailPage() {
               placeholder="Ej. 4-3-3 que con el pasar de los minutos termina en 4-2-3-1 con el lateral de carrilero"
             />
           </div>
-        </div>
-        <div className="flex justify-end mt-3">
-          <button className="btn-primary" onClick={saveGeneral}>
-            Guardar datos generales
-          </button>
-        </div>
+        </fieldset>
+        {!isViewer && (
+          <div className="flex justify-end mt-3">
+            <button className="btn-primary" onClick={saveGeneral}>
+              Guardar datos generales
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card p-4">
@@ -293,12 +297,15 @@ export default function MatchDetailPage() {
           system={match.sistema}
           previousLineup={previousLineup}
           onChange={(lineup) => setMatch({ ...match, lineup })}
+          readOnly={isViewer}
         />
-        <div className="flex justify-end mt-3">
-          <button className="btn-primary" onClick={saveLineup}>
-            Guardar XI
-          </button>
-        </div>
+        {!isViewer && (
+          <div className="flex justify-end mt-3">
+            <button className="btn-primary" onClick={saveLineup}>
+              Guardar XI
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card p-4">
@@ -315,6 +322,7 @@ export default function MatchDetailPage() {
               substitutions={match.substitutions}
               banca={match.banca}
               onChange={(banca) => setMatch({ ...match, banca })}
+              readOnly={isViewer}
             />
           </div>
           <div>
@@ -323,14 +331,21 @@ export default function MatchDetailPage() {
               Se completa solo con quien no esté en el XI ni en la banca; para sacar a alguien de esta lista, agrégalo
               arriba o al XI.
             </p>
-            <MatchBajasEditor players={rival.players} bajas={match.bajas} onChange={(bajas) => setMatch({ ...match, bajas })} />
+            <MatchBajasEditor
+              players={rival.players}
+              bajas={match.bajas}
+              onChange={(bajas) => setMatch({ ...match, bajas })}
+              readOnly={isViewer}
+            />
           </div>
         </div>
-        <div className="flex justify-end mt-3">
-          <button className="btn-primary" onClick={saveConvocatoria}>
-            Guardar convocatoria
-          </button>
-        </div>
+        {!isViewer && (
+          <div className="flex justify-end mt-3">
+            <button className="btn-primary" onClick={saveConvocatoria}>
+              Guardar convocatoria
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card p-4">
@@ -348,12 +363,15 @@ export default function MatchDetailPage() {
           banca={match.banca}
           events={match.events}
           onChange={(substitutions) => setMatch({ ...match, substitutions })}
+          readOnly={isViewer}
         />
-        <div className="flex justify-end mt-3">
-          <button className="btn-primary" onClick={saveSubs}>
-            Guardar sustituciones
-          </button>
-        </div>
+        {!isViewer && (
+          <div className="flex justify-end mt-3">
+            <button className="btn-primary" onClick={saveSubs}>
+              Guardar sustituciones
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card p-4">
@@ -372,40 +390,45 @@ export default function MatchDetailPage() {
           players={citados}
           events={match.events}
           onChange={(events) => setMatch({ ...match, events })}
+          readOnly={isViewer}
         />
-        <div className="flex justify-end mt-3">
-          <button className="btn-primary" onClick={saveEvents}>
-            Guardar goles y tarjetas
-          </button>
-        </div>
+        {!isViewer && (
+          <div className="flex justify-end mt-3">
+            <button className="btn-primary" onClick={saveEvents}>
+              Guardar goles y tarjetas
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-slate-900">CSV de Sportscode</h2>
-          <div className="flex items-center gap-2">
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-            />
-            <button className="btn-secondary" disabled={uploading} onClick={() => fileInput.current?.click()}>
-              {uploading ? 'Cargando…' : match.csv ? 'Reemplazar CSV' : 'Cargar CSV'}
-            </button>
-            {match.csv && (
-              <button
-                className="btn-danger"
-                onClick={async () => {
-                  await api.matches.removeCsv(match.id);
-                  setMatch({ ...match, csv: null });
-                }}
-              >
-                Quitar CSV
+          {!isViewer && (
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+              />
+              <button className="btn-secondary" disabled={uploading} onClick={() => fileInput.current?.click()}>
+                {uploading ? 'Cargando…' : match.csv ? 'Reemplazar CSV' : 'Cargar CSV'}
               </button>
-            )}
-          </div>
+              {match.csv && (
+                <button
+                  className="btn-danger"
+                  onClick={async () => {
+                    await api.matches.removeCsv(match.id);
+                    setMatch({ ...match, csv: null });
+                  }}
+                >
+                  Quitar CSV
+                </button>
+              )}
+            </div>
+          )}
         </div>
         {csvError && <p className="text-sm text-red-600 mb-2">{csvError}</p>}
         {match.csv ? (

@@ -28,10 +28,12 @@ import { TorneoReglasEditor } from '../components/TorneoReglasEditor';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
 import type { TorneoRegla } from '../types';
 import { api } from '../api';
+import { useIsViewer } from '../lib/authContext';
 
 export default function DashboardPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const players = playerMap(rival.players);
+  const isViewer = useIsViewer();
   const matches = useMemo(() => lastN(rival.matches, 10), [rival.matches]);
   const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
 
@@ -149,14 +151,18 @@ export default function DashboardPage() {
 
       <PlantelView
         players={rival.players}
-        editable
+        editable={!isViewer}
         onChanged={reload}
         sistemaPrincipal={rival.sistemaPrincipal || ''}
         sistemaAlternativo={rival.sistemaAlternativo || ''}
-        onSaveSistemas={async (data) => {
-          await api.rivals.update(rival.id, data);
-          reload();
-        }}
+        onSaveSistemas={
+          isViewer
+            ? undefined
+            : async (data) => {
+                await api.rivals.update(rival.id, data);
+                reload();
+              }
+        }
       />
 
       <section className="card p-4">
@@ -204,12 +210,14 @@ export default function DashboardPage() {
 
       <section className="card p-4">
         <h3 className="font-semibold text-slate-800 mb-3">Reglas por torneo</h3>
-        <TorneoReglasEditor reglas={reglasDraft} onChange={setReglasDraft} />
-        <div className="flex justify-end mt-3">
-          <button className="btn-primary" disabled={savingReglas} onClick={saveReglas}>
-            Guardar reglas
-          </button>
-        </div>
+        <TorneoReglasEditor reglas={reglasDraft} onChange={setReglasDraft} readOnly={isViewer} />
+        {!isViewer && (
+          <div className="flex justify-end mt-3">
+            <button className="btn-primary" disabled={savingReglas} onClick={saveReglas}>
+              Guardar reglas
+            </button>
+          </div>
+        )}
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
