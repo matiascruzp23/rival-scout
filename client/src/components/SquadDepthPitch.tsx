@@ -1,7 +1,15 @@
 import type { PositionRotation } from '../lib/stats';
 import { playerMap } from '../lib/lookup';
 import type { Player } from '../types';
-import { groupColor, positionDef, symmetrizeDoublePivote, symmetrizeForwardPair, POSITIONS, type PositionGroup } from '../lib/positions';
+import {
+  groupColor,
+  positionDef,
+  positionAbbr,
+  symmetrizeDoublePivote,
+  symmetrizeForwardPair,
+  POSITIONS,
+  type PositionGroup,
+} from '../lib/positions';
 import { formationSlots } from '../lib/formations';
 
 const VIEW_W = 90;
@@ -94,7 +102,7 @@ export function SquadDepthPitch({
               fill="white"
               style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.65)', strokeWidth: 0.7 }}
             >
-              {spot.label}
+              {positionAbbr(spot.label)}
             </text>
             {r?.jugadores.map((j, i) => (
               <text

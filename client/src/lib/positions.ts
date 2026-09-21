@@ -44,6 +44,31 @@ export const POSITIONS: PositionDef[] = [
 
 export const POSITION_LABELS = POSITIONS.map((p) => p.label);
 
+// Siglas para campogramas donde el nombre completo no entra sin
+// superponerse con las posiciones vecinas (ver SquadDepthPitch).
+const POSITION_ABBR: Record<string, string> = {
+  Arquero: 'ARQ',
+  'Lateral derecho': 'LD',
+  'Carrilero derecho': 'CRD',
+  'Central derecho': 'CD',
+  Central: 'CT',
+  'Central izquierdo': 'CI',
+  'Lateral izquierdo': 'LI',
+  'Carrilero izquierdo': 'CRI',
+  'Medio centro derecho': 'MCD',
+  'Volante central': 'VC',
+  'Medio centro izquierdo': 'MCI',
+  Mediapunta: 'MP',
+  'Extremo derecho': 'ED',
+  'Extremo izquierdo': 'EI',
+  'Delantero centro': 'DC',
+  'Segundo delantero': 'SD',
+};
+
+export function positionAbbr(label: string): string {
+  return POSITION_ABBR[label] || label;
+}
+
 // Sinónimos de texto libre usados antes de que la posición fuera una lista
 // desplegable, para que el campograma y las estadísticas los ubiquen de
 // forma razonable en lugar de perderlos o amontonarlos al centro. Al ser
