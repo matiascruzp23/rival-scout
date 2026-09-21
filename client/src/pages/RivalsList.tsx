@@ -28,12 +28,7 @@ export default function RivalsList() {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <AppLogo />
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Rival Scout</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Informes de rival · organiza los últimos 10 partidos, jugadores, XI y sustituciones.
-            </p>
-          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Análisis de rival</h1>
         </div>
         {!isViewer && (
           <button className="btn-primary" onClick={() => setShowCreate(true)}>
