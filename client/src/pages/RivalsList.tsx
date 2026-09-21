@@ -6,12 +6,14 @@ import { Modal, ConfirmDialog } from '../components/Modal';
 import { SystemSelect } from '../components/SystemSelect';
 import { AppLogo } from '../components/AppLogo';
 import { useIsViewer } from '../lib/authContext';
+import { RivalsCalendar } from '../components/RivalsCalendar';
 
 export default function RivalsList() {
   const [rivals, setRivals] = useState<RivalListItem[] | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [toDelete, setToDelete] = useState<RivalListItem | null>(null);
   const [error, setError] = useState('');
+  const [vista, setVista] = useState<'lista' | 'calendario'>('lista');
   const navigate = useNavigate();
   const isViewer = useIsViewer();
 
@@ -54,32 +56,60 @@ export default function RivalsList() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rivals.map((r) => (
-            <div key={r.id} className="card p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow">
-              <div className="flex items-center gap-2">
-                {r.escudoUrl && <img src={r.escudoUrl} alt="" className="w-8 h-8 object-contain shrink-0" />}
-                <Link to={`/rivales/${r.id}`} className="font-semibold text-slate-900 hover:text-emerald-700">
-                  {r.nombre}
-                </Link>
-              </div>
-              <div className="text-xs text-slate-500 flex gap-4">
-                <span>{r.matchCount} partido{r.matchCount === 1 ? '' : 's'}</span>
-                <span>{r.playerCount} jugador{r.playerCount === 1 ? '' : 'es'}</span>
-              </div>
-              <div className="flex gap-2 mt-1">
-                <button className="btn-secondary text-xs" onClick={() => navigate(`/rivales/${r.id}`)}>
-                  Abrir
-                </button>
-                {!isViewer && (
-                  <button className="btn-danger text-xs" onClick={() => setToDelete(r)}>
-                    Eliminar
-                  </button>
-                )}
-              </div>
+        <>
+          <div className="flex items-center gap-1 text-sm mb-4">
+            <button
+              onClick={() => setVista('lista')}
+              className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
+                vista === 'lista' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
+              }`}
+            >
+              Lista
+            </button>
+            <button
+              onClick={() => setVista('calendario')}
+              className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
+                vista === 'calendario' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
+              }`}
+            >
+              Calendario
+            </button>
+          </div>
+
+          {vista === 'lista' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rivals.map((r) => (
+                <div key={r.id} className="card p-4 flex flex-col gap-3 hover:shadow-sm transition-shadow">
+                  <div className="flex items-center gap-2">
+                    {r.escudoUrl && <img src={r.escudoUrl} alt="" className="w-8 h-8 object-contain shrink-0" />}
+                    <Link to={`/rivales/${r.id}`} className="font-semibold text-slate-900 hover:text-emerald-700">
+                      {r.nombre}
+                    </Link>
+                  </div>
+                  <div className="text-xs text-slate-500 flex gap-4">
+                    <span>{r.matchCount} partido{r.matchCount === 1 ? '' : 's'}</span>
+                    <span>{r.playerCount} jugador{r.playerCount === 1 ? '' : 'es'}</span>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button className="btn-secondary text-xs" onClick={() => navigate(`/rivales/${r.id}`)}>
+                      Abrir
+                    </button>
+                    {!isViewer && (
+                      <button className="btn-danger text-xs" onClick={() => setToDelete(r)}>
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="space-y-4">
+              <RivalsCalendar rivals={rivals} />
+              <SinFecha rivals={rivals} />
+            </div>
+          )}
+        </>
       )}
 
       {showCreate && (
@@ -104,6 +134,32 @@ export default function RivalsList() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// Rivales sin "próximo partido" cargado (o sin fecha dentro de ese campo):
+// no tienen dónde aparecer en el calendario, así que quedan aparte para no
+// perderlos de vista.
+function SinFecha({ rivals }: { rivals: RivalListItem[] }) {
+  const sinFecha = rivals.filter((r) => !r.proximoPartido?.fecha);
+  if (sinFecha.length === 0) return null;
+  return (
+    <div className="card p-4">
+      <h3 className="font-semibold text-slate-800 mb-1">Sin fecha asignada</h3>
+      <p className="text-xs text-slate-400 mb-3">Rivales sin un próximo partido cargado — no aparecen en el calendario.</p>
+      <div className="flex flex-wrap gap-2">
+        {sinFecha.map((r) => (
+          <Link
+            key={r.id}
+            to={`/rivales/${r.id}`}
+            className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-sm hover:border-emerald-400 hover:bg-emerald-50"
+          >
+            {r.escudoUrl && <img src={r.escudoUrl} alt="" className="w-4 h-4 object-contain shrink-0" />}
+            {r.nombre}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
