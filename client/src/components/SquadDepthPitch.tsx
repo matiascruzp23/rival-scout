@@ -1,7 +1,7 @@
 import type { PositionRotation } from '../lib/stats';
 import { playerMap } from '../lib/lookup';
 import type { Player } from '../types';
-import { groupColor, positionDef, POSITIONS, type PositionGroup } from '../lib/positions';
+import { groupColor, positionDef, symmetrizeDoublePivote, symmetrizeForwardPair, POSITIONS, type PositionGroup } from '../lib/positions';
 import { formationSlots } from '../lib/formations';
 
 const VIEW_W = 90;
@@ -9,9 +9,13 @@ const VIEW_H = 118;
 
 interface LayoutSpot {
   label: string;
+  // = label: symmetrizeForwardPair/symmetrizeDoublePivote (lib/positions.ts)
+  // identifican al delantero centro/segundo delantero e interiores por este
+  // campo, no por label.
+  posicion: string;
   group: PositionGroup;
-  x: number;
-  y: number;
+  x: number; // 0-100, sin escalar todavía al viewBox
+  y: number; // 0-100
 }
 
 // Las posiciones a mostrar: si el rival tiene un sistema reconocido, solo
@@ -27,13 +31,20 @@ export function labelsForSquadDepth(sistema: string | undefined): string[] {
 }
 
 function layoutForSystem(sistema: string | undefined): LayoutSpot[] {
-  return labelsForSquadDepth(sistema)
+  const layout = labelsForSquadDepth(sistema)
     .map((label) => {
       const def = positionDef(label);
       if (!def) return null;
-      return { label, group: def.group, x: (def.x / 100) * VIEW_W, y: (def.y / 100) * VIEW_H };
+      return { label, posicion: label, group: def.group, x: def.x, y: def.y };
     })
     .filter((s): s is LayoutSpot => s !== null);
+  // Igual que en el resto de los campogramas: sin esto, el segundo
+  // delantero/delantero centro (o los interiores sin volante central)
+  // quedan con el ancho por defecto del catálogo, que no es simétrico
+  // respecto a los centrales.
+  symmetrizeForwardPair(layout);
+  symmetrizeDoublePivote(layout);
+  return layout;
 }
 
 function apellido(nombre: string): string {
@@ -67,8 +78,10 @@ export function SquadDepthPitch({
       {layout.map((spot) => {
         const r = byPosicion.get(spot.label);
         const color = groupColor(spot.group);
+        const x = (spot.x / 100) * VIEW_W;
+        const y = (spot.y / 100) * VIEW_H;
         return (
-          <g key={spot.label} transform={`translate(${spot.x}, ${spot.y})`}>
+          <g key={spot.label} transform={`translate(${x}, ${y})`}>
             <circle r={4.6} fill={r ? color : 'rgba(255,255,255,0.15)'} stroke="white" strokeWidth={0.4} />
             <text textAnchor="middle" dy={1.1} fontSize={3.4} fontWeight={700} fill="white">
               {r ? r.jugadoresDistintos : '–'}
