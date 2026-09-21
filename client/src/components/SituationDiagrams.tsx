@@ -421,6 +421,16 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'zone', x: shift('3', 2, -18).x, y: shift('3', 2, -18).y, w: 16, h: 14 },
     { kind: 'rival', x: shift('3', 2, -18).x + 8, y: shift('3', 2, -18).y + 7 },
   ],
+  // El lateral (4) queda en duelo 1v1 con el rival que tiene enfrente,
+  // mientras un segundo rival rompe en diagonal al espacio que deja a su
+  // espalda (misma zona punteada que en "Pierde espalda", para el mismo
+  // concepto de espacio libre).
+  'Espalda de lateral': [
+    { kind: 'rival', x: shift('4', -9, 0).x, y: shift('4', -9, 0).y },
+    { kind: 'zone', x: shift('4', 4, -20).x, y: shift('4', 4, -20).y, w: 16, h: 20 },
+    { kind: 'move', from: shift('4', -16, -22), to: shift('4', 10, -8), dashed: true },
+    { kind: 'rival', x: shift('4', 10, -8).x, y: shift('4', 10, -8).y },
+  ],
   'Cierran lineas de pase': [
     { kind: 'rival', x: shift('9', -8, 0).x, y: shift('9', -8, 0).y },
     { kind: 'ball', x: shift('9', -12, 0).x, y: shift('9', -12, 0).y },
