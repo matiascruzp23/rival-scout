@@ -87,8 +87,13 @@ function structureBreakdown(rows: TaggedRow[], columna: string | null): Structur
   for (const r of rows) {
     const v = r.row[columna];
     if (!v) continue;
-    counts.set(v, (counts.get(v) || 0) + 1);
-    total += 1;
+    // La celda puede traer 2+ conceptos a la vez (separados por coma, igual
+    // que las columnas de "situaciones"): cada uno suma por separado, no
+    // como una única barra combinada.
+    for (const tag of splitTags(v)) {
+      counts.set(tag, (counts.get(tag) || 0) + 1);
+      total += 1;
+    }
   }
   fusionarAlias(counts, 'Presionan en 4-3-1-2', 'Presionan en 4-1-3-2');
   fusionarValores(counts, LINEA_DE_3_VALORES, LINEA_DE_3_LABEL);
@@ -123,7 +128,10 @@ export function construccionSituacionCombos(
   for (const r of rows) {
     const raw = r.row[estructuraColumna];
     if (!raw) continue;
-    const construccion = canonicalizeConstruccion(raw);
+    // Igual que en structureBreakdown: la celda puede traer 2+ conceptos a
+    // la vez, cada uno se combina por separado con las situaciones de la
+    // fila (no como un único concepto combinado).
+    const construcciones = new Set(splitTags(raw).map(canonicalizeConstruccion));
     const situaciones = new Set<string>();
     for (const col of situacionColumnas) {
       const v = r.row[col];
@@ -132,10 +140,12 @@ export function construccionSituacionCombos(
         if (!NON_INDIVIDUAL_SITUACIONES.has(tag)) situaciones.add(tag);
       }
     }
-    for (const situacion of situaciones) {
-      const key = `${construccion} + ${situacion}`;
-      if (!counts.has(key)) counts.set(key, { construccion, situacion, count: 0 });
-      counts.get(key)!.count += 1;
+    for (const construccion of construcciones) {
+      for (const situacion of situaciones) {
+        const key = `${construccion} + ${situacion}`;
+        if (!counts.has(key)) counts.set(key, { construccion, situacion, count: 0 });
+        counts.get(key)!.count += 1;
+      }
     }
   }
   return Array.from(counts.values())
