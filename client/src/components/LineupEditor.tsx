@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { LineupEntry, Player } from '../types';
 import { PositionSelect } from './PositionSelect';
 import { Pitch, type PitchToken } from './Pitch';
-import { defaultCoordsFor, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
+import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
 import { formationSlots } from '../lib/formations';
 
 // Para la posición de un slot, ordena primero a quienes juegan ahí de
@@ -63,6 +63,7 @@ export function LineupEditor({
     });
     symmetrizeForwardPair(next);
     symmetrizeDoublePivote(next);
+    symmetrizeBackThree(next);
     onChange(next);
   };
 
@@ -116,11 +117,18 @@ export function LineupEditor({
   const parPivote =
     !hasVolanteCentral && !!interDerEntry && !!interIzqEntry && sinCoord(interDerEntry) && sinCoord(interIzqEntry);
 
+  const centralEntry = lineup.find((l) => l.posicion === 'Central');
+  const centralDerEntry = lineup.find((l) => l.posicion === 'Central derecho');
+  const centralIzqEntry = lineup.find((l) => l.posicion === 'Central izquierdo');
+  const parBackThree =
+    !!centralEntry && !!centralDerEntry && !!centralIzqEntry && sinCoord(centralDerEntry) && sinCoord(centralIzqEntry);
+
   const tokens: PitchToken[] = [];
   for (const l of lineup) {
     if (!l.playerId) continue;
     if (parSimetrico && (l === dcEntry || l === sdEntry)) continue;
     if (parPivote && (l === interDerEntry || l === interIzqEntry)) continue;
+    if (parBackThree && (l === centralDerEntry || l === centralIzqEntry)) continue;
     let { x, y } = l;
     if (x === undefined || y === undefined) {
       const coords = defaultCoordsFor(l.posicion, tokens);
@@ -156,6 +164,33 @@ export function LineupEditor({
     ];
     symmetrizeDoublePivote(pivotePair);
     tokens.push(...pivotePair);
+  }
+  if (parBackThree && centralEntry && centralDerEntry && centralIzqEntry) {
+    const backThreeTrio: PitchToken[] = [
+      {
+        key: centralEntry.playerId,
+        x: 0,
+        y: 0,
+        posicion: centralEntry.posicion,
+        player: players.find((p) => p.id === centralEntry.playerId),
+      },
+      {
+        key: centralDerEntry.playerId,
+        x: 0,
+        y: 0,
+        posicion: centralDerEntry.posicion,
+        player: players.find((p) => p.id === centralDerEntry.playerId),
+      },
+      {
+        key: centralIzqEntry.playerId,
+        x: 0,
+        y: 0,
+        posicion: centralIzqEntry.posicion,
+        player: players.find((p) => p.id === centralIzqEntry.playerId),
+      },
+    ];
+    symmetrizeBackThree(backThreeTrio);
+    tokens.push(backThreeTrio[1], backThreeTrio[2]);
   }
 
   return (

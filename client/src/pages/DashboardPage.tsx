@@ -23,7 +23,7 @@ import { PlayerBadges } from '../components/PlayerBadges';
 import { SquadDepthPitch, labelsForSquadDepth } from '../components/SquadDepthPitch';
 import { PlantelView } from '../components/PlantelView';
 import { Pitch, type PitchToken } from '../components/Pitch';
-import { defaultCoordsFor, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
+import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
 import { TorneoReglasEditor } from '../components/TorneoReglasEditor';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
 import type { TorneoRegla } from '../types';
@@ -71,6 +71,7 @@ export default function DashboardPage() {
     }
     symmetrizeForwardPair(tokens);
     symmetrizeDoublePivote(tokens);
+    symmetrizeBackThree(tokens);
     return tokens;
   }, [xiEstimate]);
   const reglaCheck = useMemo(

@@ -156,6 +156,24 @@ export function symmetrizeDoublePivote(entries: { posicion: string; x?: number; 
   izq.y = interIzq.y;
 }
 
+// En una línea de 3 (Central derecho + Central + Central izquierdo juntos,
+// ej. 3-4-3, 3-5-2, 5-3-2), los dos centrales de afuera necesitan más
+// separación entre sí que en una línea de 4 (donde ya queda un lateral más
+// afuera todavía): al ancho por defecto del catálogo (pensado para la línea
+// de 4) los tres quedan muy pegados y las etiquetas se superponen. Si el
+// sistema no tiene los tres a la vez (línea de 4 normal), esta función no
+// hace nada.
+const BACK_THREE_HALF_WIDTH = 20;
+
+export function symmetrizeBackThree(entries: { posicion: string; x?: number; y?: number }[]): void {
+  const central = entries.find((e) => e.posicion === 'Central');
+  const der = entries.find((e) => e.posicion === 'Central derecho');
+  const izq = entries.find((e) => e.posicion === 'Central izquierdo');
+  if (!central || !der || !izq) return;
+  der.x = 50 + BACK_THREE_HALF_WIDTH;
+  izq.x = 50 - BACK_THREE_HALF_WIDTH;
+}
+
 // Coordenada por defecto para un jugador nuevo en una posición, evitando
 // superponerlo exactamente sobre otro jugador ya ubicado en la misma posición.
 export function defaultCoordsFor(

@@ -17,7 +17,7 @@ import { Pitch, type PitchToken } from '../components/Pitch';
 import { MatchPitchTimeline } from '../components/MatchPitchTimeline';
 import { RotationCard } from '../components/RotationCard';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
-import { defaultCoordsFor, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
+import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
 import type { Match, Player } from '../types';
 
 export default function LineupsPage() {
@@ -37,6 +37,7 @@ export default function LineupsPage() {
     }
     symmetrizeForwardPair(tokens);
     symmetrizeDoublePivote(tokens);
+    symmetrizeBackThree(tokens);
     return tokens;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [common]);
@@ -56,6 +57,7 @@ export default function LineupsPage() {
     }
     symmetrizeForwardPair(tokens);
     symmetrizeDoublePivote(tokens);
+    symmetrizeBackThree(tokens);
     return tokens;
   }, [estimate]);
   const reglaCheck = useMemo(

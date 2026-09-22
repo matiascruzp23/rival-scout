@@ -1,5 +1,5 @@
 import type { LineupEntry, Match, MatchEvent, Substitution } from '../types';
-import { defaultCoordsFor, symmetrizeDoublePivote, symmetrizeForwardPair } from './positions';
+import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from './positions';
 
 type MatchLineupData = Pick<Match, 'lineup' | 'substitutions' | 'events'>;
 
@@ -60,9 +60,22 @@ function withDefaults(lineup: LineupEntry[]): LineupEntry[] {
     sinCoord(interDerEntry) &&
     sinCoord(interIzqEntry);
 
+  // Línea de 3 (Central derecho + Central + Central izquierdo): igual
+  // criterio, pero "Central" en sí no se toca, solo los dos de afuera.
+  const centralEntry = lineup.find((e) => e.posicion === 'Central');
+  const centralDerEntry = lineup.find((e) => e.posicion === 'Central derecho');
+  const centralIzqEntry = lineup.find((e) => e.posicion === 'Central izquierdo');
+  const parBackThree =
+    !!centralEntry &&
+    !!centralDerEntry &&
+    !!centralIzqEntry &&
+    sinCoord(centralDerEntry) &&
+    sinCoord(centralIzqEntry);
+
   for (const entry of lineup) {
     if (parSimetrico && (entry === dcEntry || entry === sdEntry)) continue;
     if (parPivote && (entry === interDerEntry || entry === interIzqEntry)) continue;
+    if (parBackThree && (entry === centralDerEntry || entry === centralIzqEntry)) continue;
     if (entry.x !== undefined && entry.y !== undefined) {
       placed.push(entry);
     } else {
@@ -79,6 +92,13 @@ function withDefaults(lineup: LineupEntry[]): LineupEntry[] {
   if (parPivote && interDerEntry && interIzqEntry) {
     placed.push({ ...interDerEntry, x: 0, y: 0 }, { ...interIzqEntry, x: 0, y: 0 });
     symmetrizeDoublePivote(placed.slice(-2));
+  }
+
+  if (parBackThree && centralEntry && centralDerEntry && centralIzqEntry) {
+    const der = { ...centralDerEntry, x: 0, y: 0 };
+    const izq = { ...centralIzqEntry, x: 0, y: 0 };
+    symmetrizeBackThree([centralEntry, der, izq]);
+    placed.push(der, izq);
   }
 
   return placed;

@@ -46,7 +46,13 @@ import { situationDiagramFor } from '../components/SituationDiagrams';
 import { RotationCard } from '../components/RotationCard';
 import { MatchReportCard, outcomeRowClass, outcomeTextClass } from '../components/MatchReportCard';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
-import { defaultCoordsFor, positionOrderIndex, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
+import {
+  defaultCoordsFor,
+  positionOrderIndex,
+  symmetrizeBackThree,
+  symmetrizeDoublePivote,
+  symmetrizeForwardPair,
+} from '../lib/positions';
 
 const EMPTY_PROXIMO: ProximoPartido = { competicion: '', instancia: '', fecha: '', estadio: '', condicion: '' };
 
@@ -99,6 +105,7 @@ export default function InformePage() {
     }
     symmetrizeForwardPair(tokens);
     symmetrizeDoublePivote(tokens);
+    symmetrizeBackThree(tokens);
     return tokens;
   }, [xiEstimate]);
   const reglaCheck = useMemo(

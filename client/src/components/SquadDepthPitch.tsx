@@ -5,6 +5,7 @@ import {
   groupColor,
   positionDef,
   positionAbbr,
+  symmetrizeBackThree,
   symmetrizeDoublePivote,
   symmetrizeForwardPair,
   POSITIONS,
@@ -71,6 +72,7 @@ function layoutForSystem(sistema: string | undefined): LayoutSpot[] {
   // respecto a los centrales.
   symmetrizeForwardPair(layout);
   symmetrizeDoublePivote(layout);
+  symmetrizeBackThree(layout);
   for (const spot of layout) {
     const adjust = Y_ADJUST[spot.label];
     if (adjust) spot.y += adjust;
