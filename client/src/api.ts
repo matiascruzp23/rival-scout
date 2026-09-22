@@ -72,5 +72,10 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ rowIndex, situacion }),
       }),
+    resolveRivalSituacionPorJugador: (id: string, rowIndex: number, porJugador: Record<string, string>) =>
+      request<MatchCsv>(`/matches/${id}/csv/rival-resolucion`, {
+        method: 'PUT',
+        body: JSON.stringify({ rowIndex, porJugador }),
+      }),
   },
 };

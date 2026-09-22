@@ -165,7 +165,7 @@ export default function CsvAnalysisPage() {
             <PhaseView
               data={vulnerabilidades}
               showEvolucion={false}
-              situacionDiagram={(tag) => situationDiagramFor(tag)}
+              situacionDiagram={(tag) => situationDiagramFor(tag, sistemaDominante)}
             />
           )}
           {tab === 'Individuales' && (
@@ -384,6 +384,11 @@ function IndividualesCard({
 
 function PendienteRow({ pendiente, onResolved }: { pendiente: PendienteResolucion; onResolved: () => void }) {
   const [saving, setSaving] = useState(false);
+  // 2 rivales + 2 situaciones suele ser en realidad "cada uno hizo una
+  // distinta", no que los dos hicieron las dos: se ofrece armar ese pareo
+  // además de la opción de una sola situación para ambos.
+  const esPareable = pendiente.rivales.length === 2 && pendiente.opciones.length === 2;
+  const [par, setPar] = useState<[string, string]>([pendiente.opciones[0], pendiente.opciones[1] ?? pendiente.opciones[0]]);
 
   const resolver = async (situacion: string) => {
     setSaving(true);
@@ -395,21 +400,72 @@ function PendienteRow({ pendiente, onResolved }: { pendiente: PendienteResolucio
     }
   };
 
+  const resolverPorJugador = async () => {
+    setSaving(true);
+    try {
+      await api.matches.resolveRivalSituacionPorJugador(pendiente.matchId, pendiente.rowIndex, {
+        [pendiente.rivales[0]]: par[0],
+        [pendiente.rivales[1]]: par[1],
+      });
+      onResolved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 text-sm">
-      <span className="font-medium text-slate-700">{pendiente.rival}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {pendiente.opciones.map((op) => (
-          <button
-            key={op}
-            disabled={saving}
-            onClick={() => resolver(op)}
-            className="px-2 py-1 text-xs rounded border border-amber-300 bg-white hover:bg-amber-100 text-amber-800 disabled:opacity-50"
-          >
-            {op}
-          </button>
-        ))}
+    <li className="text-sm space-y-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium text-slate-700">{pendiente.rival}</span>
+        <div className="flex flex-wrap gap-1.5">
+          {pendiente.opciones.map((op) => (
+            <button
+              key={op}
+              disabled={saving}
+              onClick={() => resolver(op)}
+              className="px-2 py-1 text-xs rounded border border-amber-300 bg-white hover:bg-amber-100 text-amber-800 disabled:opacity-50"
+            >
+              {op} (ambos)
+            </button>
+          ))}
+        </div>
       </div>
+      {esPareable && (
+        <div className="flex flex-wrap items-center gap-1.5 pl-1">
+          <span className="text-xs text-slate-500">O cada uno hizo una distinta:</span>
+          <span className="text-xs text-slate-600">{pendiente.rivales[0]}</span>
+          <select
+            className="input py-0.5 text-xs w-auto"
+            value={par[0]}
+            onChange={(e) => setPar([e.target.value, par[1]])}
+          >
+            {pendiente.opciones.map((op) => (
+              <option key={op} value={op}>
+                {op}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-slate-600">{pendiente.rivales[1]}</span>
+          <select
+            className="input py-0.5 text-xs w-auto"
+            value={par[1]}
+            onChange={(e) => setPar([par[0], e.target.value])}
+          >
+            {pendiente.opciones.map((op) => (
+              <option key={op} value={op}>
+                {op}
+              </option>
+            ))}
+          </select>
+          <button
+            disabled={saving}
+            onClick={resolverPorJugador}
+            className="px-2 py-1 text-xs rounded border border-emerald-300 bg-white hover:bg-emerald-100 text-emerald-800 disabled:opacity-50"
+          >
+            Confirmar pareo
+          </button>
+        </div>
+      )}
     </li>
   );
 }

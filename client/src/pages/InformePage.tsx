@@ -569,7 +569,7 @@ export default function InformePage() {
             <PhaseSummaryCard
               title="Espacios y vulnerabilidades"
               data={vulnerabilidades}
-              situacionDiagram={(tag) => situationDiagramFor(tag)}
+              situacionDiagram={(tag) => situationDiagramFor(tag, sistemas[0]?.item ?? null)}
               situacionNarradoCount={3}
             />
             {(circulacionesIndividuales.combos.length > 0 ||

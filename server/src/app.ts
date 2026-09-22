@@ -718,13 +718,19 @@ app.delete('/api/matches/:id/csv', async (req, res) => {
 // fila ambigua del CSV (2+ situaciones a la vez junto con la columna
 // "Rivales" rellenada — ver client/src/lib/csvAnalysis.ts). Se guarda
 // dentro de la propia fila, sin tocar ninguna otra columna ni necesitar una
-// tabla aparte.
+// tabla aparte. Acepta una sola `situacion` (aplica a todos los rivales de
+// la fila por igual) o `porJugador` (mapeo 1 a 1 rival -> situación, para
+// el caso de 2 rivales + 2 situaciones donde cada uno hizo una distinta).
 app.put('/api/matches/:id/csv/rival-resolucion', async (req, res) => {
   const { data: matchRow } = await supabase.from('matches').select('id').eq('id', req.params.id).maybeSingle();
   if (!matchRow) return res.status(404).json({ error: 'Partido no encontrado' });
-  const { rowIndex, situacion } = req.body as { rowIndex?: number; situacion?: string };
-  if (typeof rowIndex !== 'number' || !situacion) {
-    return res.status(400).json({ error: 'rowIndex y situacion son requeridos' });
+  const { rowIndex, situacion, porJugador } = req.body as {
+    rowIndex?: number;
+    situacion?: string;
+    porJugador?: Record<string, string>;
+  };
+  if (typeof rowIndex !== 'number' || (!situacion && !porJugador)) {
+    return res.status(400).json({ error: 'rowIndex y (situacion o porJugador) son requeridos' });
   }
 
   const { data: csvRow } = await supabase.from('match_csv').select('rows').eq('match_id', matchRow.id).maybeSingle();
@@ -732,7 +738,9 @@ app.put('/api/matches/:id/csv/rival-resolucion', async (req, res) => {
   const rows = (csvRow.rows || []) as Record<string, string>[];
   if (!rows[rowIndex]) return res.status(400).json({ error: 'Fila fuera de rango' });
 
-  rows[rowIndex] = { ...rows[rowIndex], __rivalResuelto: situacion };
+  rows[rowIndex] = porJugador
+    ? { ...rows[rowIndex], __rivalResueltoPorJugador: JSON.stringify(porJugador) }
+    : { ...rows[rowIndex], __rivalResuelto: situacion as string };
   const { data: saved, error } = await supabase
     .from('match_csv')
     .update({ rows })

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { BoxOutline, MoveArrow, Token, Zone, type Spot } from './TacticalDiagram';
 import { formationSlots } from '../lib/formations';
-import { positionDef } from '../lib/positions';
+import { positionDef, symmetrizeForwardPair, symmetrizeDoublePivote } from '../lib/positions';
 
 // Un diagrama por cada "situación" de circulación o de presión que registra
 // el analista en Sportscode (ver csvGlossary.ts para las glosas en texto).
@@ -88,27 +88,60 @@ function formationOverridesFor(sistema: string | null | undefined): Record<strin
   if (template.filter((l) => BACK_FOUR_LABELS.includes(l)).length !== 4) return overrides;
 
   const resto = template.filter((label) => label !== 'Arquero' && !BACK_FOUR_LABELS.includes(label));
-  const conCoords = resto
+  const defs = resto
     .map((label) => positionDef(label))
-    .filter((def): def is NonNullable<ReturnType<typeof positionDef>> => !!def);
-  if (conCoords.length !== 6) return overrides;
+    .filter((d): d is NonNullable<ReturnType<typeof positionDef>> => !!d);
+  if (defs.length !== 6) return overrides;
 
-  const spots = conCoords.map(toLandscapeSpot);
+  // Si el sistema reparte 2 posiciones del grupo "delantero" (ej. 4-3-1-2,
+  // 4-2-2-2), se simetrizan y van directo a 9/10 — el criterio geométrico de
+  // abajo (por ancho/profundidad, pensado para laterales/interiores)
+  // confunde al segundo delantero con un extremo, porque su coordenada en
+  // el catálogo es bien ancha aunque sea un delantero, no un lateral.
+  const delanterosDefs = defs.filter((d) => d.group === 'DEL');
+  const usarGrupoDelanteros = delanterosDefs.length === 2;
+  if (usarGrupoDelanteros) {
+    const entries = delanterosDefs.map((d) => ({ posicion: d.label, x: d.x, y: d.y }));
+    symmetrizeForwardPair(entries);
+    const [a, b] = entries.map(toLandscapeSpot).sort((s1, s2) => s1.y - s2.y);
+    overrides['9'] = a;
+    overrides['10'] = b;
+  }
+
+  const resto4o6 = usarGrupoDelanteros ? defs.filter((d) => d.group !== 'DEL') : defs;
+  const entries4o6 = resto4o6.map((d) => ({ posicion: d.label, x: d.x, y: d.y }));
+  // Mismo criterio que el resto de los campogramas: sin esto, el doble
+  // pivote sin volante central queda con el ancho por defecto del catálogo,
+  // que no es simétrico respecto a los centrales.
+  symmetrizeDoublePivote(entries4o6);
+
+  const spots = entries4o6.map(toLandscapeSpot);
   const bySide = [...spots].sort((a, b) => a.y - b.y); // y chico = lado derecho
   const wideRight = bySide[0];
   const wideLeft = bySide[bySide.length - 1];
   const restantes = bySide.slice(1, -1);
 
-  const byDepth = [...restantes].sort((a, b) => a.x - b.x); // x chico = más adelantado
-  const delanteros = byDepth.slice(0, 2).sort((a, b) => a.y - b.y);
-  const retrasados = byDepth.slice(2).sort((a, b) => a.y - b.y);
-
   overrides['7'] = wideRight;
   overrides['11'] = wideLeft;
-  if (delanteros[0]) overrides['9'] = delanteros[0];
-  if (delanteros[1]) overrides['10'] = delanteros[1];
-  if (retrasados[0]) overrides['6'] = retrasados[0];
-  if (retrasados[1]) overrides['8'] = retrasados[1];
+
+  if (usarGrupoDelanteros) {
+    // 9/10 ya se asignaron arriba: lo que queda en el medio son los 2
+    // retrasados (6/8).
+    const retrasados = [...restantes].sort((a, b) => a.y - b.y);
+    if (retrasados[0]) overrides['6'] = retrasados[0];
+    if (retrasados[1]) overrides['8'] = retrasados[1];
+  } else {
+    // Sin un par de delanteros claro (ej. 4-3-3, un solo 9 real): se
+    // mantiene el criterio de siempre — el más adelantado de los 4
+    // restantes hace de 9/10 y los otros 2 de 6/8.
+    const byDepth = [...restantes].sort((a, b) => a.x - b.x); // x chico = más adelantado
+    const delanteros = byDepth.slice(0, 2).sort((a, b) => a.y - b.y);
+    const retrasados = byDepth.slice(2).sort((a, b) => a.y - b.y);
+    if (delanteros[0]) overrides['9'] = delanteros[0];
+    if (delanteros[1]) overrides['10'] = delanteros[1];
+    if (retrasados[0]) overrides['6'] = retrasados[0];
+    if (retrasados[1]) overrides['8'] = retrasados[1];
+  }
 
   return overrides;
 }
@@ -346,7 +379,7 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'ball', x: shift('7', -3, 2).x, y: shift('7', -3, 2).y },
     { kind: 'move', from: shift('7', -3, 2), to: { x: 14, y: 40 }, dashed: false, curve: -10, fromBall: true },
   ],
-  'Volante a banda': [{ kind: 'move', from: POS['6'], to: { x: 50, y: 15 }, dashed: true }],
+  'Volante a banda': [{ kind: 'move', from: POS['6'], to: { x: 30, y: 15 }, dashed: true }],
   'Mediapunta en cuadrado': [
     { kind: 'zone', x: 38, y: 28, w: 20, h: 34 },
     { kind: 'move', from: POS['10'], to: { x: 46, y: 45 }, dashed: true },

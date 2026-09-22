@@ -371,12 +371,29 @@ const NON_INDIVIDUAL_SITUACIONES = new Set([
 // pendientes hasta que alguien con permiso de edición elija, en vez de
 // contarlas para las dos (lo que inflaría ambos conceptos por igual).
 const RESOLUCION_KEY = '__rivalResuelto';
+// Caso especial: 2 rivales marcados + 2 situaciones marcadas suele ser en
+// realidad "cada rival hizo una situación distinta", no que ambos hicieron
+// las dos — esta resolución guarda esa asignación 1 a 1 en vez de una sola
+// situación aplicada a los dos por igual.
+const RESOLUCION_POR_JUGADOR_KEY = '__rivalResueltoPorJugador';
 
 export interface PendienteResolucion {
   matchId: string;
   rowIndex: number;
   rival: string;
+  rivales: string[];
   opciones: string[];
+}
+
+function porJugadorValido(raw: string | undefined, rivales: string[], situacionesSet: Set<string>): Record<string, string> | null {
+  if (!raw) return null;
+  try {
+    const mapping = JSON.parse(raw) as Record<string, string>;
+    const valido = rivales.every((riv) => mapping[riv] && situacionesSet.has(mapping[riv]));
+    return valido ? mapping : null;
+  } catch {
+    return null;
+  }
 }
 
 // Igual que comboBreakdown, pero dirigido: cuenta cada par (jugador rival,
@@ -391,6 +408,12 @@ function rivalSituacionCombos(
   const counts = new Map<string, RivalSituacionCombo>();
   const pendientes: PendienteResolucion[] = [];
   let registrosConRival = 0;
+  const addCombo = (rival: string, situacion: string) => {
+    const key = `${rival} + ${situacion}`;
+    if (!counts.has(key)) counts.set(key, { rival, situacion, count: 0 });
+    counts.get(key)!.count += 1;
+  };
+
   for (const r of rows) {
     const rivales = rivalTagsOf(r.row);
     if (rivales.length === 0) continue;
@@ -405,24 +428,26 @@ function rivalSituacionCombos(
     if (situacionesSet.size === 0) continue;
     registrosConRival += 1;
 
-    let situaciones = Array.from(situacionesSet);
-    if (situaciones.length > 1) {
-      const resuelto = r.row[RESOLUCION_KEY];
-      if (resuelto && situacionesSet.has(resuelto)) {
-        situaciones = [resuelto];
-      } else {
-        pendientes.push({ matchId: r.matchId, rowIndex: r.rowIndex, rival: rivales.join(', '), opciones: situaciones });
-        continue;
-      }
+    const situaciones = Array.from(situacionesSet);
+    if (situaciones.length === 1) {
+      for (const rival of rivales) addCombo(rival, situaciones[0]);
+      continue;
     }
 
-    for (const rival of rivales) {
-      for (const situacion of situaciones) {
-        const key = `${rival} + ${situacion}`;
-        if (!counts.has(key)) counts.set(key, { rival, situacion, count: 0 });
-        counts.get(key)!.count += 1;
-      }
+    // Ambiguo: primero intenta la asignación 1 a 1 por jugador (más precisa
+    // cuando aplica), después la resolución de "una sola situación para
+    // todos", y si ninguna calza todavía, queda pendiente.
+    const porJugador = porJugadorValido(r.row[RESOLUCION_POR_JUGADOR_KEY], rivales, situacionesSet);
+    if (porJugador) {
+      for (const rival of rivales) addCombo(rival, porJugador[rival]);
+      continue;
     }
+    const resuelto = r.row[RESOLUCION_KEY];
+    if (resuelto && situacionesSet.has(resuelto)) {
+      for (const rival of rivales) addCombo(rival, resuelto);
+      continue;
+    }
+    pendientes.push({ matchId: r.matchId, rowIndex: r.rowIndex, rival: rivales.join(', '), rivales, opciones: situaciones });
   }
   const combos = Array.from(counts.values())
     .sort((a, b) => b.count - a.count)
