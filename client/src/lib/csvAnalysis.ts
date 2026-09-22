@@ -271,6 +271,11 @@ const NON_INDIVIDUAL_SITUACIONES = new Set([
   'Libre cuadrado',
   'Espalda de la defensa',
   'Juego directo',
+  'Triangulo en banda',
+  'Centro 3/4',
+  'Libre lado opuesto',
+  'No emparejan en area',
+  'Presion a linea de 3',
 ]);
 
 // Igual que comboBreakdown, pero dirigido: cuenta cada par (jugador rival,
