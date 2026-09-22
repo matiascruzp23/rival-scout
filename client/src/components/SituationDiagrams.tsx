@@ -389,11 +389,11 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
   // Un rival con el balón cerca del pivote propio le da un pase directo al
   // compañero que queda libre dentro del cuadrado, sin marca.
   'Libre cuadrado': [
-    { kind: 'rival', x: 42, y: 44 },
-    { kind: 'ball', x: 45, y: 47 },
+    { kind: 'rival', x: 58, y: 44 },
+    { kind: 'ball', x: 58, y: 47 },
     { kind: 'zone', x: 52, y: 58, w: 12, h: 30 },
     { kind: 'rival', x: 58, y: 73 },
-    { kind: 'move', from: { x: 45, y: 47 }, to: { x: 58, y: 73 }, dashed: false, fromBall: true },
+    { kind: 'move', from: { x: 58, y: 47 }, to: { x: 58, y: 73 }, dashed: false, fromBall: true },
   ],
   'Persiguen movimiento': [
     { kind: 'rival', x: 28, y: 78 },
