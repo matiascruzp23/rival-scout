@@ -26,11 +26,15 @@ import {
   type RecordGEP,
 } from '../lib/stats';
 import {
+  analyzeIndividuales,
   analyzePhase,
+  construccionSituacionCombos,
   DEFENSIVE_CATEGORIES,
   estructuraCambiaPorEstado,
   matchesWithCsvCount,
   OFFENSIVE_CATEGORIES,
+  type ConstruccionSituacionCombo,
+  type IndividualesBloque,
   type PhaseAnalysis,
 } from '../lib/csvAnalysis';
 import { playerMap, playerName } from '../lib/lookup';
@@ -132,6 +136,10 @@ export default function InformePage() {
       ]),
     [matches]
   );
+  const construccionSituacion = useMemo(
+    () => construccionSituacionCombos(matches, OFFENSIVE_CATEGORIES, ['Situaciones de circulacion']),
+    [matches]
+  );
   const presionEstructura = useMemo(
     () =>
       analyzePhase(matches, DEFENSIVE_CATEGORIES, [
@@ -146,6 +154,14 @@ export default function InformePage() {
         { titulo: 'Presión media', columnas: ['Situaciones de presion'], categorias: ['PRESION MEDIA'], soloRepetidos: true },
         { titulo: 'Presión baja', columnas: ['Situaciones de presion'], categorias: ['PRESION BAJA'], soloRepetidos: true },
       ]),
+    [matches]
+  );
+  const circulacionesIndividuales = useMemo(
+    () => analyzeIndividuales(matches, OFFENSIVE_CATEGORIES, ['Situaciones de circulacion'], 'Comportamientos ofensivos'),
+    [matches]
+  );
+  const presionesIndividuales = useMemo(
+    () => analyzeIndividuales(matches, DEFENSIVE_CATEGORIES, ['Situaciones de presion'], 'Comportamientos defensivos'),
     [matches]
   );
 
@@ -540,6 +556,7 @@ export default function InformePage() {
               data={ofensiva}
               showEstructura
               estructuraDiagram={(valor) => <BuildUpShapeDiagram valor={valor} />}
+              estructuraSituacionCombos={construccionSituacion}
               situacionDiagram={(tag) => situationDiagramFor(tag, sistemas[0]?.item ?? null)}
             />
             <PhaseSummaryCard
@@ -555,6 +572,18 @@ export default function InformePage() {
               situacionDiagram={(tag) => situationDiagramFor(tag)}
               situacionNarradoCount={3}
             />
+            {(circulacionesIndividuales.combos.length > 0 ||
+              presionesIndividuales.combos.length > 0 ||
+              circulacionesIndividuales.pendientes.length > 0 ||
+              presionesIndividuales.pendientes.length > 0) && (
+              <div className="informe-section card p-4">
+                <h4 className="font-semibold text-slate-800 mb-3">Comportamientos individuales</h4>
+                <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                  <IndividualesInformeBlock data={circulacionesIndividuales} />
+                  <IndividualesInformeBlock data={presionesIndividuales} />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -866,6 +895,7 @@ function PhaseSummaryCard({
   data,
   showEstructura = false,
   estructuraDiagram,
+  estructuraSituacionCombos,
   situacionDiagram,
   situacionDiagramCount = 1,
   situacionNarradoCount = 2,
@@ -874,6 +904,7 @@ function PhaseSummaryCard({
   data: PhaseAnalysis;
   showEstructura?: boolean;
   estructuraDiagram?: (valorTop: string) => ReactNode;
+  estructuraSituacionCombos?: ConstruccionSituacionCombo[];
   situacionDiagram?: (tag: string) => ReactNode;
   situacionDiagramCount?: number;
   situacionNarradoCount?: number;
@@ -907,6 +938,12 @@ function PhaseSummaryCard({
             .slice(0, 3)
             .map((b) => `${b.valor} (${b.pct}%)`)
             .join(' · ')}
+        </p>
+      )}
+      {estructuraSituacionCombos && estructuraSituacionCombos.length > 0 && (
+        <p className="text-[11px] text-slate-500 mb-2">
+          Combinaciones frecuentes:{' '}
+          {estructuraSituacionCombos.map((c) => `${c.construccion} + ${c.situacion} (${c.count})`).join(' · ')}
         </p>
       )}
       {/* La tarjeta ahora ocupa el ancho completo de la página (una fase a
@@ -954,6 +991,35 @@ function PhaseSummaryCard({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// Combinaciones jugador rival + situación (columna "Rivales" del CSV): solo
+// lectura acá, a diferencia de la pestaña Análisis, donde quien edita puede
+// resolver los registros ambiguos — el informe es un resumen, no el lugar
+// para esa tarea.
+function IndividualesInformeBlock({ data }: { data: IndividualesBloque }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{data.titulo}</p>
+      {data.combos.length === 0 ? (
+        <p className="text-xs text-slate-400">Sin combinaciones.</p>
+      ) : (
+        <ul className="text-xs text-slate-600 space-y-1">
+          {data.combos.map((c) => (
+            <li key={`${c.rival}+${c.situacion}`}>
+              {c.rival} · {c.situacion} ({c.count})
+            </li>
+          ))}
+        </ul>
+      )}
+      {data.pendientes.length > 0 && (
+        <p className="text-[10px] text-amber-600 mt-1">
+          {data.pendientes.length} registro{data.pendientes.length === 1 ? '' : 's'} pendiente
+          {data.pendientes.length === 1 ? '' : 's'} de resolver (ver pestaña Análisis).
+        </p>
+      )}
     </div>
   );
 }
