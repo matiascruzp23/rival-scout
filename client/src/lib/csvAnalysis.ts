@@ -239,3 +239,79 @@ export function analyzePhase(matches: Match[], categorias: string[], situacionGr
 export function matchesWithCsvCount(matches: Match[]): number {
   return matches.filter((m) => !!m.csv).length;
 }
+
+// Jugador(es) rival marcados en la fila (columna "Rivales" del CSV, no
+// siempre rellenada por el analista). Se busca por nombre de columna en
+// cada fila en vez de asumir un nombre fijo de match.csv.columns, igual que
+// findEstructuraColumn, porque TaggedRow ya no sabe de qué partido vino.
+function rivalTagsOf(row: Record<string, string>): string[] {
+  for (const col of Object.keys(row)) {
+    if (col.trim().toLowerCase() === 'rivales') {
+      return row[col] ? splitTags(row[col]) : [];
+    }
+  }
+  return [];
+}
+
+export interface RivalSituacionCombo {
+  rival: string;
+  situacion: string;
+  count: number;
+}
+
+const MAX_RIVAL_COMBOS = 10;
+
+// Igual que comboBreakdown, pero dirigido: cuenta cada par (jugador rival,
+// situación) que aparece junto en una fila, en vez de pares simétricos entre
+// etiquetas de un mismo tipo. Filas sin la columna "Rivales" rellenada, o
+// sin ninguna situación marcada, se excluyen.
+function rivalSituacionCombos(
+  rows: TaggedRow[],
+  situacionColumnas: string[]
+): { registrosConRival: number; combos: RivalSituacionCombo[] } {
+  const counts = new Map<string, RivalSituacionCombo>();
+  let registrosConRival = 0;
+  for (const r of rows) {
+    const rivales = rivalTagsOf(r.row);
+    if (rivales.length === 0) continue;
+    const situaciones = new Set<string>();
+    for (const col of situacionColumnas) {
+      const v = r.row[col];
+      if (!v) continue;
+      for (const tag of splitTags(v)) situaciones.add(tag);
+    }
+    if (situaciones.size === 0) continue;
+    registrosConRival += 1;
+    for (const rival of rivales) {
+      for (const situacion of situaciones) {
+        const key = `${rival} + ${situacion}`;
+        if (!counts.has(key)) counts.set(key, { rival, situacion, count: 0 });
+        counts.get(key)!.count += 1;
+      }
+    }
+  }
+  const combos = Array.from(counts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, MAX_RIVAL_COMBOS);
+  return { registrosConRival, combos };
+}
+
+export interface IndividualesBloque {
+  titulo: string;
+  registrosConRival: number;
+  combos: RivalSituacionCombo[];
+}
+
+// Combinaciones más frecuentes de jugador rival + situación, dentro de las
+// categorías indicadas (p. ej. toda la fase ofensiva o toda la defensiva),
+// para la pestaña "Individuales".
+export function analyzeIndividuales(
+  matches: Match[],
+  categorias: string[],
+  situacionColumnas: string[],
+  titulo: string
+): IndividualesBloque {
+  const rows = collectCsvRows(matches, categorias);
+  const { registrosConRival, combos } = rivalSituacionCombos(rows, situacionColumnas);
+  return { titulo, registrosConRival, combos };
+}

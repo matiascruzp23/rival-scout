@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import {
+  analyzeIndividuales,
   analyzePhase,
   DEFENSIVE_CATEGORIES,
   estructuraCambiaPorEstado,
@@ -9,6 +10,7 @@ import {
   OFFENSIVE_CATEGORIES,
   type ComboCount,
   type EstadoResumen,
+  type IndividualesBloque,
   type PhaseAnalysis,
   type StructureBar,
   type TagCount,
@@ -17,7 +19,7 @@ import { lastN, topSistemasFormacion } from '../lib/stats';
 import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
 import { situationDiagramFor } from '../components/SituationDiagrams';
 
-const TABS = ['Fase ofensiva', 'Presión rival', 'Espacios y vulnerabilidades'] as const;
+const TABS = ['Fase ofensiva', 'Presión rival', 'Espacios y vulnerabilidades', 'Individuales'] as const;
 type Tab = (typeof TABS)[number];
 
 const ESTADO_STYLE: Record<EstadoResumen['estado'], { border: string; bg: string; text: string }> = {
@@ -70,6 +72,14 @@ export default function CsvAnalysisPage() {
         { titulo: 'Presión media', columnas: ['Situaciones de presion'], categorias: ['PRESION MEDIA'], soloRepetidos: true },
         { titulo: 'Presión baja', columnas: ['Situaciones de presion'], categorias: ['PRESION BAJA'], soloRepetidos: true },
       ]),
+    [matches]
+  );
+  const circulacionesIndividuales = useMemo(
+    () => analyzeIndividuales(matches, OFFENSIVE_CATEGORIES, ['Situaciones de circulacion'], 'Circulaciones (ofensivo)'),
+    [matches]
+  );
+  const presionesIndividuales = useMemo(
+    () => analyzeIndividuales(matches, DEFENSIVE_CATEGORIES, ['Situaciones de presion'], 'Presiones (defensivo)'),
     [matches]
   );
 
@@ -146,6 +156,9 @@ export default function CsvAnalysisPage() {
               showEvolucion={false}
               situacionDiagram={(tag) => situationDiagramFor(tag)}
             />
+          )}
+          {tab === 'Individuales' && (
+            <IndividualesView circulaciones={circulacionesIndividuales} presiones={presionesIndividuales} />
           )}
         </>
       )}
@@ -246,6 +259,59 @@ function PhaseView({
         </section>
       )}
     </div>
+  );
+}
+
+// Combinaciones más frecuentes de jugador rival + situación (columna
+// "Rivales" del CSV, no siempre rellenada), separadas en ofensivo
+// (circulaciones) y defensivo (presiones).
+function IndividualesView({ circulaciones, presiones }: { circulaciones: IndividualesBloque; presiones: IndividualesBloque }) {
+  if (circulaciones.registrosConRival === 0 && presiones.registrosConRival === 0) {
+    return (
+      <p className="text-sm text-slate-400 py-6">
+        No hay registros con la columna "Rivales" rellenada en los CSV cargados en esta ventana.
+      </p>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <IndividualesCard data={circulaciones} />
+      <IndividualesCard data={presiones} />
+    </div>
+  );
+}
+
+function IndividualesCard({ data }: { data: IndividualesBloque }) {
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-slate-800">{data.titulo}</h3>
+        <span className="text-slate-400 text-sm">{data.registrosConRival} registros con rival</span>
+      </div>
+      {data.combos.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          Sin combinaciones: la columna "Rivales" no viene rellena en estos registros.
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {data.combos.map((c) => (
+            <li
+              key={`${c.rival}+${c.situacion}`}
+              className="flex items-center justify-between gap-2 border border-slate-200 rounded-md px-3 py-2"
+            >
+              <span className="text-sm text-slate-700">
+                <span className="font-medium">{c.rival}</span>
+                <span className="text-slate-400"> · </span>
+                {c.situacion}
+              </span>
+              <span className="badge bg-slate-100 text-slate-600 whitespace-nowrap">
+                {c.count} {c.count === 1 ? 'vez' : 'veces'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
