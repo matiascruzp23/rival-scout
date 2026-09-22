@@ -307,6 +307,11 @@ export interface SituacionGroup {
   // contenido propio (p. ej. "Distancia de salida") que tienen lugar de
   // sobra para mostrarlo dentro de su propia tarjeta.
   desglosePorEstado?: boolean;
+  // Bloque de apoyo (p. ej. "Distancia de salida"): se muestra igual que el
+  // resto, pero queda afuera del párrafo resumen autogenerado — ese texto
+  // está pensado para los patrones de circulación/presión propiamente
+  // tales, no para este dato complementario.
+  soporte?: boolean;
 }
 
 export interface SituacionBloque {
@@ -317,6 +322,7 @@ export interface SituacionBloque {
   // (ordenadas por frecuencia), para ver qué contenidos suelen repetirse en
   // conjunto y no solo cada uno por separado.
   combos: ComboCount[];
+  soporte?: boolean;
 }
 
 export interface PhaseAnalysis {
@@ -347,7 +353,7 @@ export function analyzePhase(matches: Match[], categorias: string[], situacionGr
         soloRepetidos: g.soloRepetidos,
         desglosePorEstado: g.desglosePorEstado,
       });
-      return { titulo: g.titulo, registros, tags, combos };
+      return { titulo: g.titulo, registros, tags, combos, soporte: g.soporte };
     }),
     porEstado: estadoResumen(rows, estructuraColumna, todasLasColumnas),
   };

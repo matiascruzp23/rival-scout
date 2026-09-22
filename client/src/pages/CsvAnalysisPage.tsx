@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
@@ -48,6 +48,7 @@ export default function CsvAnalysisPage() {
   const ofensiva = useMemo(
     () =>
       analyzePhase(matches, OFFENSIVE_CATEGORIES, [
+        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true, soporte: true },
         {
           titulo: 'Circulación media',
           columnas: ['Situaciones de circulacion'],
@@ -60,7 +61,6 @@ export default function CsvAnalysisPage() {
           categorias: ['CIRCULACION ALTA'],
           soloRepetidos: true,
         },
-        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true },
       ]),
     [matches]
   );
@@ -146,6 +146,7 @@ export default function CsvAnalysisPage() {
             <PhaseView
               data={ofensiva}
               estructuraTitle="Estructura de circulación"
+              estructuraAfterIndex={1}
               evolucionTitle="Evolución de la circulación según el resultado"
               estructuraDiagram={(valor) => <BuildUpShapeDiagram valor={valor} />}
               estructuraSituacionCombos={construccionSituacion}
@@ -185,6 +186,7 @@ export default function CsvAnalysisPage() {
 function PhaseView({
   data,
   estructuraTitle,
+  estructuraAfterIndex = 0,
   evolucionTitle,
   showEvolucion = true,
   estructuraDiagram,
@@ -194,6 +196,11 @@ function PhaseView({
 }: {
   data: PhaseAnalysis;
   estructuraTitle?: string;
+  // En cuántos bloques de "situaciones" hay que entrar antes de mostrar la
+  // tarjeta de estructura (0 = primero, como antes; 1 = después del primer
+  // bloque, etc.) — para poder intercalarla en un orden puntual distinto al
+  // de siempre "estructura primero".
+  estructuraAfterIndex?: number;
   evolucionTitle?: string;
   showEvolucion?: boolean;
   estructuraDiagram?: (valorTop: string) => ReactNode;
@@ -215,37 +222,39 @@ function PhaseView({
   // lugar, en vez de repetir el mismo dibujo dos veces.
   const usedDiagramTags = new Set<string>();
 
+  const estructuraSection = showEstructura && (
+    <section className="card p-4">
+      <h3 className="font-semibold text-slate-800 mb-3">{estructuraTitle}</h3>
+      <StructureBarList bars={data.estructura} />
+      {estructuraDiagramEl && <div className="mt-3">{estructuraDiagramEl}</div>}
+      {estructuraSituacionCombos && estructuraSituacionCombos.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1.5">
+            Combinaciones más frecuentes con situaciones
+          </h4>
+          <ul className="space-y-1">
+            {estructuraSituacionCombos.map((c) => (
+              <li key={`${c.construccion}+${c.situacion}`} className="flex justify-between gap-2 text-sm">
+                <span className="text-slate-700">
+                  {c.construccion} + {c.situacion}
+                </span>
+                <span className="badge bg-slate-100 text-slate-600 whitespace-nowrap">
+                  {c.count} {c.count === 1 ? 'vez' : 'veces'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+
   return (
     <div className="space-y-4">
       <div className={`grid grid-cols-1 ${cardCount > 1 ? 'md:grid-cols-2' : ''} gap-4`}>
-        {showEstructura && (
-          <section className="card p-4">
-            <h3 className="font-semibold text-slate-800 mb-3">{estructuraTitle}</h3>
-            <StructureBarList bars={data.estructura} />
-            {estructuraDiagramEl && <div className="mt-3">{estructuraDiagramEl}</div>}
-            {estructuraSituacionCombos && estructuraSituacionCombos.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-slate-100">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1.5">
-                  Combinaciones más frecuentes con situaciones
-                </h4>
-                <ul className="space-y-1">
-                  {estructuraSituacionCombos.map((c) => (
-                    <li key={`${c.construccion}+${c.situacion}`} className="flex justify-between gap-2 text-sm">
-                      <span className="text-slate-700">
-                        {c.construccion} + {c.situacion}
-                      </span>
-                      <span className="badge bg-slate-100 text-slate-600 whitespace-nowrap">
-                        {c.count} {c.count === 1 ? 'vez' : 'veces'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </section>
-        )}
+        {estructuraAfterIndex === 0 && estructuraSection}
 
-        {data.situaciones.map((bloque) => {
+        {data.situaciones.map((bloque, i) => {
           // Cada bloque intenta su propio diagrama (p. ej. circulación media
           // Y alta, no solo el primero); bloques de apoyo como "Distancia de
           // salida" simplemente no tienen escena definida y quedan sin dibujo.
@@ -261,21 +270,24 @@ function PhaseView({
             }
           }
           return (
-            <section key={bloque.titulo} className="card p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-slate-800">{bloque.titulo}</h3>
-                <span className="text-slate-400 text-sm">{bloque.registros} registros</span>
-              </div>
-              <TagCardGrid tags={bloque.tags} />
-              {diagramEls.length > 0 && (
-                <div className={`mt-3 grid gap-3 ${diagramEls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {diagramEls.map((el, i) => (
-                    <div key={i}>{el}</div>
-                  ))}
+            <Fragment key={bloque.titulo}>
+              <section className="card p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-slate-800">{bloque.titulo}</h3>
+                  <span className="text-slate-400 text-sm">{bloque.registros} registros</span>
                 </div>
-              )}
-              <ComboList combos={bloque.combos.slice(0, 3)} />
-            </section>
+                <TagCardGrid tags={bloque.tags} />
+                {diagramEls.length > 0 && (
+                  <div className={`mt-3 grid gap-3 ${diagramEls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    {diagramEls.map((el, i) => (
+                      <div key={i}>{el}</div>
+                    ))}
+                  </div>
+                )}
+                <ComboList combos={bloque.combos.slice(0, 3)} />
+              </section>
+              {estructuraAfterIndex === i + 1 && estructuraSection}
+            </Fragment>
           );
         })}
       </div>

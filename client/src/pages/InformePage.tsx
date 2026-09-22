@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
@@ -128,6 +128,7 @@ export default function InformePage() {
   const ofensiva = useMemo(
     () =>
       analyzePhase(matches, OFFENSIVE_CATEGORIES, [
+        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true, soporte: true },
         {
           titulo: 'Circulación media',
           columnas: ['Situaciones de circulacion'],
@@ -140,7 +141,6 @@ export default function InformePage() {
           categorias: ['CIRCULACION ALTA'],
           soloRepetidos: true,
         },
-        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true },
       ]),
     [matches]
   );
@@ -570,6 +570,7 @@ export default function InformePage() {
               data={ofensiva}
               showEstructura
               estructuraTitle="Estructura de circulación"
+              estructuraAfterIndex={1}
               estructuraDiagram={(valor) => <BuildUpShapeDiagram valor={valor} />}
               estructuraSituacionCombos={construccionSituacion}
               situacionDiagram={(tag) => situationDiagramFor(tag, sistemas[0]?.item ?? null)}
@@ -885,9 +886,10 @@ function construirResumen(data: PhaseAnalysis, showEstructura: boolean, maxBloqu
   }
 
   // Cuántos bloques de situaciones entran al párrafo (p. ej. circulación
-  // media y alta, o presión alta/media/baja): bloques de apoyo como
-  // "Distancia de salida" quedan fuera pasando un maxBloques más chico.
-  for (const bloque of data.situaciones.slice(0, maxBloques)) {
+  // media y alta, o presión alta/media/baja): los bloques de apoyo como
+  // "Distancia de salida" (soporte: true) quedan afuera del párrafo aunque
+  // se muestren igual en la tarjeta, sea cual sea su posición ahí.
+  for (const bloque of data.situaciones.filter((b) => !b.soporte).slice(0, maxBloques)) {
     if (!bloque || bloque.tags.length === 0) continue;
     const top = bloque.tags
       .slice(0, 2)
@@ -919,6 +921,7 @@ function PhaseSummaryCard({
   data,
   showEstructura = false,
   estructuraTitle,
+  estructuraAfterIndex = 0,
   estructuraDiagram,
   estructuraSituacionCombos,
   situacionDiagram,
@@ -929,6 +932,9 @@ function PhaseSummaryCard({
   data: PhaseAnalysis;
   showEstructura?: boolean;
   estructuraTitle?: string;
+  // En cuántos bloques de "situaciones" hay que entrar antes de mostrar el
+  // bloque de estructura (0 = primero, como antes).
+  estructuraAfterIndex?: number;
   estructuraDiagram?: (valorTop: string) => ReactNode;
   estructuraSituacionCombos?: ConstruccionSituacionCombo[];
   situacionDiagram?: (tag: string) => ReactNode;
@@ -977,7 +983,7 @@ function PhaseSummaryCard({
           situaciones se acomodan lado a lado en vez de apilarse uno abajo
           del otro, aprovechando ese ancho en vez de dejarlo vacío. */}
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        {estructuraDiagramEl && (
+        {estructuraAfterIndex === 0 && estructuraDiagramEl && (
           <div>
             {estructuraTitle && (
               <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">{estructuraTitle}</p>
@@ -985,7 +991,7 @@ function PhaseSummaryCard({
             <DiagramFigure caption={estructuraTop!.valor} el={estructuraDiagramEl} />
           </div>
         )}
-        {data.situaciones.map((bloque) => {
+        {data.situaciones.map((bloque, i) => {
           // Cada bloque intenta su propio diagrama (p. ej. circulación media
           // Y alta, no solo el primero); bloques de apoyo como "Distancia de
           // salida" simplemente no tienen escena definida y quedan sin dibujo.
@@ -1001,36 +1007,48 @@ function PhaseSummaryCard({
             }
           }
           return (
-            <div key={bloque.titulo}>
-              {data.situaciones.length > 1 && (
-                <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">{bloque.titulo}</p>
-              )}
-              <ul className="text-xs text-slate-600 space-y-1">
-                {bloque.tags.slice(0, 5).map((t) => (
-                  <li key={t.tag}>
-                    <div>
-                      {t.tag} ({t.count})
-                    </div>
-                    {t.porEstado && t.porEstado.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-0.5 mb-1">
-                        {t.porEstado.map((e) => (
-                          <span
-                            key={e.estado}
-                            className={`text-[10px] rounded-full px-1.5 py-0 border ${ESTADO_BADGE_CLASS[e.estado]}`}
-                          >
-                            {e.estado}: {e.count}
-                          </span>
-                        ))}
+            <Fragment key={bloque.titulo}>
+              <div>
+                {data.situaciones.length > 1 && (
+                  <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">{bloque.titulo}</p>
+                )}
+                <ul className="text-xs text-slate-600 space-y-1">
+                  {bloque.tags.slice(0, 5).map((t) => (
+                    <li key={t.tag}>
+                      <div>
+                        {t.tag} ({t.count})
                       </div>
-                    )}
-                  </li>
+                      {t.porEstado && t.porEstado.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-0.5 mb-1">
+                          {t.porEstado.map((e) => (
+                            <span
+                              key={e.estado}
+                              className={`text-[10px] rounded-full px-1.5 py-0 border ${ESTADO_BADGE_CLASS[e.estado]}`}
+                            >
+                              {e.estado}: {e.count}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                  {bloque.tags.length === 0 && <li className="text-slate-400">Sin registros.</li>}
+                </ul>
+                {diagramEntries.map((d) => (
+                  <DiagramFigure key={d.tag} caption={d.tag} el={d.el} wide />
                 ))}
-                {bloque.tags.length === 0 && <li className="text-slate-400">Sin registros.</li>}
-              </ul>
-              {diagramEntries.map((d) => (
-                <DiagramFigure key={d.tag} caption={d.tag} el={d.el} wide />
-              ))}
-            </div>
+              </div>
+              {estructuraAfterIndex === i + 1 && estructuraDiagramEl && (
+                <div>
+                  {estructuraTitle && (
+                    <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">
+                      {estructuraTitle}
+                    </p>
+                  )}
+                  <DiagramFigure caption={estructuraTop!.valor} el={estructuraDiagramEl} />
+                </div>
+              )}
+            </Fragment>
           );
         })}
       </div>
