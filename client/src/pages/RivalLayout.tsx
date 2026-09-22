@@ -13,6 +13,7 @@ const tabs = [
   { to: '', label: 'Dashboard', end: true },
   { to: 'jugadores', label: 'Jugadores' },
   { to: 'partidos', label: 'Partidos' },
+  { to: 'en-vivo', label: 'En Vivo' },
   { to: 'xi-rotaciones', label: 'XI y Rotaciones' },
   { to: 'sustituciones', label: 'Sustituciones' },
   { to: 'analisis-csv', label: 'Análisis' },

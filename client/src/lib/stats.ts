@@ -413,6 +413,59 @@ export function minutoPromedioPorEstado(matches: Match[], estado: GameState): nu
   return subs.reduce((sum, s) => sum + s.sub.minuto, 0) / subs.length;
 }
 
+// Igual que topSistemasResultantes, pero solo con los cambios de sistema que
+// ocurrieron estando en ese estado de partido puntual (Ganando/Empatando/
+// Perdiendo) — para "En Vivo", donde interesa a qué sistema suele pasar el
+// rival cuando va perdiendo, no en general.
+export function topSistemasResultantesByState(matches: Match[], estado: GameState): Counted<string>[] {
+  const subs = substitutionsWithState(matches).filter((s) => s.estado === estado && !!s.sub.sistemaResultante);
+  return countBy(subs, (s) => s.sub.sistemaResultante || s.sub.descripcion || null);
+}
+
+// Ventana, en minutos, dentro de la cual se considera que una sustitución
+// "responde" a una tarjeta amarilla previa del mismo jugador (más allá de
+// eso, ya no se puede atribuir la salida a la tarjeta con confianza).
+const VENTANA_CAMBIO_TRAS_TARJETA = 20;
+
+export interface CambioTrasTarjetaStat {
+  totalTarjetas: number;
+  seguidasDeCambio: number;
+  pct: number;
+  minutoPromedioCambio: number | null;
+}
+
+// De todas las tarjetas amarillas registradas, en qué porcentaje el propio
+// jugador amonestado terminó saliendo dentro de los siguientes N minutos, y
+// cuánto tardó en promedio — para "En Vivo": una alerta de "ojo, suelen
+// sacarlo pronto" cuando se carga una amarilla en el partido en curso.
+export function cambioTrasTarjeta(matches: Match[]): CambioTrasTarjetaStat {
+  let total = 0;
+  let seguidas = 0;
+  const demoras: number[] = [];
+  for (const match of matches) {
+    for (const ev of match.events || []) {
+      if (ev.tipo !== 'amarilla' || !ev.jugadorId) continue;
+      total += 1;
+      const salida = match.substitutions.find(
+        (s) =>
+          s.jugadorSaleId === ev.jugadorId &&
+          s.minuto >= ev.minuto &&
+          s.minuto - ev.minuto <= VENTANA_CAMBIO_TRAS_TARJETA
+      );
+      if (salida) {
+        seguidas += 1;
+        demoras.push(salida.minuto - ev.minuto);
+      }
+    }
+  }
+  return {
+    totalTarjetas: total,
+    seguidasDeCambio: seguidas,
+    pct: total > 0 ? Math.round((seguidas / total) * 100) : 0,
+    minutoPromedioCambio: demoras.length > 0 ? demoras.reduce((s, d) => s + d, 0) / demoras.length : null,
+  };
+}
+
 export function topSistemasFormacion(matches: Match[]): Counted<string>[] {
   return countBy(matches, (m) => m.sistema || null);
 }

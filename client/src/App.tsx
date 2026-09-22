@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import PlayersPage from './pages/PlayersPage';
 import MatchesPage from './pages/MatchesPage';
 import MatchDetailPage from './pages/MatchDetailPage';
+import EnVivoPage from './pages/EnVivoPage';
 import LineupsPage from './pages/LineupsPage';
 import SubstitutionsPage from './pages/SubstitutionsPage';
 import CsvAnalysisPage from './pages/CsvAnalysisPage';
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="jugadores" element={<PlayersPage />} />
             <Route path="partidos" element={<MatchesPage />} />
             <Route path="partidos/:matchId" element={<MatchDetailPage />} />
+            <Route path="en-vivo" element={<EnVivoPage />} />
             <Route path="xi-rotaciones" element={<LineupsPage />} />
             <Route path="sustituciones" element={<SubstitutionsPage />} />
             <Route path="analisis-csv" element={<CsvAnalysisPage />} />

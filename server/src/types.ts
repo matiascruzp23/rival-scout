@@ -100,6 +100,7 @@ export interface Match {
   notas?: string;
   // Nota táctica libre sobre este partido puntual (ajustes, lectura del DT).
   notaTactica?: string;
+  enVivo: boolean;
   createdAt: string;
   updatedAt: string;
 }

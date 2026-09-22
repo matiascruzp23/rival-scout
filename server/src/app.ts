@@ -194,6 +194,7 @@ function toMatch(row: any, children: MatchChildren): Match {
     csv: children.csv,
     notas: row.notas || '',
     notaTactica: row.nota_tactica || '',
+    enVivo: !!row.en_vivo,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -612,6 +613,7 @@ app.post('/api/rivals/:rivalId/matches', async (req, res) => {
     jornada: b.jornada?.trim() || '',
     notas: b.notas || '',
     nota_tactica: b.notaTactica || '',
+    en_vivo: !!b.enVivo,
     created_at: now(),
     updated_at: now(),
   };
@@ -653,6 +655,7 @@ app.put('/api/matches/:id', async (req, res) => {
   if (b.jornada !== undefined) patch.jornada = b.jornada.trim();
   if (b.notas !== undefined) patch.notas = b.notas;
   if (b.notaTactica !== undefined) patch.nota_tactica = b.notaTactica;
+  if (b.enVivo !== undefined) patch.en_vivo = b.enVivo;
 
   const { error } = await supabase.from('matches').update(patch).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });

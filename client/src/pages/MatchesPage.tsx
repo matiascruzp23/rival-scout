@@ -78,7 +78,10 @@ export default function MatchesPage() {
               const bajasPorLesionOSuspension = m.bajas.filter((b) => b.tipo === 'lesion' || b.tipo === 'suspension');
               return (
                 <tr key={m.id} className="cursor-pointer" onClick={() => navigate(`/rivales/${rival.id}/partidos/${m.id}`)}>
-                  <td className="whitespace-nowrap">{m.fecha}</td>
+                  <td className="whitespace-nowrap">
+                    {m.fecha}
+                    {m.enVivo && <span className="badge bg-red-100 text-red-700 ml-1.5">EN VIVO</span>}
+                  </td>
                   <td>{m.oponente || '—'}</td>
                   <td>{m.condicion}</td>
                   <td>{m.competencia || '—'}</td>

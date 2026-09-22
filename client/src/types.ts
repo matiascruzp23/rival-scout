@@ -135,6 +135,10 @@ export interface Match {
   notas?: string;
   // Nota táctica libre sobre este partido puntual (ajustes, lectura del DT).
   notaTactica?: string;
+  // Partido que se está cargando en vivo (ver pestaña "En Vivo"): mientras
+  // es true, queda excluido de las estadísticas agregadas del rival y la app
+  // redirige a la pantalla de carga en vivo en vez de a la ficha normal.
+  enVivo: boolean;
   createdAt: string;
   updatedAt: string;
 }

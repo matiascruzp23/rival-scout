@@ -79,6 +79,11 @@ create table if not exists matches (
   jornada text,
   notas text,
   nota_tactica text,
+  -- Partido en curso de carga en vivo (ver "En Vivo"): mientras es true, se
+  -- excluye de las estadísticas agregadas del rival (goles_favor/contra
+  -- quedan en null hasta finalizar) y la app redirige a la pantalla de
+  -- carga en vivo en vez de a la ficha normal del partido.
+  en_vivo boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
