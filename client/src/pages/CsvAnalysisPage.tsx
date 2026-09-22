@@ -75,11 +75,11 @@ export default function CsvAnalysisPage() {
     [matches]
   );
   const circulacionesIndividuales = useMemo(
-    () => analyzeIndividuales(matches, OFFENSIVE_CATEGORIES, ['Situaciones de circulacion'], 'Circulaciones (ofensivo)'),
+    () => analyzeIndividuales(matches, OFFENSIVE_CATEGORIES, ['Situaciones de circulacion'], 'Comportamientos ofensivos'),
     [matches]
   );
   const presionesIndividuales = useMemo(
-    () => analyzeIndividuales(matches, DEFENSIVE_CATEGORIES, ['Situaciones de presion'], 'Presiones (defensivo)'),
+    () => analyzeIndividuales(matches, DEFENSIVE_CATEGORIES, ['Situaciones de presion'], 'Comportamientos defensivos'),
     [matches]
   );
 
