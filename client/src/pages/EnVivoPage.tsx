@@ -9,8 +9,10 @@ import {
   combosPrediccion,
   topSistemasResultantesByState,
   cambioTrasTarjeta,
+  sustitutosHistoricosDe,
   type GameState,
   type ComboPrediccion,
+  type Counted,
 } from '../lib/stats';
 import { onFieldBefore } from '../lib/pitchLayout';
 import { analyzePhase, OFFENSIVE_CATEGORIES, DEFENSIVE_CATEGORIES, type EstadoResumen } from '../lib/csvAnalysis';
@@ -240,6 +242,25 @@ function PartidoEnVivo({
   );
   const posicionActual = (playerId: string) => currentLayout.find((l) => l.playerId === playerId)?.posicion || '';
 
+  // Jugadores marcados con problemas físicos durante el partido (solo en
+  // pantalla, no se guarda en el partido): sirve para preguntar "¿quién
+  // suele reemplazarlo?" antes de que el cambio táctico normal lo sugiera.
+  // Se limpia solo a quien ya salió de la cancha (marca obsoleta).
+  const [lesionados, setLesionados] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setLesionados((prev) => {
+      const next = new Set([...prev].filter((id) => enCanchaIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [enCanchaIds]);
+  const marcarLesionado = (playerId: string) => setLesionados((prev) => new Set(prev).add(playerId));
+  const quitarLesionado = (playerId: string) =>
+    setLesionados((prev) => {
+      const next = new Set(prev);
+      next.delete(playerId);
+      return next;
+    });
+
   // Citados a este partido (XI, banca, o entraron de cambio): son los únicos
   // que tiene sentido poder marcar en un gol o tarjeta.
   const citados = useMemo(() => {
@@ -286,6 +307,21 @@ function PartidoEnVivo({
         )
         .slice(0, 3),
     [combosTodos, enCanchaIds, bancaDisponibleIds, yaParticipoEnCambio]
+  );
+
+  // Para cada jugador marcado con problemas físicos, quién lo ha
+  // reemplazado antes (sin filtrar por estado del partido: una lesión no
+  // depende de si el rival va ganando o perdiendo), solo entre quienes
+  // están disponibles en la banca de hoy.
+  const sugerenciasLesion = useMemo(
+    () =>
+      [...lesionados].map((jugadorId) => ({
+        jugadorId,
+        sugerencias: sustitutosHistoricosDe(historial, jugadorId)
+          .filter((c) => bancaDisponibleIds.has(c.item))
+          .slice(0, 3),
+      })),
+    [lesionados, historial, bancaDisponibleIds]
   );
   // Un "cambio" de sistema no puede sugerir el mismo sistema con el que ya
   // están jugando ahora mismo.
@@ -418,6 +454,10 @@ function PartidoEnVivo({
         players={players}
       />
 
+      {sugerenciasLesion.length > 0 && (
+        <LesionadosPanel sugerencias={sugerenciasLesion} players={players} onQuitar={quitarLesionado} isViewer={isViewer} />
+      )}
+
       {!isViewer && (
         <QuickActions
           minutoActual={minutoActual}
@@ -427,6 +467,8 @@ function PartidoEnVivo({
           posicionActual={posicionActual}
           guardarRapido={guardarRapido}
           players={players}
+          lesionados={lesionados}
+          marcarLesionado={marcarLesionado}
         />
       )}
 
@@ -518,7 +560,7 @@ function PartidoEnVivo({
   );
 }
 
-type QuickAction = 'gol_favor' | 'gol_contra' | 'amarilla' | 'roja' | 'cambio' | null;
+type QuickAction = 'gol_favor' | 'gol_contra' | 'amarilla' | 'roja' | 'cambio' | 'lesion' | null;
 
 function QuickActions({
   minutoActual,
@@ -528,6 +570,8 @@ function QuickActions({
   posicionActual,
   guardarRapido,
   players,
+  lesionados,
+  marcarLesionado,
 }: {
   minutoActual: number;
   localMatch: Match;
@@ -536,6 +580,8 @@ function QuickActions({
   posicionActual: (playerId: string) => string;
   guardarRapido: (patch: Partial<Match>) => Promise<void>;
   players: Player[];
+  lesionados: Set<string>;
+  marcarLesionado: (playerId: string) => void;
 }) {
   const [accion, setAccion] = useState<QuickAction>(null);
   const [jugadorId, setJugadorId] = useState('');
@@ -602,6 +648,9 @@ function QuickActions({
         <button className="btn-secondary" onClick={() => abrir('cambio')}>
           🔄 Cambio
         </button>
+        <button className="btn-secondary" onClick={() => abrir('lesion')}>
+          🩹 Problema físico
+        </button>
       </div>
 
       {accion && (
@@ -663,6 +712,36 @@ function QuickActions({
                 </button>
               </div>
             </div>
+          ) : accion === 'lesion' ? (
+            <div className="space-y-2">
+              <label className="label">¿Quién tiene problemas físicos?</label>
+              <select className="input" value={jugadorId} onChange={(e) => setJugadorId(e.target.value)}>
+                <option value="">Seleccionar…</option>
+                {enCancha
+                  .filter((p) => !lesionados.has(p.id))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.dorsal ? `#${p.dorsal} ` : ''}
+                      {p.nombre}
+                    </option>
+                  ))}
+              </select>
+              <div className="flex justify-end gap-2">
+                <button className="btn-secondary" onClick={cancelar}>
+                  Cancelar
+                </button>
+                <button
+                  className="btn-primary"
+                  disabled={!jugadorId}
+                  onClick={() => {
+                    marcarLesionado(jugadorId);
+                    setAccion(null);
+                  }}
+                >
+                  Marcar
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="space-y-2">
               <label className="label">Jugador</label>
@@ -679,7 +758,11 @@ function QuickActions({
                 <button className="btn-secondary" onClick={cancelar}>
                   Cancelar
                 </button>
-                <button className="btn-primary" disabled={saving || !jugadorId} onClick={() => confirmarEvento(accion)}>
+                <button
+                  className="btn-primary"
+                  disabled={saving || !jugadorId}
+                  onClick={() => confirmarEvento(accion as MatchEventType)}
+                >
                   Confirmar
                 </button>
               </div>
@@ -716,6 +799,45 @@ function RegistroCompacto({ localMatch, players }: { localMatch: Match; players:
           <li key={i} className="flex gap-2">
             <span className="text-slate-400 w-8 shrink-0">{it.minuto}'</span>
             <span>{it.texto}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function LesionadosPanel({
+  sugerencias,
+  players,
+  onQuitar,
+  isViewer,
+}: {
+  sugerencias: { jugadorId: string; sugerencias: Counted<string>[] }[];
+  players: Player[];
+  onQuitar: (playerId: string) => void;
+  isViewer: boolean;
+}) {
+  return (
+    <section className="card p-3 bg-amber-50/60 border-amber-200">
+      <h3 className="text-xs font-semibold text-amber-700 uppercase mb-2">🩹 Con problemas físicos</h3>
+      <ul className="space-y-2">
+        {sugerencias.map(({ jugadorId, sugerencias: subs }) => (
+          <li key={jugadorId} className="text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-slate-800">{playerName(players, jugadorId)}</span>
+              {!isViewer && (
+                <button className="text-xs text-slate-500 hover:underline" onClick={() => onQuitar(jugadorId)}>
+                  Quitar
+                </button>
+              )}
+            </div>
+            {subs.length === 0 ? (
+              <p className="text-xs text-slate-400">Sin datos históricos de quién lo reemplaza.</p>
+            ) : (
+              <p className="text-xs text-slate-600">
+                Posible entra: {subs.map((s) => `${playerName(players, s.item)} (${s.count})`).join(' · ')}
+              </p>
+            )}
           </li>
         ))}
       </ul>

@@ -250,6 +250,17 @@ export function topSalientes(matches: Match[]): Counted<string>[] {
   return countBy(allSubstitutions(matches), (x) => x.sub.jugadorSaleId);
 }
 
+// Quién ha reemplazado a un jugador puntual, sin importar el estado del
+// partido (una lesión no depende de si el equipo va ganando o perdiendo,
+// a diferencia de una sustitución táctica) — para "En Vivo", al marcar a
+// alguien con problemas físicos.
+export function sustitutosHistoricosDe(matches: Match[], jugadorId: string): Counted<string>[] {
+  return countBy(
+    allSubstitutions(matches).filter((x) => x.sub.jugadorSaleId === jugadorId),
+    (x) => x.sub.jugadorEntraId
+  );
+}
+
 export interface RevulsivoStat extends Counted<string> {
   minutoPromedio: number;
 }
