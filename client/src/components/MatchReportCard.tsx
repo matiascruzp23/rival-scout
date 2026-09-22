@@ -104,7 +104,7 @@ export function MatchReportCard({ match, players }: { match: Match; players: Pla
       )}
 
       {subsOrdenadas.length > 0 && (
-        <div className="mt-2">
+        <div className="mt-2" style={{ breakInside: 'avoid' }}>
           <h5 className="text-[11px] font-semibold text-slate-500 uppercase mb-1">Sustituciones</h5>
           {/* Con muchos cambios, se reparten en 2 columnas (como un diario) en
               vez de seguir estirando la tarjeta hacia abajo hasta que se corte
@@ -124,7 +124,7 @@ export function MatchReportCard({ match, players }: { match: Match; players: Pla
       )}
 
       {eventosOrdenados.length > 0 && (
-        <div className="mt-2">
+        <div className="mt-2" style={{ breakInside: 'avoid' }}>
           <h5 className="text-[11px] font-semibold text-slate-500 uppercase mb-1">Goles y tarjetas</h5>
           <ul
             className="text-xs text-slate-600 space-y-0.5"

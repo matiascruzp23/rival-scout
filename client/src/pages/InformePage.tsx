@@ -46,6 +46,7 @@ import { situationDiagramFor } from '../components/SituationDiagrams';
 import { RotationCard } from '../components/RotationCard';
 import { MatchReportCard, outcomeRowClass, outcomeTextClass } from '../components/MatchReportCard';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
+import type { GameStateLabel } from '../lib/csvAnalysis';
 import {
   defaultCoordsFor,
   positionOrderIndex,
@@ -139,7 +140,7 @@ export default function InformePage() {
           categorias: ['CIRCULACION ALTA'],
           soloRepetidos: true,
         },
-        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'] },
+        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true },
       ]),
     [matches]
   );
@@ -196,53 +197,53 @@ export default function InformePage() {
 
       <Portada rival={rival} gep={recordGEP(matches)} onSaved={reload} />
 
-      <div className="informe-section mb-6">
+      <div className="mb-6">
         <PlantelView
           players={rival.players}
           sistemaPrincipal={rival.sistemaPrincipal || ''}
           sistemaAlternativo={rival.sistemaAlternativo || ''}
         />
-
-        <section className="card p-4 mt-4">
-          <h3 className="font-semibold text-slate-800 mb-3">Últimos {matches.length} resultados</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Oponente</th>
-                <th>Cond.</th>
-                <th>Competencia</th>
-                <th>Resultado</th>
-                <th>Sistema</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allMatches.slice(0, 10).map((m) => (
-                <tr key={m.id} className={outcomeRowClass(m)}>
-                  <td className="whitespace-nowrap">{m.fecha}</td>
-                  <td>{m.oponente || '—'}</td>
-                  <td>{m.condicion}</td>
-                  <td>{[m.competencia, m.jornada].filter(Boolean).join(' · ') || '—'}</td>
-                  <td className={outcomeTextClass(m)}>
-                    {m.golesFavor ?? '-'} - {m.golesContra ?? '-'}
-                  </td>
-                  <td>
-                    {m.sistema || '—'}
-                    {m.sistemaOponente ? ` vs ${m.sistemaOponente}` : ''}
-                  </td>
-                </tr>
-              ))}
-              {allMatches.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center text-slate-400 py-4">
-                    Sin partidos registrados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </section>
       </div>
+
+      <section className="informe-section card p-4 mb-6">
+        <h3 className="font-semibold text-slate-800 mb-3">Últimos {matches.length} resultados</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Oponente</th>
+              <th>Cond.</th>
+              <th>Competencia</th>
+              <th>Resultado</th>
+              <th>Sistema</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allMatches.slice(0, 10).map((m) => (
+              <tr key={m.id} className={outcomeRowClass(m)}>
+                <td className="whitespace-nowrap">{m.fecha}</td>
+                <td>{m.oponente || '—'}</td>
+                <td>{m.condicion}</td>
+                <td>{[m.competencia, m.jornada].filter(Boolean).join(' · ') || '—'}</td>
+                <td className={outcomeTextClass(m)}>
+                  {m.golesFavor ?? '-'} - {m.golesContra ?? '-'}
+                </td>
+                <td>
+                  {m.sistema || '—'}
+                  {m.sistemaOponente ? ` vs ${m.sistemaOponente}` : ''}
+                </td>
+              </tr>
+            ))}
+            {allMatches.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center text-slate-400 py-4">
+                  Sin partidos registrados.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
 
       <section className="informe-section card p-4 mb-6">
         <h3 className="font-semibold text-slate-800 mb-3">Balance general</h3>
@@ -352,33 +353,6 @@ export default function InformePage() {
       </section>
 
       <section className="informe-section informe-page card p-4 mb-6">
-        <h3 className="font-semibold text-slate-800 mb-3">Sistema más utilizado</h3>
-        {sistemas.length === 0 ? (
-          <p className="text-sm text-slate-400 mb-3">Sin datos.</p>
-        ) : (
-          <table className="mb-3">
-            <thead>
-              <tr>
-                <th>Sistema</th>
-                <th>Partidos</th>
-                <th>V-E-P</th>
-                <th>Rendimiento</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sistemas.map((s, i) => (
-                <tr key={i}>
-                  <td>{s.item}</td>
-                  <td>{s.count}</td>
-                  <td>
-                    {s.ganados}-{s.empatados}-{s.perdidos}
-                  </td>
-                  <td>{s.rendimiento !== null ? `${s.rendimiento}%` : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
         <h3 className="font-semibold text-slate-800 mb-3">XI estimado para el próximo partido</h3>
         {xiEstimate.picks.length === 0 ? (
           <p className="text-sm text-slate-400">Sin datos suficientes.</p>
@@ -414,6 +388,36 @@ export default function InformePage() {
             )}
           </>
         )}
+
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <h3 className="font-semibold text-slate-800 mb-3">Sistema más utilizado</h3>
+          {sistemas.length === 0 ? (
+            <p className="text-sm text-slate-400">Sin datos.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Sistema</th>
+                  <th>Partidos</th>
+                  <th>V-E-P</th>
+                  <th>Rendimiento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sistemas.map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.item}</td>
+                    <td>{s.count}</td>
+                    <td>
+                      {s.ganados}-{s.empatados}-{s.perdidos}
+                    </td>
+                    <td>{s.rendimiento !== null ? `${s.rendimiento}%` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </section>
 
       <section className="informe-section mb-6">
@@ -429,8 +433,11 @@ export default function InformePage() {
         )}
       </section>
 
-      <section className="informe-section mb-6">
-        <h3 className="font-semibold text-slate-800 mb-3">Partidos analizados</h3>
+      <div className="informe-title-page">
+        <h3 className="font-semibold text-slate-800">Partidos analizados</h3>
+      </div>
+
+      <section className="informe-section informe-page mb-6">
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
           {allMatches.map((m) => (
             <div key={m.id} className="informe-section">
@@ -562,6 +569,7 @@ export default function InformePage() {
               title="Fase ofensiva"
               data={ofensiva}
               showEstructura
+              estructuraTitle="Estructura de circulación"
               estructuraDiagram={(valor) => <BuildUpShapeDiagram valor={valor} />}
               estructuraSituacionCombos={construccionSituacion}
               situacionDiagram={(tag) => situationDiagramFor(tag, sistemas[0]?.item ?? null)}
@@ -570,6 +578,7 @@ export default function InformePage() {
               title="Presión rival"
               data={presionEstructura}
               showEstructura
+              estructuraTitle="Dibujo táctico en presión"
               estructuraDiagram={(valor) => <FormationLinesDiagram valor={valor} />}
               situacionDiagram={(tag) => <PressingTriggerDiagram tag={tag} />}
             />
@@ -897,10 +906,19 @@ function construirResumen(data: PhaseAnalysis, showEstructura: boolean, maxBloqu
   return frases.length > 0 ? frases.join(' ') : null;
 }
 
+// Mismos colores que las filas "Ganando/Empatando/Perdiendo" del resto de la
+// app, para el desglose por resultado dentro de cada tarjeta de tag.
+const ESTADO_BADGE_CLASS: Record<GameStateLabel, string> = {
+  Ganando: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  Empatando: 'border-amber-200 bg-amber-50 text-amber-700',
+  Perdiendo: 'border-red-200 bg-red-50 text-red-700',
+};
+
 function PhaseSummaryCard({
   title,
   data,
   showEstructura = false,
+  estructuraTitle,
   estructuraDiagram,
   estructuraSituacionCombos,
   situacionDiagram,
@@ -910,6 +928,7 @@ function PhaseSummaryCard({
   title: string;
   data: PhaseAnalysis;
   showEstructura?: boolean;
+  estructuraTitle?: string;
   estructuraDiagram?: (valorTop: string) => ReactNode;
   estructuraSituacionCombos?: ConstruccionSituacionCombo[];
   situacionDiagram?: (tag: string) => ReactNode;
@@ -960,6 +979,9 @@ function PhaseSummaryCard({
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         {estructuraDiagramEl && (
           <div>
+            {estructuraTitle && (
+              <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">{estructuraTitle}</p>
+            )}
             <DiagramFigure caption={estructuraTop!.valor} el={estructuraDiagramEl} />
           </div>
         )}
@@ -981,12 +1003,26 @@ function PhaseSummaryCard({
           return (
             <div key={bloque.titulo}>
               {data.situaciones.length > 1 && (
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{bloque.titulo}</p>
+                <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">{bloque.titulo}</p>
               )}
               <ul className="text-xs text-slate-600 space-y-1">
                 {bloque.tags.slice(0, 5).map((t) => (
                   <li key={t.tag}>
-                    {t.tag} ({t.count})
+                    <div>
+                      {t.tag} ({t.count})
+                    </div>
+                    {t.porEstado && t.porEstado.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-0.5 mb-1">
+                        {t.porEstado.map((e) => (
+                          <span
+                            key={e.estado}
+                            className={`text-[10px] rounded-full px-1.5 py-0 border ${ESTADO_BADGE_CLASS[e.estado]}`}
+                          >
+                            {e.estado}: {e.count}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </li>
                 ))}
                 {bloque.tags.length === 0 && <li className="text-slate-400">Sin registros.</li>}

@@ -116,4 +116,21 @@ tr:hover td {
   .informe-cover {
     break-after: page;
   }
+  /* Título "puente" entre dos bloques que no caben juntos en una página
+     (p. ej. "Partidos analizados" antes de la grilla de tarjetas, que
+     ocupa varias páginas): en vez de quedar como un título chico y suelto
+     arriba de una hoja casi en blanco, se lo trata como una página propia
+     centrada — misma altura de contenido que deja @page (210mm - 12mm de
+     margen arriba y abajo). */
+  .informe-title-page {
+    break-before: page;
+    break-after: page;
+    height: 186mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .informe-title-page h3 {
+    font-size: 40px;
+  }
 }
