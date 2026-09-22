@@ -6,11 +6,13 @@ import { useIsViewer } from '../lib/authContext';
 import {
   analyzeIndividuales,
   analyzePhase,
+  construccionSituacionCombos,
   DEFENSIVE_CATEGORIES,
   estructuraCambiaPorEstado,
   matchesWithCsvCount,
   OFFENSIVE_CATEGORIES,
   type ComboCount,
+  type ConstruccionSituacionCombo,
   type EstadoResumen,
   type IndividualesBloque,
   type PendienteResolucion,
@@ -60,6 +62,10 @@ export default function CsvAnalysisPage() {
         },
         { titulo: 'Distancia de salida', columnas: ['Distancia de salida'] },
       ]),
+    [matches]
+  );
+  const construccionSituacion = useMemo(
+    () => construccionSituacionCombos(matches, OFFENSIVE_CATEGORIES, ['Situaciones de circulacion']),
     [matches]
   );
   const presionEstructura = useMemo(
@@ -142,6 +148,7 @@ export default function CsvAnalysisPage() {
               estructuraTitle="Estructura de circulación"
               evolucionTitle="Evolución de la circulación según el resultado"
               estructuraDiagram={(valor) => <BuildUpShapeDiagram valor={valor} />}
+              estructuraSituacionCombos={construccionSituacion}
               situacionDiagram={(tag) => situationDiagramFor(tag, sistemaDominante)}
             />
           )}
@@ -181,6 +188,7 @@ function PhaseView({
   evolucionTitle,
   showEvolucion = true,
   estructuraDiagram,
+  estructuraSituacionCombos,
   situacionDiagram,
   situacionDiagramCount = 1,
 }: {
@@ -189,6 +197,7 @@ function PhaseView({
   evolucionTitle?: string;
   showEvolucion?: boolean;
   estructuraDiagram?: (valorTop: string) => ReactNode;
+  estructuraSituacionCombos?: ConstruccionSituacionCombo[];
   situacionDiagram?: (tag: string) => ReactNode;
   situacionDiagramCount?: number;
 }) {
@@ -214,6 +223,25 @@ function PhaseView({
             <h3 className="font-semibold text-slate-800 mb-3">{estructuraTitle}</h3>
             <StructureBarList bars={data.estructura} />
             {estructuraDiagramEl && <div className="mt-3">{estructuraDiagramEl}</div>}
+            {estructuraSituacionCombos && estructuraSituacionCombos.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1.5">
+                  Combinaciones más frecuentes con situaciones
+                </h4>
+                <ul className="space-y-1">
+                  {estructuraSituacionCombos.map((c) => (
+                    <li key={`${c.construccion}+${c.situacion}`} className="flex justify-between gap-2 text-sm">
+                      <span className="text-slate-700">
+                        {c.construccion} + {c.situacion}
+                      </span>
+                      <span className="badge bg-slate-100 text-slate-600 whitespace-nowrap">
+                        {c.count} {c.count === 1 ? 'vez' : 'veces'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
 

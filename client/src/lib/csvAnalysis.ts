@@ -65,6 +65,7 @@ const LINEA_DE_3_VALORES = [
   'Linea de 3 con contencion',
   'Linea de 3 externa con contencion',
 ];
+const LINEA_DE_3_LABEL = 'Línea de 3 (lateral, interno o contención)';
 
 function fusionarValores(counts: Map<string, number>, valores: string[], etiquetaFusion: string): void {
   let total = 0;
@@ -90,10 +91,57 @@ function structureBreakdown(rows: TaggedRow[], columna: string | null): Structur
     total += 1;
   }
   fusionarAlias(counts, 'Presionan en 4-3-1-2', 'Presionan en 4-1-3-2');
-  fusionarValores(counts, LINEA_DE_3_VALORES, 'Línea de 3 (lateral, interno o contención)');
+  fusionarValores(counts, LINEA_DE_3_VALORES, LINEA_DE_3_LABEL);
   return Array.from(counts.entries())
     .map(([valor, count]) => ({ valor, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 }))
     .sort((a, b) => b.count - a.count);
+}
+
+function canonicalizeConstruccion(valor: string): string {
+  return LINEA_DE_3_VALORES.includes(valor) ? LINEA_DE_3_LABEL : valor;
+}
+
+export interface ConstruccionSituacionCombo {
+  construccion: string;
+  situacion: string;
+  count: number;
+}
+
+// Combinaciones más frecuentes de construcción (Estructura de circulación) +
+// situación de circulación marcadas en la misma fila, solo las que se
+// repiten más de una vez (una sola coincidencia no es un patrón).
+export function construccionSituacionCombos(
+  matches: Match[],
+  categorias: string[],
+  situacionColumnas: string[]
+): ConstruccionSituacionCombo[] {
+  const rows = collectCsvRows(matches, categorias);
+  const estructuraColumna = findEstructuraColumn(rows);
+  if (!estructuraColumna) return [];
+
+  const counts = new Map<string, ConstruccionSituacionCombo>();
+  for (const r of rows) {
+    const raw = r.row[estructuraColumna];
+    if (!raw) continue;
+    const construccion = canonicalizeConstruccion(raw);
+    const situaciones = new Set<string>();
+    for (const col of situacionColumnas) {
+      const v = r.row[col];
+      if (!v) continue;
+      for (const tag of splitTags(v)) {
+        if (!NON_INDIVIDUAL_SITUACIONES.has(tag)) situaciones.add(tag);
+      }
+    }
+    for (const situacion of situaciones) {
+      const key = `${construccion} + ${situacion}`;
+      if (!counts.has(key)) counts.set(key, { construccion, situacion, count: 0 });
+      counts.get(key)!.count += 1;
+    }
+  }
+  return Array.from(counts.values())
+    .filter((c) => c.count > 1)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, MAX_TAGS);
 }
 
 export interface TagCount {
