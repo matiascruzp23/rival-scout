@@ -257,16 +257,35 @@ function PartidoEnVivo({
 
   const combosTodos = useMemo(() => combosPrediccion(historial, estadoActual), [historial, estadoActual]);
   const bancaDisponibleIds = useMemo(() => new Set(bancaDisponible.map((p) => p.id)), [bancaDisponible]);
+  // Cualquiera que ya haya entrado o salido en un cambio de ESTE partido no
+  // vuelve a participar de las predicciones (ni como el que sale ni como el
+  // que entra): un cambio ya hecho no es un cambio "por venir".
+  const yaParticipoEnCambio = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of localMatch.substitutions) {
+      ids.add(s.jugadorSaleId);
+      ids.add(s.jugadorEntraId);
+    }
+    return ids;
+  }, [localMatch.substitutions]);
   // Solo combinaciones donde quien "sale" está efectivamente en cancha ahora
   // Y quien "entra" está disponible en la banca de hoy (no sirve sugerir a
-  // alguien ni siquiera convocado), y que se hayan repetido más de una vez:
-  // mejor mostrar menos combinaciones que rellenar con casos de una sola vez.
+  // alguien ni siquiera convocado), sin nadie que ya haya participado de un
+  // cambio, y que se hayan repetido más de una vez: mejor mostrar menos
+  // combinaciones que rellenar con casos de una sola vez.
   const combosRelevantes = useMemo(
     () =>
       combosTodos
-        .filter((c) => enCanchaIds.has(c.jugadorSaleId) && bancaDisponibleIds.has(c.jugadorEntraId) && c.count > 1)
+        .filter(
+          (c) =>
+            enCanchaIds.has(c.jugadorSaleId) &&
+            bancaDisponibleIds.has(c.jugadorEntraId) &&
+            !yaParticipoEnCambio.has(c.jugadorSaleId) &&
+            !yaParticipoEnCambio.has(c.jugadorEntraId) &&
+            c.count > 1
+        )
         .slice(0, 3),
-    [combosTodos, enCanchaIds, bancaDisponibleIds]
+    [combosTodos, enCanchaIds, bancaDisponibleIds, yaParticipoEnCambio]
   );
   // Un "cambio" de sistema no puede sugerir el mismo sistema con el que ya
   // están jugando ahora mismo.
