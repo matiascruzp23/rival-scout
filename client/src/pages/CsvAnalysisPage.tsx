@@ -284,10 +284,7 @@ function IndividualesView({ circulaciones, presiones }: { circulaciones: Individ
 function IndividualesCard({ data }: { data: IndividualesBloque }) {
   return (
     <section className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-slate-800">{data.titulo}</h3>
-        <span className="text-slate-400 text-sm">{data.registrosConRival} registros con rival</span>
-      </div>
+      <h3 className="font-semibold text-slate-800 mb-3">{data.titulo}</h3>
       {data.combos.length === 0 ? (
         <p className="text-sm text-slate-400">
           Sin combinaciones: la columna "Rivales" no viene rellena en estos registros.
