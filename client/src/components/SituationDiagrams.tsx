@@ -379,7 +379,7 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'ball', x: shift('7', -3, 2).x, y: shift('7', -3, 2).y },
     { kind: 'move', from: shift('7', -3, 2), to: { x: 14, y: 40 }, dashed: false, curve: -10, fromBall: true },
   ],
-  'Volante a banda': [{ kind: 'move', from: POS['6'], to: { x: 30, y: 15 }, dashed: true }],
+  'Volante a banda': [{ kind: 'move', from: POS['7'], to: { x: 30, y: 15 }, dashed: true }],
   'Mediapunta en cuadrado': [
     { kind: 'zone', x: 38, y: 28, w: 20, h: 34 },
     { kind: 'move', from: POS['10'], to: { x: 46, y: 45 }, dashed: true },
