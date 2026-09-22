@@ -389,9 +389,9 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
   // El balón sigue circulando por el medio (entre 6 y 8) mientras, más cerca
   // del área, un rival queda libre dentro de un cuadrado que nadie marca.
   'Libre cuadrado': [
-    { kind: 'ball', x: 47, y: 48 },
-    { kind: 'zone', x: 75, y: 54, w: 15, h: 25 },
-    { kind: 'rival', x: 83, y: 73 },
+    { kind: 'ball', x: 46, y: 48 },
+    { kind: 'zone', x: 52, y: 58, w: 12, h: 30 },
+    { kind: 'rival', x: 58, y: 73 },
   ],
   'Persiguen movimiento': [
     { kind: 'rival', x: 28, y: 78 },
