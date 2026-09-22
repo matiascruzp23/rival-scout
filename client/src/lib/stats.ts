@@ -1,6 +1,7 @@
 import type { Match, Player, Substitution, TorneoRegla } from '../types';
 import { positionDef, POSITION_LABELS } from './positions';
 import { formationSlots } from './formations';
+import { onFieldBefore, computeDefaultLayoutForSub } from './pitchLayout';
 
 // Los partidos se asumen ya ordenados de más reciente a más antiguo donde corresponda.
 export function sortMatchesDesc(matches: Match[]): Match[] {
@@ -411,6 +412,81 @@ export function minutoPromedioPorEstado(matches: Match[], estado: GameState): nu
   const subs = substitutionsWithState(matches).filter((s) => s.estado === estado);
   if (subs.length === 0) return 0;
   return subs.reduce((sum, s) => sum + s.sub.minuto, 0) / subs.length;
+}
+
+export interface CambioAsociado {
+  playerId: string;
+  posicionAntes: string;
+  posicionDespues: string;
+  count: number;
+}
+
+export interface ComboPrediccion {
+  jugadorSaleId: string;
+  jugadorEntraId: string;
+  count: number;
+  // Minuto promedio de ESTA combinación puntual, a diferencia de
+  // minutoPromedioPorEstado (que promedia todas las sustituciones del
+  // estado, sin distinguir cuál combinación fue cada una).
+  minutoPromedio: number;
+  // Si al hacer este cambio otro jugador (no el que sale/entra) suele
+  // terminar en una posición distinta (ej. "entra Charrupí por Soto y
+  // Berríos pasa a lateral"), el más frecuente de esos casos — se detecta
+  // comparando el campograma justo antes del cambio contra el que haya
+  // quedado registrado después (layoutResultante), cuando el analista lo
+  // cargó al anotar la sustitución.
+  cambioAsociado: CambioAsociado | null;
+}
+
+// Como topCombosByState + minutoPromedioPorEstado, pero por combinación
+// puntual (no un promedio general del estado) y agregando el cambio de
+// posición asociado más frecuente de cada combinación — para "En Vivo",
+// donde interesa no solo quién suele salir/entrar sino cuándo y qué otro
+// ajuste suele acompañarlo.
+export function combosPrediccion(matches: Match[], estado: GameState): ComboPrediccion[] {
+  const subsEstado = substitutionsWithState(matches).filter((s) => s.estado === estado);
+  const porCombo = new Map<
+    string,
+    {
+      jugadorSaleId: string;
+      jugadorEntraId: string;
+      minutos: number[];
+      asociados: Map<string, CambioAsociado>;
+    }
+  >();
+
+  for (const { match, sub } of subsEstado) {
+    const key = `${sub.jugadorSaleId}|${sub.jugadorEntraId}`;
+    if (!porCombo.has(key)) {
+      porCombo.set(key, { jugadorSaleId: sub.jugadorSaleId, jugadorEntraId: sub.jugadorEntraId, minutos: [], asociados: new Map() });
+    }
+    const entry = porCombo.get(key)!;
+    entry.minutos.push(sub.minuto);
+
+    const antes = onFieldBefore(match, sub.minuto, sub.id);
+    const despues = computeDefaultLayoutForSub(match, sub.id);
+    const posicionAntesDe = new Map(antes.map((l) => [l.playerId, l.posicion]));
+    for (const d of despues) {
+      if (d.playerId === sub.jugadorSaleId || d.playerId === sub.jugadorEntraId) continue;
+      const posicionAntes = posicionAntesDe.get(d.playerId);
+      if (!posicionAntes || posicionAntes === d.posicion) continue;
+      const akey = `${d.playerId}|${posicionAntes}|${d.posicion}`;
+      if (!entry.asociados.has(akey)) {
+        entry.asociados.set(akey, { playerId: d.playerId, posicionAntes, posicionDespues: d.posicion, count: 0 });
+      }
+      entry.asociados.get(akey)!.count += 1;
+    }
+  }
+
+  return Array.from(porCombo.values())
+    .map((e) => ({
+      jugadorSaleId: e.jugadorSaleId,
+      jugadorEntraId: e.jugadorEntraId,
+      count: e.minutos.length,
+      minutoPromedio: e.minutos.reduce((s, m) => s + m, 0) / e.minutos.length,
+      cambioAsociado: Array.from(e.asociados.values()).sort((a, b) => b.count - a.count)[0] || null,
+    }))
+    .sort((a, b) => b.count - a.count);
 }
 
 // Igual que topSistemasResultantes, pero solo con los cambios de sistema que
