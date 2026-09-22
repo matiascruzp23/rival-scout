@@ -22,6 +22,7 @@ import { playerMap, playerName } from '../lib/lookup';
 import { PlayerBadges } from '../components/PlayerBadges';
 import { SquadDepthPitch, labelsForSquadDepth } from '../components/SquadDepthPitch';
 import { PlantelView } from '../components/PlantelView';
+import { outcomeRowClass, outcomeTextClass } from '../components/MatchReportCard';
 import { Pitch, type PitchToken } from '../components/Pitch';
 import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
 import { TorneoReglasEditor } from '../components/TorneoReglasEditor';
@@ -186,11 +187,11 @@ export default function DashboardPage() {
           </thead>
           <tbody>
             {allMatches.slice(0, 10).map((m) => (
-              <tr key={m.id}>
+              <tr key={m.id} className={outcomeRowClass(m)}>
                 <td className="whitespace-nowrap">{m.fecha}</td>
                 <td>{m.oponente || '—'}</td>
                 <td>{m.condicion}</td>
-                <td>
+                <td className={outcomeTextClass(m)}>
                   {m.golesFavor ?? '-'} - {m.golesContra ?? '-'}
                 </td>
                 <td>
