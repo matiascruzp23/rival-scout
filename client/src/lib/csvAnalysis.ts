@@ -54,6 +54,31 @@ function fusionarAlias(counts: Map<string, number>, principal: string, alias: st
   counts.set(`${principal} (${alias.replace('Presionan en ', '')})`, countPrincipal + countAlias);
 }
 
+// "Línea de 3 con lateral/interno/contención (normal y externa)" son la
+// misma idea de construcción (salida en línea de 3), solo que el analista
+// anota distinto quién arma la línea — se fusionan en un solo valor.
+// Deliberadamente no incluye "Línea de 3 con arquero", que es un concepto
+// distinto (arquero sumado a la salida, no quién arma la línea de 3).
+const LINEA_DE_3_VALORES = [
+  'Linea de 3 con lateral',
+  'Linea de 3 externa con interno',
+  'Linea de 3 con contencion',
+  'Linea de 3 externa con contencion',
+];
+
+function fusionarValores(counts: Map<string, number>, valores: string[], etiquetaFusion: string): void {
+  let total = 0;
+  let huboAlguno = false;
+  for (const v of valores) {
+    const c = counts.get(v);
+    if (!c) continue;
+    huboAlguno = true;
+    total += c;
+    counts.delete(v);
+  }
+  if (huboAlguno) counts.set(etiquetaFusion, total);
+}
+
 function structureBreakdown(rows: TaggedRow[], columna: string | null): StructureBar[] {
   if (!columna) return [];
   const counts = new Map<string, number>();
@@ -65,6 +90,7 @@ function structureBreakdown(rows: TaggedRow[], columna: string | null): Structur
     total += 1;
   }
   fusionarAlias(counts, 'Presionan en 4-3-1-2', 'Presionan en 4-1-3-2');
+  fusionarValores(counts, LINEA_DE_3_VALORES, 'Línea de 3 (lateral, interno o contención)');
   return Array.from(counts.entries())
     .map(([valor, count]) => ({ valor, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 }))
     .sort((a, b) => b.count - a.count);
