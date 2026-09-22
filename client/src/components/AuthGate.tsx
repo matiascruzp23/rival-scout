@@ -23,11 +23,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <IsViewerContext.Provider value={isViewer}>
       {children}
-      {isViewer && (
-        <div className="no-print fixed bottom-3 left-1/2 -translate-x-1/2 z-50 text-xs text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-full shadow-sm">
-          Modo solo lectura
-        </div>
-      )}
       <button
         onClick={() => supabase.auth.signOut()}
         className="no-print fixed top-3 right-3 z-50 text-xs text-slate-400 hover:text-slate-600 bg-white/80 backdrop-blur px-2 py-1 rounded border border-slate-200"
