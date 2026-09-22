@@ -388,12 +388,18 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
   // --- Situaciones de presión (vulnerabilidades) ---
   // Un rival con el balón cerca del pivote propio le da un pase directo al
   // compañero que queda libre dentro del cuadrado, sin marca.
+  // Ojo: en esta cancha horizontal, "profundidad" (un pase vertical de
+  // verdad, de avance) es el eje X (igual que toLandscapeSpot), no el eje Y
+  // — un eje Y constante y X variable es lo que se lee como vertical/de
+  // avance; X constante (lo que parece "derecho hacia abajo" en pantalla)
+  // en realidad es un pase horizontal, de un costado a otro a la misma
+  // profundidad.
   'Libre cuadrado': [
-    { kind: 'rival', x: 58, y: 44 },
-    { kind: 'ball', x: 58, y: 47 },
+    { kind: 'rival', x: 40, y: 73 },
+    { kind: 'ball', x: 43, y: 73 },
     { kind: 'zone', x: 52, y: 58, w: 12, h: 30 },
     { kind: 'rival', x: 58, y: 73 },
-    { kind: 'move', from: { x: 58, y: 47 }, to: { x: 58, y: 73 }, dashed: false, fromBall: true },
+    { kind: 'move', from: { x: 43, y: 73 }, to: { x: 58, y: 73 }, dashed: false, fromBall: true },
   ],
   'Persiguen movimiento': [
     { kind: 'rival', x: 28, y: 78 },
