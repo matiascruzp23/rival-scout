@@ -103,43 +103,45 @@ export function MatchReportCard({ match, players }: { match: Match; players: Pla
         </p>
       )}
 
-      {subsOrdenadas.length > 0 && (
-        <div className="mt-2" style={{ breakInside: 'avoid' }}>
-          <h5 className="text-[11px] font-semibold text-slate-500 uppercase mb-1">Sustituciones</h5>
-          {/* Con muchos cambios, se reparten en 2 columnas (como un diario) en
-              vez de seguir estirando la tarjeta hacia abajo hasta que se corte
-              justo entre una página y la otra. */}
-          <ul
-            className="text-xs text-slate-600 space-y-0.5"
-            style={subsOrdenadas.length > 5 ? { columns: 2, columnGap: '1rem' } : undefined}
-          >
-            {subsOrdenadas.map((s) => (
-              <li key={s.id} style={{ breakInside: 'avoid-column' }}>
-                {s.minuto}' {playerName(map, s.jugadorSaleId)} → {playerName(map, s.jugadorEntraId)}
-                {s.sistemaResultante ? ` · cambia a ${s.sistemaResultante}` : ''}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Sustituciones y goles/tarjetas van lado a lado (no una debajo de la
+          otra): juntas casi nunca llenan el ancho completo de la tarjeta, así
+          que apilarlas solo estira la tarjeta hacia abajo hasta que se corte
+          justo entre una página y la otra, cuando de sobra hay lugar a la
+          derecha para la segunda lista. */}
+      {(subsOrdenadas.length > 0 || eventosOrdenados.length > 0) && (
+        <div
+          className={`mt-2 grid gap-4 ${subsOrdenadas.length > 0 && eventosOrdenados.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}
+        >
+          {subsOrdenadas.length > 0 && (
+            <div style={{ breakInside: 'avoid' }}>
+              <h5 className="text-[11px] font-semibold text-slate-500 uppercase mb-1">Sustituciones</h5>
+              <ul className="text-xs text-slate-600 space-y-0.5">
+                {subsOrdenadas.map((s) => (
+                  <li key={s.id} style={{ breakInside: 'avoid-column' }}>
+                    {s.minuto}' {playerName(map, s.jugadorSaleId)} → {playerName(map, s.jugadorEntraId)}
+                    {s.sistemaResultante ? ` · cambia a ${s.sistemaResultante}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-      {eventosOrdenados.length > 0 && (
-        <div className="mt-2" style={{ breakInside: 'avoid' }}>
-          <h5 className="text-[11px] font-semibold text-slate-500 uppercase mb-1">Goles y tarjetas</h5>
-          <ul
-            className="text-xs text-slate-600 space-y-0.5"
-            style={eventosOrdenados.length > 5 ? { columns: 2, columnGap: '1rem' } : undefined}
-          >
-            {eventosOrdenados.map((e) => (
-              <li key={e.id} style={{ breakInside: 'avoid-column' }}>
-                {e.minuto}'{' '}
-                {e.tipo === 'gol_favor' && `Gol de ${playerName(map, e.jugadorId || '')}`}
-                {e.tipo === 'gol_contra' && 'Gol del oponente'}
-                {e.tipo === 'amarilla' && `Amarilla a ${playerName(map, e.jugadorId || '')}`}
-                {e.tipo === 'roja' && `Roja a ${playerName(map, e.jugadorId || '')}`}
-              </li>
-            ))}
-          </ul>
+          {eventosOrdenados.length > 0 && (
+            <div style={{ breakInside: 'avoid' }}>
+              <h5 className="text-[11px] font-semibold text-slate-500 uppercase mb-1">Goles y tarjetas</h5>
+              <ul className="text-xs text-slate-600 space-y-0.5">
+                {eventosOrdenados.map((e) => (
+                  <li key={e.id} style={{ breakInside: 'avoid-column' }}>
+                    {e.minuto}'{' '}
+                    {e.tipo === 'gol_favor' && `Gol de ${playerName(map, e.jugadorId || '')}`}
+                    {e.tipo === 'gol_contra' && 'Gol del oponente'}
+                    {e.tipo === 'amarilla' && `Amarilla a ${playerName(map, e.jugadorId || '')}`}
+                    {e.tipo === 'roja' && `Roja a ${playerName(map, e.jugadorId || '')}`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
