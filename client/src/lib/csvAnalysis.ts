@@ -159,6 +159,10 @@ export interface TagCount {
   count: number;
   pct: number;
   descripcion?: string;
+  // Desglose de este tag por resultado parcial (columna RESULTADO del CSV),
+  // solo cuando el bloque lo pide (SituacionGroup.desglosePorEstado) — no
+  // todos los bloques tienen espacio/necesidad de mostrarlo.
+  porEstado?: { estado: GameStateLabel; count: number }[];
 }
 
 // Cuántas etiquetas distintas mostrar como máximo por bloque: el objetivo es
@@ -203,9 +207,10 @@ function comboBreakdown(rows: TaggedRow[], columnas: string[]): ComboCount[] {
 function tagBreakdown(
   rows: TaggedRow[],
   columnas: string[],
-  opts: { soloRepetidos?: boolean } = {}
+  opts: { soloRepetidos?: boolean; desglosePorEstado?: boolean } = {}
 ): { registros: number; tags: TagCount[]; combos: ComboCount[] } {
   const counts = new Map<string, number>();
+  const countsPorEstado = new Map<string, Map<GameStateLabel, number>>();
   let total = 0;
   let registros = 0;
   for (const r of rows) {
@@ -217,12 +222,30 @@ function tagBreakdown(
       for (const tag of splitTags(v)) {
         counts.set(tag, (counts.get(tag) || 0) + 1);
         total += 1;
+        if (opts.desglosePorEstado) {
+          const estado = r.row['RESULTADO'] as GameStateLabel;
+          if (GAME_STATES.includes(estado)) {
+            if (!countsPorEstado.has(tag)) countsPorEstado.set(tag, new Map());
+            const porEstado = countsPorEstado.get(tag)!;
+            porEstado.set(estado, (porEstado.get(estado) || 0) + 1);
+          }
+        }
       }
     }
     if (tieneValor) registros += 1;
   }
   let tags = Array.from(counts.entries())
-    .map(([tag, count]) => ({ tag, count, pct: total > 0 ? Math.round((count / total) * 100) : 0, descripcion: glossaryFor(tag) }))
+    .map(([tag, count]) => ({
+      tag,
+      count,
+      pct: total > 0 ? Math.round((count / total) * 100) : 0,
+      descripcion: glossaryFor(tag),
+      porEstado: opts.desglosePorEstado
+        ? GAME_STATES.map((estado) => ({ estado, count: countsPorEstado.get(tag)?.get(estado) || 0 })).filter(
+            (e) => e.count > 0
+          )
+        : undefined,
+    }))
     .sort((a, b) => b.count - a.count);
   if (opts.soloRepetidos) tags = tags.filter((t) => t.count > 1);
   tags = tags.slice(0, MAX_TAGS);
@@ -279,6 +302,11 @@ export interface SituacionGroup {
   // objetivo es resaltar patrones que se repiten, no cualquier cosa marcada
   // una vez sola en el CSV.
   soloRepetidos?: boolean;
+  // Si es true, cada tag de este bloque trae además su propio desglose por
+  // resultado parcial (TagCount.porEstado), para bloques de apoyo con poco
+  // contenido propio (p. ej. "Distancia de salida") que tienen lugar de
+  // sobra para mostrarlo dentro de su propia tarjeta.
+  desglosePorEstado?: boolean;
 }
 
 export interface SituacionBloque {
@@ -315,7 +343,10 @@ export function analyzePhase(matches: Match[], categorias: string[], situacionGr
     estructura: structureBreakdown(rows, estructuraColumna),
     situaciones: situacionGroups.map((g) => {
       const groupRows = g.categorias ? collectCsvRows(matches, g.categorias) : rows;
-      const { registros, tags, combos } = tagBreakdown(groupRows, g.columnas, { soloRepetidos: g.soloRepetidos });
+      const { registros, tags, combos } = tagBreakdown(groupRows, g.columnas, {
+        soloRepetidos: g.soloRepetidos,
+        desglosePorEstado: g.desglosePorEstado,
+      });
       return { titulo: g.titulo, registros, tags, combos };
     }),
     porEstado: estadoResumen(rows, estructuraColumna, todasLasColumnas),

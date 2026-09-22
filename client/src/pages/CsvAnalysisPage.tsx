@@ -60,7 +60,7 @@ export default function CsvAnalysisPage() {
           categorias: ['CIRCULACION ALTA'],
           soloRepetidos: true,
         },
-        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'] },
+        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true },
       ]),
     [matches]
   );
@@ -504,6 +504,21 @@ function TagCardGrid({ tags }: { tags: TagCount[] }) {
             </span>
           </div>
           {t.descripcion && <p className="text-xs text-slate-500 mt-1">{t.descripcion}</p>}
+          {t.porEstado && t.porEstado.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {t.porEstado.map((e) => {
+                const style = ESTADO_STYLE[e.estado];
+                return (
+                  <span
+                    key={e.estado}
+                    className={`text-xs rounded-full px-2 py-0.5 border ${style.border} ${style.bg} ${style.text}`}
+                  >
+                    {e.estado}: {e.count}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       ))}
     </div>
