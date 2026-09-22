@@ -386,12 +386,14 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
   ],
 
   // --- Situaciones de presión (vulnerabilidades) ---
-  // El balón sigue circulando por el medio (entre 6 y 8) mientras, más cerca
-  // del área, un rival queda libre dentro de un cuadrado que nadie marca.
+  // Un rival con el balón cerca del pivote propio le da un pase directo al
+  // compañero que queda libre dentro del cuadrado, sin marca.
   'Libre cuadrado': [
-    { kind: 'ball', x: 46, y: 48 },
+    { kind: 'rival', x: 42, y: 44 },
+    { kind: 'ball', x: 45, y: 47 },
     { kind: 'zone', x: 52, y: 58, w: 12, h: 30 },
     { kind: 'rival', x: 58, y: 73 },
+    { kind: 'move', from: { x: 45, y: 47 }, to: { x: 58, y: 73 }, dashed: false, fromBall: true },
   ],
   'Persiguen movimiento': [
     { kind: 'rival', x: 28, y: 78 },
