@@ -13,7 +13,7 @@ export default function RivalsList() {
   const [showCreate, setShowCreate] = useState(false);
   const [toDelete, setToDelete] = useState<RivalListItem | null>(null);
   const [error, setError] = useState('');
-  const [vista, setVista] = useState<'lista' | 'calendario'>('lista');
+  const [vista, setVista] = useState<'lista' | 'calendario'>('calendario');
   const navigate = useNavigate();
   const isViewer = useIsViewer();
 
