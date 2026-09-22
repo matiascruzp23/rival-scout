@@ -711,6 +711,35 @@ app.delete('/api/matches/:id/csv', async (req, res) => {
   res.status(204).end();
 });
 
+// Registra a qué situación concreta corresponde el rival marcado en una
+// fila ambigua del CSV (2+ situaciones a la vez junto con la columna
+// "Rivales" rellenada — ver client/src/lib/csvAnalysis.ts). Se guarda
+// dentro de la propia fila, sin tocar ninguna otra columna ni necesitar una
+// tabla aparte.
+app.put('/api/matches/:id/csv/rival-resolucion', async (req, res) => {
+  const { data: matchRow } = await supabase.from('matches').select('id').eq('id', req.params.id).maybeSingle();
+  if (!matchRow) return res.status(404).json({ error: 'Partido no encontrado' });
+  const { rowIndex, situacion } = req.body as { rowIndex?: number; situacion?: string };
+  if (typeof rowIndex !== 'number' || !situacion) {
+    return res.status(400).json({ error: 'rowIndex y situacion son requeridos' });
+  }
+
+  const { data: csvRow } = await supabase.from('match_csv').select('rows').eq('match_id', matchRow.id).maybeSingle();
+  if (!csvRow) return res.status(404).json({ error: 'Este partido no tiene CSV cargado' });
+  const rows = (csvRow.rows || []) as Record<string, string>[];
+  if (!rows[rowIndex]) return res.status(400).json({ error: 'Fila fuera de rango' });
+
+  rows[rowIndex] = { ...rows[rowIndex], __rivalResuelto: situacion };
+  const { data: saved, error } = await supabase
+    .from('match_csv')
+    .update({ rows })
+    .eq('match_id', matchRow.id)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(toMatchCsv(saved));
+});
+
 // Middleware de error genérico: sin esto, un archivo rechazado por
 // escudoUpload (u otro error de multer) llega al manejador por defecto de
 // Express, que responde con una página HTML y expone la traza del error.

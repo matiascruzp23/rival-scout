@@ -9,6 +9,8 @@ export type GameStateLabel = (typeof GAME_STATES)[number];
 const MIN_SAMPLES_PER_STATE = 2;
 
 interface TaggedRow {
+  matchId: string;
+  rowIndex: number;
   row: Record<string, string>;
 }
 
@@ -18,9 +20,9 @@ function collectCsvRows(matches: Match[], categorias: string[]): TaggedRow[] {
     if (!match.csv) continue;
     const categoryColumn = match.csv.columns.find((c) => c.trim().toLowerCase() === 'row');
     if (!categoryColumn) continue;
-    for (const row of match.csv.rows) {
-      if (categorias.includes(row[categoryColumn])) out.push({ row });
-    }
+    match.csv.rows.forEach((row, rowIndex) => {
+      if (categorias.includes(row[categoryColumn])) out.push({ matchId: match.id, rowIndex, row });
+    });
   }
   return out;
 }
@@ -278,29 +280,58 @@ const NON_INDIVIDUAL_SITUACIONES = new Set([
   'Presion a linea de 3',
 ]);
 
+// Cuando Sportscode marca 2+ situaciones a la vez en la misma instancia
+// (celda separada por coma) junto con un rival, no queda claro a cuál de
+// esas situaciones corresponde ese rival puntual — el analista solo marcó
+// "esto pasó a la vez", no "el rival tal hizo esto". Estas filas quedan
+// pendientes hasta que alguien con permiso de edición elija, en vez de
+// contarlas para las dos (lo que inflaría ambos conceptos por igual).
+const RESOLUCION_KEY = '__rivalResuelto';
+
+export interface PendienteResolucion {
+  matchId: string;
+  rowIndex: number;
+  rival: string;
+  opciones: string[];
+}
+
 // Igual que comboBreakdown, pero dirigido: cuenta cada par (jugador rival,
 // situación) que aparece junto en una fila, en vez de pares simétricos entre
 // etiquetas de un mismo tipo. Filas sin la columna "Rivales" rellenada, o
-// sin ninguna situación marcada, se excluyen.
+// sin ninguna situación marcada, se excluyen; filas ambiguas (2+ situaciones
+// sin resolver) se apartan en "pendientes" en vez de contarse.
 function rivalSituacionCombos(
   rows: TaggedRow[],
   situacionColumnas: string[]
-): { registrosConRival: number; combos: RivalSituacionCombo[] } {
+): { registrosConRival: number; combos: RivalSituacionCombo[]; pendientes: PendienteResolucion[] } {
   const counts = new Map<string, RivalSituacionCombo>();
+  const pendientes: PendienteResolucion[] = [];
   let registrosConRival = 0;
   for (const r of rows) {
     const rivales = rivalTagsOf(r.row);
     if (rivales.length === 0) continue;
-    const situaciones = new Set<string>();
+    const situacionesSet = new Set<string>();
     for (const col of situacionColumnas) {
       const v = r.row[col];
       if (!v) continue;
       for (const tag of splitTags(v)) {
-        if (!NON_INDIVIDUAL_SITUACIONES.has(tag)) situaciones.add(tag);
+        if (!NON_INDIVIDUAL_SITUACIONES.has(tag)) situacionesSet.add(tag);
       }
     }
-    if (situaciones.size === 0) continue;
+    if (situacionesSet.size === 0) continue;
     registrosConRival += 1;
+
+    let situaciones = Array.from(situacionesSet);
+    if (situaciones.length > 1) {
+      const resuelto = r.row[RESOLUCION_KEY];
+      if (resuelto && situacionesSet.has(resuelto)) {
+        situaciones = [resuelto];
+      } else {
+        pendientes.push({ matchId: r.matchId, rowIndex: r.rowIndex, rival: rivales.join(', '), opciones: situaciones });
+        continue;
+      }
+    }
+
     for (const rival of rivales) {
       for (const situacion of situaciones) {
         const key = `${rival} + ${situacion}`;
@@ -312,13 +343,14 @@ function rivalSituacionCombos(
   const combos = Array.from(counts.values())
     .sort((a, b) => b.count - a.count)
     .slice(0, MAX_RIVAL_COMBOS);
-  return { registrosConRival, combos };
+  return { registrosConRival, combos, pendientes };
 }
 
 export interface IndividualesBloque {
   titulo: string;
   registrosConRival: number;
   combos: RivalSituacionCombo[];
+  pendientes: PendienteResolucion[];
 }
 
 // Combinaciones más frecuentes de jugador rival + situación, dentro de las
@@ -331,6 +363,6 @@ export function analyzeIndividuales(
   titulo: string
 ): IndividualesBloque {
   const rows = collectCsvRows(matches, categorias);
-  const { registrosConRival, combos } = rivalSituacionCombos(rows, situacionColumnas);
-  return { titulo, registrosConRival, combos };
+  const { registrosConRival, combos, pendientes } = rivalSituacionCombos(rows, situacionColumnas);
+  return { titulo, registrosConRival, combos, pendientes };
 }

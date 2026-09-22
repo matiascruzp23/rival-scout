@@ -67,5 +67,10 @@ export const api = {
       return request<MatchCsv>(`/matches/${id}/csv`, { method: 'POST', body: form });
     },
     removeCsv: (id: string) => request<void>(`/matches/${id}/csv`, { method: 'DELETE' }),
+    resolveRivalSituacion: (id: string, rowIndex: number, situacion: string) =>
+      request<MatchCsv>(`/matches/${id}/csv/rival-resolucion`, {
+        method: 'PUT',
+        body: JSON.stringify({ rowIndex, situacion }),
+      }),
   },
 };

@@ -1,6 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
+import { api } from '../api';
+import { useIsViewer } from '../lib/authContext';
 import {
   analyzeIndividuales,
   analyzePhase,
@@ -11,6 +13,7 @@ import {
   type ComboCount,
   type EstadoResumen,
   type IndividualesBloque,
+  type PendienteResolucion,
   type PhaseAnalysis,
   type StructureBar,
   type TagCount,
@@ -29,7 +32,8 @@ const ESTADO_STYLE: Record<EstadoResumen['estado'], { border: string; bg: string
 };
 
 export default function CsvAnalysisPage() {
-  const { rival } = useOutletContext<RivalContext>();
+  const { rival, reload } = useOutletContext<RivalContext>();
+  const isViewer = useIsViewer();
   const [window, setWindowSize] = useState<3 | 5 | 10>(10);
   const [tab, setTab] = useState<Tab>('Fase ofensiva');
   const matches = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
@@ -158,7 +162,12 @@ export default function CsvAnalysisPage() {
             />
           )}
           {tab === 'Individuales' && (
-            <IndividualesView circulaciones={circulacionesIndividuales} presiones={presionesIndividuales} />
+            <IndividualesView
+              circulaciones={circulacionesIndividuales}
+              presiones={presionesIndividuales}
+              canResolve={!isViewer}
+              onResolved={reload}
+            />
           )}
         </>
       )}
@@ -265,7 +274,17 @@ function PhaseView({
 // Combinaciones más frecuentes de jugador rival + situación (columna
 // "Rivales" del CSV, no siempre rellenada), separadas en ofensivo
 // (circulaciones) y defensivo (presiones).
-function IndividualesView({ circulaciones, presiones }: { circulaciones: IndividualesBloque; presiones: IndividualesBloque }) {
+function IndividualesView({
+  circulaciones,
+  presiones,
+  canResolve,
+  onResolved,
+}: {
+  circulaciones: IndividualesBloque;
+  presiones: IndividualesBloque;
+  canResolve: boolean;
+  onResolved: () => void;
+}) {
   if (circulaciones.registrosConRival === 0 && presiones.registrosConRival === 0) {
     return (
       <p className="text-sm text-slate-400 py-6">
@@ -275,16 +294,39 @@ function IndividualesView({ circulaciones, presiones }: { circulaciones: Individ
   }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <IndividualesCard data={circulaciones} />
-      <IndividualesCard data={presiones} />
+      <IndividualesCard data={circulaciones} canResolve={canResolve} onResolved={onResolved} />
+      <IndividualesCard data={presiones} canResolve={canResolve} onResolved={onResolved} />
     </div>
   );
 }
 
-function IndividualesCard({ data }: { data: IndividualesBloque }) {
+function IndividualesCard({
+  data,
+  canResolve,
+  onResolved,
+}: {
+  data: IndividualesBloque;
+  canResolve: boolean;
+  onResolved: () => void;
+}) {
   return (
     <section className="card p-4">
       <h3 className="font-semibold text-slate-800 mb-3">{data.titulo}</h3>
+
+      {data.pendientes.length > 0 && canResolve && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-xs font-semibold text-amber-800 mb-2">
+            {data.pendientes.length} registro{data.pendientes.length === 1 ? '' : 's'} marca{data.pendientes.length === 1 ? '' : 'n'} más
+            de una situación a la vez para el mismo rival: elegí a cuál corresponde para que cuente.
+          </p>
+          <ul className="space-y-2">
+            {data.pendientes.map((p) => (
+              <PendienteRow key={`${p.matchId}-${p.rowIndex}`} pendiente={p} onResolved={onResolved} />
+            ))}
+          </ul>
+        </div>
+      )}
+
       {data.combos.length === 0 ? (
         <p className="text-sm text-slate-400">
           Sin combinaciones: la columna "Rivales" no viene rellena en estos registros.
@@ -309,6 +351,38 @@ function IndividualesCard({ data }: { data: IndividualesBloque }) {
         </ul>
       )}
     </section>
+  );
+}
+
+function PendienteRow({ pendiente, onResolved }: { pendiente: PendienteResolucion; onResolved: () => void }) {
+  const [saving, setSaving] = useState(false);
+
+  const resolver = async (situacion: string) => {
+    setSaving(true);
+    try {
+      await api.matches.resolveRivalSituacion(pendiente.matchId, pendiente.rowIndex, situacion);
+      onResolved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 text-sm">
+      <span className="font-medium text-slate-700">{pendiente.rival}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {pendiente.opciones.map((op) => (
+          <button
+            key={op}
+            disabled={saving}
+            onClick={() => resolver(op)}
+            className="px-2 py-1 text-xs rounded border border-amber-300 bg-white hover:bg-amber-100 text-amber-800 disabled:opacity-50"
+          >
+            {op}
+          </button>
+        ))}
+      </div>
+    </li>
   );
 }
 
