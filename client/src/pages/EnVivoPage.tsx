@@ -20,7 +20,7 @@ import { BancaEditor } from '../components/BancaEditor';
 import { SubstitutionsEditor } from '../components/SubstitutionsEditor';
 import { MatchEventsEditor } from '../components/MatchEventsEditor';
 import { SystemSelect } from '../components/SystemSelect';
-import { playerMap, playerName } from '../lib/lookup';
+import { playerName } from '../lib/lookup';
 import { useIsViewer } from '../lib/authContext';
 
 const ESTADO_STYLE: Record<GameState, string> = {
