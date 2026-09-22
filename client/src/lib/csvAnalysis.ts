@@ -261,6 +261,18 @@ export interface RivalSituacionCombo {
 
 const MAX_RIVAL_COMBOS = 10;
 
+// Conceptos de espacio/estructura general, no un duelo puntual contra un
+// rival: aunque el CSV a veces trae la columna "Rivales" rellenada en esa
+// fila, no corresponde mostrarlos como comportamiento individual de ese
+// jugador.
+const NON_INDIVIDUAL_SITUACIONES = new Set([
+  'Espacio por fuera',
+  'Espacio entre lineas',
+  'Libre cuadrado',
+  'Espalda de la defensa',
+  'Juego directo',
+]);
+
 // Igual que comboBreakdown, pero dirigido: cuenta cada par (jugador rival,
 // situación) que aparece junto en una fila, en vez de pares simétricos entre
 // etiquetas de un mismo tipo. Filas sin la columna "Rivales" rellenada, o
@@ -278,7 +290,9 @@ function rivalSituacionCombos(
     for (const col of situacionColumnas) {
       const v = r.row[col];
       if (!v) continue;
-      for (const tag of splitTags(v)) situaciones.add(tag);
+      for (const tag of splitTags(v)) {
+        if (!NON_INDIVIDUAL_SITUACIONES.has(tag)) situaciones.add(tag);
+      }
     }
     if (situaciones.size === 0) continue;
     registrosConRival += 1;
