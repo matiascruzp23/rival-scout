@@ -112,23 +112,33 @@ function SetupPartidoEnVivo({
   );
 }
 
-function kickoffKeyFor(matchId: string): string {
-  return `envivo_kickoff_${matchId}`;
+// Cronómetro con pausa (para el entretiempo): baseElapsedMs acumula el
+// tiempo corrido en segmentos anteriores (congelado mientras está en
+// pausa), runningSince es la marca de tiempo de cuando arrancó el segmento
+// actual (null = pausado). minutoActual = baseElapsedMs + lo corrido del
+// segmento actual, si lo hay.
+interface TimerState {
+  baseElapsedMs: number;
+  runningSince: number | null;
 }
 
-function readKickoff(matchId: string): number | null {
+function timerKeyFor(matchId: string): string {
+  return `envivo_timer_${matchId}`;
+}
+
+function readTimer(matchId: string): TimerState | null {
   try {
-    const v = localStorage.getItem(kickoffKeyFor(matchId));
-    return v ? Number(v) : null;
+    const v = localStorage.getItem(timerKeyFor(matchId));
+    return v ? (JSON.parse(v) as TimerState) : null;
   } catch {
     return null;
   }
 }
 
-function writeKickoff(matchId: string, value: number | null) {
+function writeTimer(matchId: string, value: TimerState | null) {
   try {
-    if (value === null) localStorage.removeItem(kickoffKeyFor(matchId));
-    else localStorage.setItem(kickoffKeyFor(matchId), String(value));
+    if (value === null) localStorage.removeItem(timerKeyFor(matchId));
+    else localStorage.setItem(timerKeyFor(matchId), JSON.stringify(value));
   } catch {
     // localStorage puede fallar (modo privado, storage lleno): el
     // cronómetro simplemente no persiste entre recargas, no es crítico.
@@ -159,22 +169,38 @@ function PartidoEnVivo({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => setLocalMatch(match), [match.id]);
 
-  const [kickoffAt, setKickoffAtState] = useState<number | null>(() => readKickoff(match.id));
+  const [timer, setTimerState] = useState<TimerState | null>(() => readTimer(match.id));
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    if (kickoffAt === null) return;
+    if (!timer || timer.runningSince === null) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [kickoffAt]);
+  }, [timer]);
 
-  const setKickoffAt = (value: number | null) => {
-    setKickoffAtState(value);
-    writeKickoff(localMatch.id, value);
+  const setTimer = (value: TimerState | null) => {
+    setTimerState(value);
+    writeTimer(localMatch.id, value);
   };
 
-  const started = kickoffAt !== null;
-  const minutoActual = started ? Math.max(1, Math.floor((now - kickoffAt) / 60000) + 1) : 1;
-  const ajustarMinuto = (nuevoMinuto: number) => setKickoffAt(Date.now() - Math.max(0, nuevoMinuto - 1) * 60000);
+  const started = timer !== null;
+  const pausado = started && timer!.runningSince === null;
+  const elapsedMs = timer ? timer.baseElapsedMs + (timer.runningSince !== null ? now - timer.runningSince : 0) : 0;
+  const minutoActual = started ? Math.max(1, Math.floor(elapsedMs / 60000) + 1) : 1;
+
+  const iniciarCronometro = () => setTimer({ baseElapsedMs: 0, runningSince: Date.now() });
+  const pausarCronometro = () => {
+    if (!timer || timer.runningSince === null) return;
+    setTimer({ baseElapsedMs: timer.baseElapsedMs + (Date.now() - timer.runningSince), runningSince: null });
+  };
+  const reanudarCronometro = () => {
+    if (!timer || timer.runningSince !== null) return;
+    setTimer({ ...timer, runningSince: Date.now() });
+  };
+  const ajustarMinuto = (nuevoMinuto: number) =>
+    setTimer({
+      baseElapsedMs: Math.max(0, nuevoMinuto - 1) * 60000,
+      runningSince: timer && timer.runningSince !== null ? Date.now() : null,
+    });
 
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
@@ -196,7 +222,7 @@ function PartidoEnVivo({
       });
       setLocalMatch(updated);
       reload();
-      setKickoffAt(Date.now());
+      iniciarCronometro();
     } finally {
       setSavingSetup(false);
     }
@@ -230,15 +256,26 @@ function PartidoEnVivo({
   const estadoActual = useMemo(() => gameStateAtMinute(localMatch, minutoActual), [localMatch, minutoActual]);
 
   const combosTodos = useMemo(() => combosPrediccion(historial, estadoActual), [historial, estadoActual]);
-  // Solo combinaciones donde quien "sale" está efectivamente en cancha ahora:
-  // mostrar a alguien que ni siquiera fue titular hoy no sirve de nada.
+  const bancaDisponibleIds = useMemo(() => new Set(bancaDisponible.map((p) => p.id)), [bancaDisponible]);
+  // Solo combinaciones donde quien "sale" está efectivamente en cancha ahora
+  // Y quien "entra" está disponible en la banca de hoy (no sirve sugerir a
+  // alguien ni siquiera convocado), y que se hayan repetido más de una vez:
+  // mejor mostrar menos combinaciones que rellenar con casos de una sola vez.
   const combosRelevantes = useMemo(
-    () => combosTodos.filter((c) => enCanchaIds.has(c.jugadorSaleId)).slice(0, 3),
-    [combosTodos, enCanchaIds]
+    () =>
+      combosTodos
+        .filter((c) => enCanchaIds.has(c.jugadorSaleId) && bancaDisponibleIds.has(c.jugadorEntraId) && c.count > 1)
+        .slice(0, 3),
+    [combosTodos, enCanchaIds, bancaDisponibleIds]
   );
+  // Un "cambio" de sistema no puede sugerir el mismo sistema con el que ya
+  // están jugando ahora mismo.
   const sistemasProbables = useMemo(
-    () => topSistemasResultantesByState(historial, estadoActual).slice(0, 3),
-    [historial, estadoActual]
+    () =>
+      topSistemasResultantesByState(historial, estadoActual)
+        .filter((s) => s.item !== localMatch.sistema)
+        .slice(0, 3),
+    [historial, estadoActual, localMatch.sistema]
   );
   const tarjetaStat = useMemo(() => cambioTrasTarjeta(historial), [historial]);
   const ultimaAmarillaSinSalir = useMemo(() => {
@@ -265,7 +302,7 @@ function PartidoEnVivo({
     setFinalizando(true);
     try {
       await api.matches.update(localMatch.id, { enVivo: false, golesFavor, golesContra });
-      setKickoffAt(null);
+      setTimer(null);
       reload();
       navigate(`/rivales/${rivalId}/partidos/${localMatch.id}`);
     } finally {
@@ -332,7 +369,17 @@ function PartidoEnVivo({
             onChange={(e) => ajustarMinuto(Number(e.target.value))}
             title="Ajustar minuto (ej. después del entretiempo)"
           />
-          <span className="text-xs text-slate-400">min. (corre solo)</span>
+          <span className="text-xs text-slate-400">{pausado ? 'min. (pausado)' : 'min. (corre solo)'}</span>
+          {!isViewer &&
+            (pausado ? (
+              <button className="btn-secondary" onClick={reanudarCronometro}>
+                ▶ Reanudar
+              </button>
+            ) : (
+              <button className="btn-secondary" onClick={pausarCronometro}>
+                ⏸ Entretiempo
+              </button>
+            ))}
         </div>
         {!isViewer && (
           <button className="btn-primary" disabled={finalizando} onClick={finalizar}>
@@ -701,7 +748,7 @@ function PrediccionesPanel({
           <div>
             <h3 className="text-xs font-semibold text-slate-500 uppercase mb-1.5">Próximo cambio probable</h3>
             {combos.length === 0 ? (
-              <p className="text-sm text-slate-400">Sin datos con jugadores en cancha ahora.</p>
+              <p className="text-sm text-slate-400">Sin cambios que se repitan con los jugadores citados hoy.</p>
             ) : (
               <ul className="text-sm text-slate-700 space-y-1.5">
                 {combos.map((c) => (
