@@ -5,7 +5,7 @@ import { api } from '../api';
 import type { LeagueStatsImport } from '../types';
 import { useIsViewer } from '../lib/authContext';
 import { RadarChart, RadarLegend } from '../components/RadarChart';
-import { CODIGO_PROMEDIO, RADAR_PRESETS, findRow, metricColumns, valorNumerico } from '../lib/leagueStats';
+import { CODIGO_PROMEDIO, RADAR_PRESETS, findRow, ligaMax, metricColumns, valorNumerico } from '../lib/leagueStats';
 
 const COLOR_RIVAL = '#f97316';
 const COLOR_PROPIO = '#1e3a8a';
@@ -43,6 +43,11 @@ export default function GraficosPage() {
     if (promedioRow) out.push({ label: 'Promedio', color: COLOR_PROMEDIO, valores: ejes.map((e) => valorNumerico(promedioRow, e.columna)) });
     return out;
   }, [data, rivalRow, propioRow, promedioRow, ejes, rival.nombre]);
+
+  const maxPorEje = useMemo(() => {
+    if (!data) return [];
+    return ejes.map((e) => ligaMax(data, e.columna));
+  }, [data, ejes]);
 
   if (data === undefined) return <p className="text-sm text-slate-400 py-6">Cargando…</p>;
 
@@ -107,7 +112,7 @@ export default function GraficosPage() {
             <section className="card p-4">
               <RadarLegend series={series} />
               <div className="mt-3 max-w-xl mx-auto">
-                <RadarChart ejeLabels={ejes.map((e) => e.label)} series={series} />
+                <RadarChart ejeLabels={ejes.map((e) => e.label)} series={series} maxPorEje={maxPorEje} />
               </div>
             </section>
           )}

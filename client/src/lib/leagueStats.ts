@@ -87,6 +87,22 @@ export function valorNumerico(row: Record<string, string | number> | null, colum
   return Number.isFinite(n) ? n : 0;
 }
 
+// Máximo real de esa métrica entre todos los EQUIPOS de la liga (no filas
+// agregadas como "PROMEDIO"): el eje se escala contra este techo fijo, no
+// contra el máximo de las 3 series que se están graficando — así el ancho
+// del radar de una métrica se puede comparar entre distintos rivales, en
+// vez de reajustarse solo según a quién se esté mirando.
+export function ligaMax(data: LeagueStatsImport, columna: string): number {
+  const col = equipoColumna(data);
+  let max = 0;
+  for (const row of data.rows) {
+    if (col && String(row[col] ?? '').trim().toUpperCase() === CODIGO_PROMEDIO) continue;
+    const v = valorNumerico(row, columna);
+    if (v > max) max = v;
+  }
+  return max;
+}
+
 // Todas las columnas métricas disponibles (todo menos la de equipo), para
 // el modo "Personalizado" — alfabético en vez del orden de la planilla (que
 // las agrupa a mano de forma no siempre intuitiva), para que sea fácil

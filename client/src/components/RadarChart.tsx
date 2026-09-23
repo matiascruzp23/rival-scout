@@ -41,10 +41,15 @@ const RINGS = 4;
 export function RadarChart({
   ejeLabels,
   series,
+  maxPorEje,
   size = 440,
 }: {
   ejeLabels: string[];
   series: RadarSeriesInput[];
+  // Techo real de cada eje (ej. el máximo de toda la liga en esa métrica),
+  // en las unidades originales — el componente lo redondea a un número
+  // prolijo para los ticks, no lo usa tal cual.
+  maxPorEje: number[];
   size?: number;
 }) {
   const n = ejeLabels.length;
@@ -54,10 +59,7 @@ export function RadarChart({
   const radius = size * 0.32;
   const angleFor = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
 
-  const axisMax = ejeLabels.map((_, i) => {
-    const vals = series.map((s) => s.valores[i] ?? 0);
-    return niceMax(Math.max(...vals, 0) * 1.08 || 1);
-  });
+  const axisMax = ejeLabels.map((_, i) => niceMax((maxPorEje[i] || 0) * 1.05 || 1));
 
   const pointFor = (i: number, value: number) => {
     const frac = axisMax[i] > 0 ? Math.max(0, Math.min(1, value / axisMax[i])) : 0;
