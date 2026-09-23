@@ -155,6 +155,10 @@ export interface Rival {
   // (ver LeagueStatsImport). Se completa a mano porque las abreviaciones de
   // la planilla no se pueden inferir de forma confiable desde el nombre.
   codigoLdp?: string;
+  // Columnas de la planilla LDP elegidas en el modo "Personalizado" de
+  // Gráficos y estadísticas, guardadas para poder mostrar ese mismo radar
+  // en el Informe.
+  graficoPersonalizado?: string[];
   createdAt: string;
   updatedAt: string;
 }

@@ -32,6 +32,11 @@ create table if not exists rivals (
   -- Código con el que este rival aparece en la planilla de estadísticas de
   -- liga importada (ver league_stats_import) — se completa a mano.
   codigo_ldp text,
+  -- Columnas de la planilla LDP elegidas a mano en el modo "Personalizado"
+  -- de Gráficos y estadísticas, guardadas para poder mostrar ese mismo
+  -- radar en el Informe (si no, la selección se pierde al salir de la
+  -- pestaña, es solo estado local del componente).
+  grafico_personalizado text[],
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

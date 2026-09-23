@@ -8,10 +8,8 @@ import { RadarChart, RadarLegend } from '../components/RadarChart';
 import {
   CODIGO_PROMEDIO,
   RADAR_PRESETS,
+  escalasPorEje,
   findRow,
-  ligaMax,
-  ligaMin,
-  mejorEsMayor,
   metricColumns,
   metricGroups,
   rankingEnLiga,
@@ -32,12 +30,35 @@ export default function GraficosPage() {
   const [data, setData] = useState<LeagueStatsImport | null | undefined>(undefined);
   const [error, setError] = useState('');
   const [modo, setModo] = useState<Modo>(RADAR_PRESETS[0].key);
-  const [seleccionadas, setSeleccionadas] = useState<string[]>([]);
+  // Arranca con lo último guardado para este rival (si hay), para que la
+  // selección de Personalizado no se pierda al salir de la pestaña — y
+  // también es lo que se muestra en el Informe (ver InformePage.tsx).
+  const [seleccionadas, setSeleccionadas] = useState<string[]>(rival.graficoPersonalizado || []);
+  const [guardando, setGuardando] = useState(false);
 
   const load = () => {
     api.leagueStats.get().then(setData).catch((e) => setError(e.message));
   };
   useEffect(load, []);
+
+  useEffect(() => {
+    setSeleccionadas(rival.graficoPersonalizado || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rival.id]);
+
+  const guardarSeleccion = async () => {
+    setGuardando(true);
+    try {
+      await api.rivals.update(rival.id, { graficoPersonalizado: seleccionadas });
+      reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const huboCambios = JSON.stringify(seleccionadas) !== JSON.stringify(rival.graficoPersonalizado || []);
 
   const rivalRow = data ? findRow(data, rival.codigoLdp || '') : null;
   const propioRow = data?.codigoPropio ? findRow(data, data.codigoPropio) : null;
@@ -57,24 +78,17 @@ export default function GraficosPage() {
     return out;
   }, [data, rivalRow, propioRow, promedioRow, ejes, rival.nombre]);
 
-  const maxPorEje = useMemo(() => {
-    if (!data) return [];
-    return ejes.map((e) => ligaMax(data, e.columna));
+  // maxPorEje: techo del eje (máximo real de la liga). minPorEje: solo
+  // relevante en los ejes invertidos (ver abajo), donde el borde exterior no
+  // es 0 sino el mínimo real de la liga, para no desperdiciar la mitad del
+  // eje en un "0 faltas" que ningún equipo tiene. invertido: "menos es
+  // mejor" (Faltas, Goles recibidos, PPDA, etc.) va al revés en el radar
+  // (ver RadarChart) para que un área grande siempre signifique buen
+  // rendimiento, tanto en los presets fijos como en Personalizado.
+  const { maxPorEje, minPorEje, invertido } = useMemo(() => {
+    if (!data) return { maxPorEje: [], minPorEje: [], invertido: [] };
+    return escalasPorEje(data, ejes);
   }, [data, ejes]);
-
-  // Solo relevante para los ejes invertidos (ver abajo): ahí el borde
-  // exterior no es 0 sino el mínimo real de la liga en esa métrica, para no
-  // desperdiciar la mitad del eje en un "0 faltas" que ningún equipo tiene.
-  const minPorEje = useMemo(() => {
-    if (!data) return [];
-    return ejes.map((e) => ligaMin(data, e.columna));
-  }, [data, ejes]);
-
-  // "Menos es mejor" (Faltas, Goles recibidos, PPDA, etc.): esos ejes van
-  // invertidos en el radar (ver RadarChart) para que un área grande siempre
-  // signifique buen rendimiento, tanto en los presets fijos como en
-  // Personalizado.
-  const invertido = useMemo(() => ejes.map((e) => !mejorEsMayor(e.columna)), [ejes]);
 
   // Solo para el modo Personalizado, y sobre TODAS las métricas disponibles
   // (no solo las ya elegidas): para avisar en la propia lista, antes de
@@ -147,6 +161,10 @@ export default function GraficosPage() {
               seleccionadas={seleccionadas}
               onChange={setSeleccionadas}
               rankingPorColumna={rankingPorColumna}
+              isViewer={isViewer}
+              guardando={guardando}
+              huboCambios={huboCambios}
+              onGuardar={guardarSeleccion}
             />
           )}
 
@@ -325,6 +343,10 @@ function MetricPicker({
   seleccionadas,
   onChange,
   rankingPorColumna,
+  isViewer,
+  guardando,
+  huboCambios,
+  onGuardar,
 }: {
   groups: MetricGroup[];
   seleccionadas: string[];
@@ -332,6 +354,12 @@ function MetricPicker({
   // Para avisar, en la propia lista, si el rival queda top 3 mejor/peor de
   // la liga en esa métrica — antes de elegirla, no después.
   rankingPorColumna: Map<string, RankingLiga>;
+  isViewer: boolean;
+  guardando: boolean;
+  // Si la selección actual difiere de la última guardada para este rival
+  // (habilita el botón de guardar solo cuando hay algo nuevo que guardar).
+  huboCambios: boolean;
+  onGuardar: () => void;
 }) {
   const toggle = (col: string) => {
     if (seleccionadas.includes(col)) {
@@ -350,6 +378,16 @@ function MetricPicker({
           {seleccionadas.length > 0 && (
             <button className="text-xs text-emerald-700 hover:underline" onClick={() => onChange([])}>
               Limpiar
+            </button>
+          )}
+          {!isViewer && (
+            <button
+              className="btn-primary text-xs py-1"
+              disabled={seleccionadas.length < 3 || guardando || !huboCambios}
+              onClick={onGuardar}
+              title="Guarda esta selección para que también aparezca en el Informe"
+            >
+              {guardando ? 'Guardando…' : 'Guardar selección'}
             </button>
           )}
         </div>

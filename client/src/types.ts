@@ -193,6 +193,10 @@ export interface Rival {
   // Código con el que este rival aparece en la planilla de estadísticas de
   // liga importada (ver LeagueStatsImport), para ubicar su fila ahí.
   codigoLdp?: string;
+  // Columnas de la planilla LDP elegidas en el modo "Personalizado" de
+  // Gráficos y estadísticas, guardadas para poder mostrar ese mismo radar
+  // en el Informe.
+  graficoPersonalizado?: string[];
   createdAt: string;
   updatedAt: string;
 }

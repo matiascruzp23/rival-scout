@@ -2,7 +2,17 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
-import type { ProximoPartido } from '../types';
+import type { LeagueStatsImport, ProximoPartido } from '../types';
+import { RadarChart, RadarLegend } from '../components/RadarChart';
+import {
+  CODIGO_PROMEDIO,
+  RADAR_PRESETS,
+  escalasPorEje,
+  findRow,
+  valoresPorEje,
+  type RadarAxis,
+  type RadarPreset,
+} from '../lib/leagueStats';
 import {
   balancePorSistema,
   checkReglaTorneo,
@@ -72,6 +82,33 @@ export default function InformePage() {
       document.title = previous;
     };
   }, [rival.nombre]);
+
+  // Planilla de estadísticas de liga (pestaña "Gráficos y estadísticas"):
+  // se refleja acá con las mismas funciones (lib/leagueStats.ts), para que
+  // el Informe no pueda quedar desalineado con lo que se ve en esa pestaña.
+  const [leagueStats, setLeagueStats] = useState<LeagueStatsImport | null | undefined>(undefined);
+  useEffect(() => {
+    api.leagueStats
+      .get()
+      .then(setLeagueStats)
+      .catch(() => setLeagueStats(null));
+  }, []);
+
+  // Los 3 radares fijos, más el de Personalizado si el analista guardó uno
+  // para este rival (ver GraficosPage.tsx) — con menos de 3 métricas
+  // elegidas no se puede dibujar un radar, así que directamente no se
+  // agrega.
+  const radarPresets: RadarPreset[] = useMemo(() => {
+    const list = [...RADAR_PRESETS];
+    if (rival.graficoPersonalizado && rival.graficoPersonalizado.length >= 3) {
+      list.push({
+        key: 'personalizado',
+        titulo: 'Personalizado',
+        ejes: rival.graficoPersonalizado.map((c): RadarAxis => ({ columna: c, label: c })),
+      });
+    }
+    return list;
+  }, [rival.graficoPersonalizado]);
 
   const matches = useMemo(() => lastN(rival.matches, 10), [rival.matches]);
   const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
@@ -605,6 +642,23 @@ export default function InformePage() {
         )}
       </section>
 
+      {leagueStats && rival.codigoLdp && (
+        <section className="informe-section informe-page mb-6">
+          <h3 className="font-semibold text-slate-800 mb-3">Gráficos y estadísticas</h3>
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+            {radarPresets.map((preset) => (
+              <RadarPresetCard
+                key={preset.key}
+                data={leagueStats}
+                preset={preset}
+                rivalNombre={rival.nombre}
+                rivalCodigo={rival.codigoLdp!}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="informe-section card p-4">
         <h3 className="font-semibold text-slate-800 mb-3">Notas finales</h3>
         <p className="text-sm text-slate-600">
@@ -1094,6 +1148,55 @@ function DiagramFigure({ caption, el, wide = false }: { caption: string; el: Rea
     <div className="mt-2" style={{ maxWidth: wide ? '95%' : '62%', marginLeft: 'auto', marginRight: 'auto' }}>
       {el}
       <p className="text-[10px] text-slate-500 text-center mt-1">{caption}</p>
+    </div>
+  );
+}
+
+const COLOR_RIVAL = '#f97316';
+const COLOR_PROPIO = '#1e3a8a';
+const COLOR_PROMEDIO = '#eab308';
+
+// Mismo radar que la pestaña "Gráficos y estadísticas" (rival/propio/
+// promedio, con los ejes "menos es mejor" invertidos) — se recalcula acá en
+// vez de recibir las series ya armadas porque el techo/piso de cada eje
+// (escalasPorEje) depende de toda la planilla, no solo de este rival.
+function RadarPresetCard({
+  data,
+  preset,
+  rivalNombre,
+  rivalCodigo,
+}: {
+  data: LeagueStatsImport;
+  preset: RadarPreset;
+  rivalNombre: string;
+  rivalCodigo: string;
+}) {
+  const rivalRow = findRow(data, rivalCodigo);
+  const propioRow = data.codigoPropio ? findRow(data, data.codigoPropio) : null;
+  const promedioRow = findRow(data, CODIGO_PROMEDIO);
+
+  const series: { label: string; color: string; valores: number[] }[] = [];
+  if (rivalRow) series.push({ label: rivalNombre, color: COLOR_RIVAL, valores: valoresPorEje(data, preset.ejes, rivalCodigo) });
+  if (propioRow) series.push({ label: 'Propio', color: COLOR_PROPIO, valores: valoresPorEje(data, preset.ejes, data.codigoPropio!) });
+  if (promedioRow) series.push({ label: 'Promedio', color: COLOR_PROMEDIO, valores: valoresPorEje(data, preset.ejes, CODIGO_PROMEDIO) });
+  if (series.length === 0) return null;
+
+  const { maxPorEje, minPorEje, invertido } = escalasPorEje(data, preset.ejes);
+
+  return (
+    <div className="informe-section card p-3">
+      <h4 className="text-sm font-semibold text-slate-700 mb-2">{preset.titulo}</h4>
+      <RadarLegend series={series} />
+      <div className="mt-2 max-w-sm mx-auto">
+        <RadarChart
+          ejeLabels={preset.ejes.map((e) => e.label)}
+          series={series}
+          maxPorEje={maxPorEje}
+          minPorEje={minPorEje}
+          invertido={invertido}
+          size={320}
+        />
+      </div>
     </div>
   );
 }

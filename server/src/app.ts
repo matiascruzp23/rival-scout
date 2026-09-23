@@ -124,6 +124,7 @@ function toRival(row: any, reglasTorneo: TorneoRegla[]): Rival {
     reglasTorneo,
     escudoUrl: row.escudo_url || undefined,
     codigoLdp: row.codigo_ldp || undefined,
+    graficoPersonalizado: row.grafico_personalizado?.length ? row.grafico_personalizado : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -434,6 +435,7 @@ app.put('/api/rivals/:id', async (req, res) => {
   if (b.notasContexto !== undefined) patch.notas_contexto = b.notasContexto || null;
   if (b.notaXI !== undefined) patch.nota_xi = b.notaXI || null;
   if (b.codigoLdp !== undefined) patch.codigo_ldp = b.codigoLdp?.trim() || null;
+  if (b.graficoPersonalizado !== undefined) patch.grafico_personalizado = b.graficoPersonalizado?.length ? b.graficoPersonalizado : null;
 
   const { data: updated, error } = await supabase.from('rivals').update(patch).eq('id', req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });

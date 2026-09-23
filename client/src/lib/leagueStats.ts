@@ -365,3 +365,22 @@ export function rankingEnLiga(data: LeagueStatsImport, codigoRival: string, colu
     mejorEsMayor: esMejorMayor,
   };
 }
+
+// Valores de un equipo para cada eje, en el mismo orden — para armar una
+// serie del radar (ver GraficosPage.tsx / InformePage.tsx, que solo tienen
+// que agregarle color y etiqueta).
+export function valoresPorEje(data: LeagueStatsImport, ejes: RadarAxis[], codigo: string): number[] {
+  const row = findRow(data, codigo);
+  return ejes.map((e) => valorNumerico(row, e.columna));
+}
+
+// Techo, piso e inversión de cada eje — compartido entre el radar de
+// Gráficos y estadísticas y el del Informe, para no repetir este cálculo en
+// los dos lugares (y no arriesgarse a que queden desalineados).
+export function escalasPorEje(data: LeagueStatsImport, ejes: RadarAxis[]) {
+  return {
+    maxPorEje: ejes.map((e) => ligaMax(data, e.columna)),
+    minPorEje: ejes.map((e) => ligaMin(data, e.columna)),
+    invertido: ejes.map((e) => !mejorEsMayor(e.columna)),
+  };
+}
