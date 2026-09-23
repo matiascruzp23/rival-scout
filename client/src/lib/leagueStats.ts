@@ -88,7 +88,9 @@ export function valorNumerico(row: Record<string, string | number> | null, colum
 }
 
 // Todas las columnas métricas disponibles (todo menos la de equipo), para
-// el modo "Personalizado".
+// el modo "Personalizado" — alfabético en vez del orden de la planilla (que
+// las agrupa a mano de forma no siempre intuitiva), para que sea fácil
+// encontrar una métrica puntual en la lista.
 export function metricColumns(data: LeagueStatsImport): string[] {
-  return data.columns.slice(1);
+  return [...data.columns.slice(1)].sort((a, b) => a.localeCompare(b, 'es'));
 }
