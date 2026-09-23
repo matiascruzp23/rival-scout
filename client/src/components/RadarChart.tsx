@@ -56,7 +56,7 @@ export function RadarChart({
   if (n < 3) return <p className="text-sm text-slate-400">Elegí al menos 3 métricas para dibujar un radar.</p>;
 
   const center = size / 2;
-  const radius = size * 0.32;
+  const radius = size * 0.28;
   const angleFor = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
 
   const axisMax = ejeLabels.map((_, i) => niceMax((maxPorEje[i] || 0) * 1.05 || 1));
@@ -69,7 +69,7 @@ export function RadarChart({
   };
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+    <svg viewBox={`0 0 ${size} ${size}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}>
       {/* anillos de la grilla */}
       {Array.from({ length: RINGS }, (_, ringIdx) => {
         const frac = (ringIdx + 1) / RINGS;
@@ -88,16 +88,24 @@ export function RadarChart({
         const ang = angleFor(i);
         const x2 = center + radius * Math.cos(ang);
         const y2 = center + radius * Math.sin(ang);
-        const labelR = radius + size * 0.09;
+        const labelR = radius + size * 0.1;
         const lx = center + labelR * Math.cos(ang);
         const ly = center + labelR * Math.sin(ang);
+        // Ancla el texto hacia el lado de donde "crece" en vez de centrarlo
+        // siempre en el punto: una etiqueta larga a la izquierda (ej.
+        // "Pases progresivos") centrada en su punto se corta contra el
+        // borde del SVG, porque la mitad del texto queda apuntando hacia
+        // afuera del dibujo. Ejes casi verticales (arriba/abajo) sí quedan
+        // centrados, para no verse pegados de costado.
+        const cos = Math.cos(ang);
+        const textAnchor = cos > 0.25 ? 'start' : cos < -0.25 ? 'end' : 'middle';
         return (
           <g key={label}>
             <line x1={center} y1={center} x2={x2} y2={y2} stroke="#cbd5e1" strokeWidth={1} />
             <text
               x={lx}
               y={ly}
-              textAnchor="middle"
+              textAnchor={textAnchor}
               dominantBaseline="middle"
               fontSize={size * 0.026}
               fill="#334155"
