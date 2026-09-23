@@ -9,7 +9,7 @@ export function IndividualStatsBoard({ data }: { data: IndividualStatsImport }) 
   const grupos = INDIVIDUAL_STAT_GROUPS.map((g) => ({
     titulo: g.titulo,
     categorias: g.categorias
-      .map((c) => ({ ...c, top: topJugadores(data, c.columna) }))
+      .map((c) => ({ ...c, top: topJugadores(data, c.columna, 3, { excluirPorteros: c.excluirPorteros }) }))
       .filter((c) => c.top.length > 0),
   })).filter((g) => g.categorias.length > 0);
 

@@ -6,6 +6,10 @@ export interface IndividualStatCategory {
   columna: string;
   etiqueta: string;
   formato: (v: number) => string;
+  // Excluye arqueros del ranking (ej. % de duelos aéreos: un arquero casi
+  // no disputa duelos aéreos de juego, así que su % no es comparable con
+  // el del resto del plantel).
+  excluirPorteros?: boolean;
 }
 
 export interface IndividualStatGroup {
@@ -37,7 +41,7 @@ export const INDIVIDUAL_STAT_GROUPS: IndividualStatGroup[] = [
     titulo: 'Defensivo',
     categorias: [
       { columna: 'Duelos defensivos ganados, %', etiqueta: '% Duelos defensivos', formato: porcentaje },
-      { columna: 'Duelos aéreos ganados, %', etiqueta: '% Duelos aéreos', formato: porcentaje },
+      { columna: 'Duelos aéreos ganados, %', etiqueta: '% Duelos aéreos', formato: porcentaje, excluirPorteros: true },
       { columna: 'Interceptaciones/90', etiqueta: 'Interceptaciones/90', formato: decimal1 },
       { columna: 'Entradas/90', etiqueta: 'Entradas/90', formato: decimal1 },
     ],
@@ -81,11 +85,22 @@ export interface JugadorRanking {
 // los partidos disputados hasta ahora.
 const COLUMNA_MINUTOS = 'Minutos jugados';
 const COLUMNA_PARTIDOS = 'Partidos jugados';
+const COLUMNA_POSICION = 'Posición específica';
 const MINUTOS_POR_PARTIDO = 90;
 export const MIN_PORCENTAJE_MINUTOS = 0.5;
 
 function jugadorColumna(data: IndividualStatsImport): string | null {
   return data.columns[0] || null;
+}
+
+// La posición específica llega como una lista separada por comas (ej. "RWB,
+// CF, RB" para un jugador que ocupó varias); un arquero siempre trae "GK"
+// como único valor.
+function esPortero(row: Record<string, string | number>): boolean {
+  return String(row[COLUMNA_POSICION] ?? '')
+    .split(',')
+    .map((p) => p.trim().toUpperCase())
+    .includes('GK');
 }
 
 function valorNumerico(row: Record<string, string | number>, columna: string): number {
@@ -112,18 +127,24 @@ export function umbralMinutos(data: IndividualStatsImport): UmbralMinutos {
 }
 
 // Top N jugadores para una columna, de mayor a menor, entre los que superan
-// el umbral de minutos vigente (ver umbralMinutos). Se descartan además los
-// que están en 0 (o sin dato) en la propia columna: mostrar "top 3" con
-// jugadores en 0 sería engañoso cuando en realidad nadie del plantel se
-// destaca ahí (ver IndividualesInformeBlock/RadarPresetCard para el mismo
-// criterio en otras planillas: no mostrar la categoría en vez de mostrar
-// ceros).
-export function topJugadores(data: IndividualStatsImport, columna: string, n = 3): JugadorRanking[] {
+// el umbral de minutos vigente (ver umbralMinutos) y, si se pide, sin
+// arqueros. Se descartan además los que están en 0 (o sin dato) en la
+// propia columna: mostrar "top 3" con jugadores en 0 sería engañoso cuando
+// en realidad nadie del plantel se destaca ahí (ver
+// IndividualesInformeBlock/RadarPresetCard para el mismo criterio en otras
+// planillas: no mostrar la categoría en vez de mostrar ceros).
+export function topJugadores(
+  data: IndividualStatsImport,
+  columna: string,
+  n = 3,
+  opts: { excluirPorteros?: boolean } = {}
+): JugadorRanking[] {
   const col = jugadorColumna(data);
   if (!col) return [];
   const { activo, minMinutos } = umbralMinutos(data);
   return data.rows
     .filter((r) => !activo || valorNumerico(r, COLUMNA_MINUTOS) >= minMinutos)
+    .filter((r) => !opts.excluirPorteros || !esPortero(r))
     .map((r) => ({ nombre: String(r[col] ?? '').trim(), valor: valorNumerico(r, columna) }))
     .filter((j) => j.nombre && j.valor > 0)
     .sort((a, b) => b.valor - a.valor)
