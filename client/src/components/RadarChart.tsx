@@ -12,21 +12,22 @@ export interface RadarSeriesInput {
   valores: number[]; // mismo orden que los ejes
 }
 
-// Redondea hacia arriba a un número "prolijo" (1/2/2.5/5/10 × 10^n), igual
-// criterio que usan las librerías de gráficos para elegir los ticks de un
-// eje.
+// Redondea hacia arriba a un número "prolijo" × 10^n, para que los ticks no
+// queden con decimales feos. Con pocos escalones (ej. el clásico 1/2/2.5/
+// 5/10) un techo apenas arriba de una potencia de diez saltaba directo al
+// doble (1.05 → 2): el equipo líder de la liga en esa métrica terminaba
+// pintado a la mitad del eje en vez de cerca del borde, aunque el propio
+// techo del eje SÍ fuera su valor real. Con más escalones, el peor caso
+// pasa de +100% a +20%.
+const NICE_STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+
 function niceMax(max: number): number {
   if (max <= 0) return 1;
   const exp = Math.floor(Math.log10(max));
   const base = Math.pow(10, exp);
   const norm = max / base;
-  let niceNorm: number;
-  if (norm <= 1) niceNorm = 1;
-  else if (norm <= 2) niceNorm = 2;
-  else if (norm <= 2.5) niceNorm = 2.5;
-  else if (norm <= 5) niceNorm = 5;
-  else niceNorm = 10;
-  return niceNorm * base;
+  const step = NICE_STEPS.find((s) => s >= norm - 1e-9) ?? 10;
+  return step * base;
 }
 
 function formatTick(v: number): string {
