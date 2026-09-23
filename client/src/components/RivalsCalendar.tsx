@@ -103,12 +103,12 @@ export function RivalsCalendar({ rivals }: { rivals: RivalListItem[] }) {
               }`}
             >
               <span className={`text-xs ${isToday ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>{day}</span>
-              <div className="flex flex-wrap gap-1">
+              <div className="grid grid-cols-2 gap-1">
                 {rivalesDelDia.map((r) => (
                   <Link
                     key={r.id}
                     to={`/rivales/${r.id}`}
-                    className="w-1/2 aspect-square flex items-center justify-center bg-white border border-slate-200 rounded hover:border-emerald-400 hover:bg-emerald-50 p-0.5"
+                    className="aspect-square flex items-center justify-center bg-white border border-slate-200 rounded hover:border-emerald-400 hover:bg-emerald-50 p-0.5"
                     title={r.nombre}
                   >
                     {r.escudoUrl ? (
