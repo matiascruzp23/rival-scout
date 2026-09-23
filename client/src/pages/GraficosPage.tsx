@@ -10,6 +10,7 @@ import {
   RADAR_PRESETS,
   findRow,
   ligaMax,
+  ligaMin,
   mejorEsMayor,
   metricColumns,
   metricGroups,
@@ -59,6 +60,14 @@ export default function GraficosPage() {
   const maxPorEje = useMemo(() => {
     if (!data) return [];
     return ejes.map((e) => ligaMax(data, e.columna));
+  }, [data, ejes]);
+
+  // Solo relevante para los ejes invertidos (ver abajo): ahí el borde
+  // exterior no es 0 sino el mínimo real de la liga en esa métrica, para no
+  // desperdiciar la mitad del eje en un "0 faltas" que ningún equipo tiene.
+  const minPorEje = useMemo(() => {
+    if (!data) return [];
+    return ejes.map((e) => ligaMin(data, e.columna));
   }, [data, ejes]);
 
   // "Menos es mejor" (Faltas, Goles recibidos, PPDA, etc.): esos ejes van
@@ -153,6 +162,7 @@ export default function GraficosPage() {
                   ejeLabels={ejes.map((e) => e.label)}
                   series={series}
                   maxPorEje={maxPorEje}
+                  minPorEje={minPorEje}
                   invertido={invertido}
                 />
               </div>

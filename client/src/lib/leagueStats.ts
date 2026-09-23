@@ -103,6 +103,23 @@ export function ligaMax(data: LeagueStatsImport, columna: string): number {
   return max;
 }
 
+// Mínimo real de esa métrica entre todos los EQUIPOS de la liga (no
+// "PROMEDIO") — para los ejes "menos es mejor" del radar (ver RadarChart):
+// ahí 0 no es un techo útil para el mejor caso (nadie hace 0 faltas en la
+// temporada), así que el borde exterior se ancla al mínimo real observado
+// en la liga en vez de 0, para que se note la diferencia entre los equipos
+// realmente mejores y no queden todos apretados cerca del borde.
+export function ligaMin(data: LeagueStatsImport, columna: string): number {
+  const col = equipoColumna(data);
+  let min = Infinity;
+  for (const row of data.rows) {
+    if (col && String(row[col] ?? '').trim().toUpperCase() === CODIGO_PROMEDIO) continue;
+    const v = valorNumerico(row, columna);
+    if (v < min) min = v;
+  }
+  return Number.isFinite(min) ? min : 0;
+}
+
 export interface MetricGroup {
   titulo: string;
   columnas: string[];

@@ -30,6 +30,23 @@ function niceMax(max: number): number {
   return step * base;
 }
 
+// Redondea hacia ABAJO a un número prolijo, para el otro extremo de un eje
+// invertido (ver RadarChart): ahí el borde exterior no es 0 sino el mínimo
+// real de la liga, y este valor tiene que quedar por debajo de ese mínimo
+// (nunca por encima), o el mejor equipo real quedaría fuera del eje.
+function niceMin(min: number): number {
+  if (min <= 0) return 0;
+  const exp = Math.floor(Math.log10(min));
+  const base = Math.pow(10, exp);
+  const norm = min / base;
+  let step = NICE_STEPS[0];
+  for (const s of NICE_STEPS) {
+    if (s <= norm + 1e-9) step = s;
+    else break;
+  }
+  return step * base;
+}
+
 function formatTick(v: number): string {
   if (v === 0) return '0';
   if (Math.abs(v) >= 100) return v.toFixed(0);
@@ -43,6 +60,7 @@ export function RadarChart({
   ejeLabels,
   series,
   maxPorEje,
+  minPorEje,
   invertido,
   size = 440,
 }: {
@@ -52,11 +70,17 @@ export function RadarChart({
   // en las unidades originales — el componente lo redondea a un número
   // prolijo para los ticks, no lo usa tal cual.
   maxPorEje: number[];
+  // Solo se usa en los ejes invertidos (ver abajo): el mínimo real de la
+  // liga en esa métrica, que ahí hace de borde exterior en vez de 0 — 0
+  // faltas no es una referencia útil si ningún equipo real se acerca. En
+  // los ejes normales el mínimo siempre es 0, este valor se ignora.
+  minPorEje?: number[];
   // Ejes donde "menos es mejor" (ej. Faltas, Goles recibidos): se dibujan al
-  // revés (0 en el borde exterior, el techo de la liga en el centro) para
-  // que en TODO el radar "más área = mejor rendimiento", en vez de que un
-  // pico grande a veces sea bueno (más goles) y a veces malo (más fueras de
-  // juego). Mismo orden que ejeLabels; si se omite, ningún eje se invierte.
+  // revés (el mínimo de la liga en el borde exterior, el máximo en el
+  // centro) para que en TODO el radar "más área = mejor rendimiento", en
+  // vez de que un pico grande a veces sea bueno (más goles) y a veces malo
+  // (más fueras de juego). Mismo orden que ejeLabels; si se omite, ningún
+  // eje se invierte.
   invertido?: boolean[];
   size?: number;
 }) {
@@ -66,12 +90,25 @@ export function RadarChart({
   const center = size / 2;
   const radius = size * 0.28;
   const angleFor = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
-
-  const axisMax = ejeLabels.map((_, i) => niceMax((maxPorEje[i] || 0) * 1.05 || 1));
   const esInvertido = (i: number) => !!invertido?.[i];
 
+  const axisMax = ejeLabels.map((_, i) => niceMax((maxPorEje[i] || 0) * 1.05 || 1));
+  // Mínimo del eje: 0 en los normales; en los invertidos, el mínimo real de
+  // la liga (con el mismo margen que el techo, para que el mejor equipo real
+  // no quede pegado exactamente al borde) — nunca por encima del propio
+  // techo, por si un eje invertido no tiene datos reales para calcular un
+  // mínimo por debajo del máximo.
+  const axisMin = ejeLabels.map((_, i) => {
+    if (!esInvertido(i)) return 0;
+    const m = niceMin((minPorEje?.[i] || 0) * 0.95);
+    return Math.min(m, axisMax[i] * 0.9);
+  });
+
   const pointFor = (i: number, value: number) => {
-    let frac = axisMax[i] > 0 ? Math.max(0, Math.min(1, value / axisMax[i])) : 0;
+    const lo = axisMin[i];
+    const hi = axisMax[i];
+    const range = hi - lo;
+    let frac = range > 0 ? Math.max(0, Math.min(1, (value - lo) / range)) : 0;
     if (esInvertido(i)) frac = 1 - frac;
     const r = frac * radius;
     const ang = angleFor(i);
@@ -133,9 +170,10 @@ export function RadarChart({
             {Array.from({ length: RINGS }, (_, ringIdx) => {
               const frac = (ringIdx + 1) / RINGS;
               // Invertido: el valor baja a medida que el punto se aleja del
-              // centro (0 en el borde, el techo de la liga en el centro),
-              // al revés que un eje normal.
-              const tickVal = axisMax[i] * (inv ? 1 - frac : frac);
+              // centro (el mínimo de la liga en el borde, el máximo en el
+              // centro), al revés que un eje normal — y arranca del mínimo
+              // real de la liga, no de 0.
+              const tickVal = inv ? axisMax[i] - frac * (axisMax[i] - axisMin[i]) : axisMax[i] * frac;
               const tx = center + frac * radius * Math.cos(ang);
               const ty = center + frac * radius * Math.sin(ang);
               return (
