@@ -50,6 +50,8 @@ import {
 import { playerMap, playerName } from '../lib/lookup';
 import { PlantelView } from '../components/PlantelView';
 import { useIsViewer } from '../lib/authContext';
+import { UserSharePicker } from '../components/UserSharePicker';
+import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
 import { Pitch, type PitchToken } from '../components/Pitch';
 import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
 import { situationDiagramFor } from '../components/SituationDiagrams';
@@ -659,6 +661,13 @@ export default function InformePage() {
         </section>
       )}
 
+      {rival.individualStats && rival.individualStats.rows.length > 0 && (
+        <section className="informe-section informe-page mb-6">
+          <h3 className="font-semibold text-slate-800 mb-3">Datos individuales</h3>
+          <IndividualStatsBoard data={rival.individualStats} />
+        </section>
+      )}
+
       <section className="informe-section card p-4">
         <h3 className="font-semibold text-slate-800 mb-3">Notas finales</h3>
         <p className="text-sm text-slate-600">
@@ -689,6 +698,7 @@ function Portada({
   const [entrenadorPerdidos, setEntrenadorPerdidos] = useState(rival.entrenadorPerdidos?.toString() ?? '');
   const [notasContexto, setNotasContexto] = useState(rival.notasContexto || '');
   const [notaXI, setNotaXI] = useState(rival.notaXI || '');
+  const [visibleUserIds, setVisibleUserIds] = useState<string[] | null>(rival.visibleUserIds ?? null);
   const [saving, setSaving] = useState(false);
   const [uploadingEscudo, setUploadingEscudo] = useState(false);
   const p = rival.proximoPartido;
@@ -712,6 +722,7 @@ function Portada({
         entrenadorPerdidos: entrenadorPerdidos.trim() === '' ? null : Number(entrenadorPerdidos),
         notasContexto,
         notaXI,
+        visibleUserIds,
       });
       onSaved();
       setEditing(false);
@@ -861,6 +872,7 @@ function Portada({
               />
             </div>
           </div>
+          <UserSharePicker value={visibleUserIds} onChange={setVisibleUserIds} />
           <div className="flex justify-end">
             <button className="btn-primary" disabled={saving} onClick={save}>
               Guardar

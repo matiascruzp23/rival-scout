@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
-import type { LeagueStatsImport } from '../types';
+import type { IndividualStatsImport, LeagueStatsImport } from '../types';
 import { useIsViewer } from '../lib/authContext';
 import { RadarChart, RadarLegend } from '../components/RadarChart';
+import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
 import {
   CODIGO_PROMEDIO,
   RADAR_PRESETS,
@@ -188,7 +189,100 @@ export default function GraficosPage() {
           )}
         </>
       )}
+
+      <div className="pt-2 border-t border-slate-200">
+        <h3 className="text-base font-semibold text-slate-900">Datos individuales</h3>
+        <p className="text-xs text-slate-500 mt-0.5 mb-3">
+          Líderes del plantel de {rival.nombre} por categoría, a partir de una planilla de jugadores importada
+          (propia de este rival, a diferencia de la planilla de liga de arriba).
+        </p>
+        <IndividualStatsImportCard rivalId={rival.id} data={rival.individualStats} isViewer={isViewer} onImported={reload} />
+        {rival.individualStats && (
+          rival.individualStats.rows.length === 0 ? (
+            <p className="text-sm text-slate-400 mt-3">La planilla importada no tiene filas.</p>
+          ) : (
+            <div className="mt-3">
+              <IndividualStatsBoard data={rival.individualStats} />
+            </div>
+          )
+        )}
+      </div>
     </div>
+  );
+}
+
+function IndividualStatsImportCard({
+  rivalId,
+  data,
+  isViewer,
+  onImported,
+}: {
+  rivalId: string;
+  data: IndividualStatsImport | null;
+  isViewer: boolean;
+  onImported: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  if (isViewer && !data) {
+    return <p className="text-sm text-slate-400">Todavía no se importó una planilla de jugadores para este rival.</p>;
+  }
+
+  const doImport = async () => {
+    if (!file) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api.individualStats.import(rivalId, file);
+      setFile(null);
+      onImported();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const doRemove = async () => {
+    setSaving(true);
+    try {
+      await api.individualStats.remove(rivalId);
+      onImported();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="font-semibold text-slate-800 text-sm">Planilla de jugadores</h4>
+        {data && (
+          <span className="text-xs text-slate-400">
+            {data.fileName} · {data.rows.length} jugadores · subida el {new Date(data.uploadedAt).toLocaleDateString('es-CL')}
+          </span>
+        )}
+      </div>
+      {!isViewer && (
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="label">Archivo (.xlsx)</label>
+            <input type="file" accept=".xlsx" className="input" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          </div>
+          <button className="btn-primary" disabled={!file || saving} onClick={doImport}>
+            {data ? 'Reemplazar planilla' : 'Importar planilla'}
+          </button>
+          {data && (
+            <button className="text-xs text-red-600 hover:underline" disabled={saving} onClick={doRemove}>
+              Quitar planilla
+            </button>
+          )}
+        </div>
+      )}
+      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+    </section>
   );
 }
 

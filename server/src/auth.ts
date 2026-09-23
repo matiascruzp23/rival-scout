@@ -1,6 +1,17 @@
 import type { NextFunction, Request, Response } from 'express';
 import { supabase } from './supabaseClient.js';
 
+declare global {
+  namespace Express {
+    interface Request {
+      // Fijado por requireAuth una vez validada la sesión — id real de
+      // auth.users, usado para decidir qué rivales puede ver cada quien
+      // (ver puedeVerRival en app.ts).
+      user?: { id: string; isViewer: boolean };
+    }
+  }
+}
+
 // Exige una sesión válida de Supabase Auth (el token que el cliente adjunta
 // como Authorization: Bearer <access_token>, ver client/src/api.ts). El rol
 // vive en app_metadata (solo lo puede fijar un admin vía service_role, el
@@ -22,5 +33,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(403).json({ error: 'Tu usuario es de solo lectura' });
   }
 
+  req.user = { id: data.user.id, isViewer };
   next();
 }

@@ -1,6 +1,8 @@
 import type {
+  AppUser,
   ImportedPlayerRow,
   ImportPreviewResult,
+  IndividualStatsImport,
   LeagueStatsImport,
   Match,
   MatchCsv,
@@ -36,8 +38,13 @@ export const api = {
   rivals: {
     list: () => request<RivalListItem[]>('/rivals'),
     get: (id: string) => request<RivalDetail>(`/rivals/${id}`),
-    create: (data: { nombre: string; sistemaPrincipal?: string; sistemaAlternativo?: string; entrenador?: string }) =>
-      request<Rival>('/rivals', { method: 'POST', body: JSON.stringify(data) }),
+    create: (data: {
+      nombre: string;
+      sistemaPrincipal?: string;
+      sistemaAlternativo?: string;
+      entrenador?: string;
+      visibleUserIds?: string[];
+    }) => request<Rival>('/rivals', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Rival>) =>
       request<Rival>(`/rivals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: string) => request<void>(`/rivals/${id}`, { method: 'DELETE' }),
@@ -98,5 +105,16 @@ export const api = {
     },
     setCodigoPropio: (codigoPropio: string) =>
       request<LeagueStatsImport>('/league-stats/config', { method: 'PUT', body: JSON.stringify({ codigoPropio }) }),
+  },
+  individualStats: {
+    import: (rivalId: string, file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      return request<IndividualStatsImport>(`/rivals/${rivalId}/individual-stats/import`, { method: 'POST', body: form });
+    },
+    remove: (rivalId: string) => request<void>(`/rivals/${rivalId}/individual-stats`, { method: 'DELETE' }),
+  },
+  users: {
+    list: () => request<AppUser[]>('/users'),
   },
 };

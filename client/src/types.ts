@@ -197,6 +197,12 @@ export interface Rival {
   // Gráficos y estadísticas, guardadas para poder mostrar ese mismo radar
   // en el Informe.
   graficoPersonalizado?: string[];
+  // Id (auth.users) de quien creó este rival — siempre puede verlo, incluso
+  // si después se restringe con visibleUserIds.
+  createdBy?: string;
+  // undefined/null = visible para todos. Una lista (incluso vacía = solo el
+  // creador) restringe qué otros usuarios además del creador pueden verlo.
+  visibleUserIds?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -211,6 +217,21 @@ export interface LeagueStatsImport {
   uploadedAt: string;
 }
 
+// Planilla de estadísticas INDIVIDUALES de los jugadores de un rival
+// puntual (una fila por jugador), a diferencia de LeagueStatsImport que es
+// de equipos y compartida entre todos los rivales.
+export interface IndividualStatsImport {
+  fileName: string;
+  columns: string[];
+  rows: Record<string, string | number>[];
+  uploadedAt: string;
+}
+
+export interface AppUser {
+  id: string;
+  username: string;
+}
+
 export interface RivalListItem extends Rival {
   matchCount: number;
   playerCount: number;
@@ -219,4 +240,5 @@ export interface RivalListItem extends Rival {
 export interface RivalDetail extends Rival {
   players: Player[];
   matches: Match[];
+  individualStats: IndividualStatsImport | null;
 }

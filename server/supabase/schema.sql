@@ -37,6 +37,13 @@ create table if not exists rivals (
   -- radar en el Informe (si no, la selección se pierde al salir de la
   -- pestaña, es solo estado local del componente).
   grafico_personalizado text[],
+  -- Id (auth.users) de quien creó este rival — siempre puede verlo, incluso
+  -- si después se restringe con visible_user_ids.
+  created_by text,
+  -- null = visible para todos (comportamiento por defecto). Una lista
+  -- (incluso vacía = solo el creador) restringe qué otros usuarios además
+  -- del creador pueden ver este rival.
+  visible_user_ids text[],
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -170,6 +177,19 @@ create table if not exists league_stats_import (
   uploaded_at timestamptz not null default now()
 );
 
+-- Planilla de estadísticas INDIVIDUALES de los jugadores de un rival
+-- puntual (pestaña "Gráficos y estadísticas" → "Datos individuales"): una
+-- fila por jugador de ESE rival (a diferencia de league_stats_import, que
+-- es de equipos y compartida entre todos). Una por rival, se reemplaza
+-- entera en cada import (upsert por rival_id).
+create table if not exists individual_stats_import (
+  rival_id text primary key references rivals(id) on delete cascade,
+  file_name text,
+  columns text[] not null default '{}',
+  rows jsonb not null default '[]',
+  uploaded_at timestamptz not null default now()
+);
+
 -- Sin políticas: deniega todo a anon/authenticated. service_role (el
 -- servidor) sigue teniendo acceso completo, RLS no le aplica.
 alter table rivals enable row level security;
@@ -182,4 +202,5 @@ alter table substitutions enable row level security;
 alter table match_events enable row level security;
 alter table match_banca enable row level security;
 alter table match_bajas enable row level security;
+alter table individual_stats_import enable row level security;
 alter table league_stats_import enable row level security;

@@ -7,6 +7,7 @@ import { SystemSelect } from '../components/SystemSelect';
 import { AppLogo } from '../components/AppLogo';
 import { useIsViewer } from '../lib/authContext';
 import { RivalsCalendar } from '../components/RivalsCalendar';
+import { UserSharePicker } from '../components/UserSharePicker';
 
 export default function RivalsList() {
   const [rivals, setRivals] = useState<RivalListItem[] | null>(null);
@@ -80,6 +81,14 @@ export default function RivalsList() {
                     <Link to={`/rivales/${r.id}`} className="font-semibold text-slate-900 hover:text-emerald-700">
                       {r.nombre}
                     </Link>
+                    {r.visibleUserIds != null && (
+                      <span
+                        className="badge bg-slate-100 text-slate-500 px-1.5 shrink-0"
+                        title="Rival privado: solo lo ven ciertos usuarios"
+                      >
+                        🔒
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-slate-500 flex gap-4">
                     <span>{r.matchCount} partido{r.matchCount === 1 ? '' : 's'}</span>
@@ -165,6 +174,7 @@ function CreateRivalModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [sistemaPrincipal, setSistemaPrincipal] = useState('');
   const [sistemaAlternativo, setSistemaAlternativo] = useState('');
   const [escudo, setEscudo] = useState<File | null>(null);
+  const [visibleUserIds, setVisibleUserIds] = useState<string[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -172,7 +182,13 @@ function CreateRivalModal({ onClose, onCreated }: { onClose: () => void; onCreat
     if (!nombre.trim()) return;
     setSaving(true);
     try {
-      const rival = await api.rivals.create({ nombre: nombre.trim(), entrenador, sistemaPrincipal, sistemaAlternativo });
+      const rival = await api.rivals.create({
+        nombre: nombre.trim(),
+        entrenador,
+        sistemaPrincipal,
+        sistemaAlternativo,
+        visibleUserIds: visibleUserIds ?? undefined,
+      });
       if (escudo) await api.rivals.uploadEscudo(rival.id, escudo);
       onCreated(rival.id);
     } catch (e) {
@@ -223,6 +239,7 @@ function CreateRivalModal({ onClose, onCreated }: { onClose: () => void; onCreat
           <label className="label">Sistema alternativo (opcional)</label>
           <SystemSelect value={sistemaAlternativo} onChange={setSistemaAlternativo} emptyLabel="Sin alternativo" />
         </div>
+        <UserSharePicker value={visibleUserIds} onChange={setVisibleUserIds} />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button className="btn-secondary" onClick={onClose}>
