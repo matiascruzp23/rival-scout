@@ -43,6 +43,7 @@ export function RadarChart({
   ejeLabels,
   series,
   maxPorEje,
+  invertido,
   size = 440,
 }: {
   ejeLabels: string[];
@@ -51,6 +52,12 @@ export function RadarChart({
   // en las unidades originales — el componente lo redondea a un número
   // prolijo para los ticks, no lo usa tal cual.
   maxPorEje: number[];
+  // Ejes donde "menos es mejor" (ej. Faltas, Goles recibidos): se dibujan al
+  // revés (0 en el borde exterior, el techo de la liga en el centro) para
+  // que en TODO el radar "más área = mejor rendimiento", en vez de que un
+  // pico grande a veces sea bueno (más goles) y a veces malo (más fueras de
+  // juego). Mismo orden que ejeLabels; si se omite, ningún eje se invierte.
+  invertido?: boolean[];
   size?: number;
 }) {
   const n = ejeLabels.length;
@@ -61,9 +68,11 @@ export function RadarChart({
   const angleFor = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
 
   const axisMax = ejeLabels.map((_, i) => niceMax((maxPorEje[i] || 0) * 1.05 || 1));
+  const esInvertido = (i: number) => !!invertido?.[i];
 
   const pointFor = (i: number, value: number) => {
-    const frac = axisMax[i] > 0 ? Math.max(0, Math.min(1, value / axisMax[i])) : 0;
+    let frac = axisMax[i] > 0 ? Math.max(0, Math.min(1, value / axisMax[i])) : 0;
+    if (esInvertido(i)) frac = 1 - frac;
     const r = frac * radius;
     const ang = angleFor(i);
     return { x: center + r * Math.cos(ang), y: center + r * Math.sin(ang) };
@@ -100,6 +109,7 @@ export function RadarChart({
         // centrados, para no verse pegados de costado.
         const cos = Math.cos(ang);
         const textAnchor = cos > 0.25 ? 'start' : cos < -0.25 ? 'end' : 'middle';
+        const inv = esInvertido(i);
         return (
           <g key={label}>
             <line x1={center} y1={center} x2={x2} y2={y2} stroke="#cbd5e1" strokeWidth={1} />
@@ -113,10 +123,19 @@ export function RadarChart({
               style={{ fontWeight: 600 }}
             >
               {label}
+              {inv && (
+                <tspan fill="#b45309">
+                  {' '}
+                  ▼
+                </tspan>
+              )}
             </text>
             {Array.from({ length: RINGS }, (_, ringIdx) => {
               const frac = (ringIdx + 1) / RINGS;
-              const tickVal = axisMax[i] * frac;
+              // Invertido: el valor baja a medida que el punto se aleja del
+              // centro (0 en el borde, el techo de la liga en el centro),
+              // al revés que un eje normal.
+              const tickVal = axisMax[i] * (inv ? 1 - frac : frac);
               const tx = center + frac * radius * Math.cos(ang);
               const ty = center + frac * radius * Math.sin(ang);
               return (
@@ -131,7 +150,7 @@ export function RadarChart({
                   dx={4}
                   dy={-3}
                   fontSize={size * 0.019}
-                  fill="#94a3b8"
+                  fill={inv ? '#b45309' : '#94a3b8'}
                 >
                   {formatTick(tickVal)}
                 </text>

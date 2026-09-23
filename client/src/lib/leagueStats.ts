@@ -309,6 +309,13 @@ const MENOS_ES_MEJOR = new Set([
   'PPDA',
 ]);
 
+// Si un valor más alto es mejor para esta columna (la mayoría) o más bajo
+// (MENOS_ES_MEJOR) — se usa tanto para el ranking en liga como para decidir
+// qué ejes del radar van invertidos (ver RadarChart).
+export function mejorEsMayor(columna: string): boolean {
+  return !MENOS_ES_MEJOR.has(columna);
+}
+
 export interface RankingLiga {
   posicion: number; // 1 = mejor
   total: number;
@@ -323,11 +330,11 @@ export interface RankingLiga {
 export function rankingEnLiga(data: LeagueStatsImport, codigoRival: string, columna: string): RankingLiga | null {
   const col = equipoColumna(data);
   if (!col) return null;
-  const mejorEsMayor = !MENOS_ES_MEJOR.has(columna);
+  const esMejorMayor = mejorEsMayor(columna);
   const equipos = data.rows
     .filter((r) => String(r[col] ?? '').trim().toUpperCase() !== CODIGO_PROMEDIO)
     .map((r) => ({ codigo: String(r[col] ?? '').trim(), valor: valorNumerico(r, columna) }))
-    .sort((a, b) => (mejorEsMayor ? b.valor - a.valor : a.valor - b.valor));
+    .sort((a, b) => (esMejorMayor ? b.valor - a.valor : a.valor - b.valor));
 
   const idx = equipos.findIndex((e) => e.codigo.toLowerCase() === codigoRival.trim().toLowerCase());
   if (idx === -1) return null;
@@ -338,6 +345,6 @@ export function rankingEnLiga(data: LeagueStatsImport, codigoRival: string, colu
     total,
     top3Positivo: posicion <= 3,
     top3Negativo: posicion > total - 3,
-    mejorEsMayor,
+    mejorEsMayor: esMejorMayor,
   };
 }

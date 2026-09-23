@@ -10,6 +10,7 @@ import {
   RADAR_PRESETS,
   findRow,
   ligaMax,
+  mejorEsMayor,
   metricColumns,
   metricGroups,
   rankingEnLiga,
@@ -59,6 +60,12 @@ export default function GraficosPage() {
     if (!data) return [];
     return ejes.map((e) => ligaMax(data, e.columna));
   }, [data, ejes]);
+
+  // "Menos es mejor" (Faltas, Goles recibidos, PPDA, etc.): esos ejes van
+  // invertidos en el radar (ver RadarChart) para que un área grande siempre
+  // signifique buen rendimiento, tanto en los presets fijos como en
+  // Personalizado.
+  const invertido = useMemo(() => ejes.map((e) => !mejorEsMayor(e.columna)), [ejes]);
 
   // Solo para el modo Personalizado, y sobre TODAS las métricas disponibles
   // (no solo las ya elegidas): para avisar en la propia lista, antes de
@@ -142,7 +149,12 @@ export default function GraficosPage() {
             <section className="card p-4">
               <RadarLegend series={series} />
               <div className="mt-3 max-w-xl mx-auto">
-                <RadarChart ejeLabels={ejes.map((e) => e.label)} series={series} maxPorEje={maxPorEje} />
+                <RadarChart
+                  ejeLabels={ejes.map((e) => e.label)}
+                  series={series}
+                  maxPorEje={maxPorEje}
+                  invertido={invertido}
+                />
               </div>
             </section>
           )}
