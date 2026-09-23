@@ -58,16 +58,19 @@ export default function GraficosPage() {
     return ejes.map((e) => ligaMax(data, e.columna));
   }, [data, ejes]);
 
-  // Solo para el modo Personalizado: entre las métricas elegidas, cuáles
-  // dejan al rival entre los 3 mejores o los 3 peores de la liga, para
-  // destacarlo aparte del radar (que muestra el valor pero no dónde queda
-  // parado dentro de toda la liga).
-  const destacados = useMemo(() => {
-    if (!data || modo !== 'personalizado' || !rival.codigoLdp) return [];
-    return ejes
-      .map((e) => ({ eje: e, ranking: rankingEnLiga(data, rival.codigoLdp!, e.columna) }))
-      .filter((d): d is { eje: (typeof ejes)[number]; ranking: RankingLiga } => !!d.ranking && (d.ranking.top3Positivo || d.ranking.top3Negativo));
-  }, [data, modo, ejes, rival.codigoLdp]);
+  // Solo para el modo Personalizado, y sobre TODAS las métricas disponibles
+  // (no solo las ya elegidas): para avisar en la propia lista, antes de
+  // elegir, cuáles dejan al rival entre los 3 mejores o los 3 peores de la
+  // liga — no después, una vez ya armado el radar.
+  const rankingPorColumna = useMemo(() => {
+    const map = new Map<string, RankingLiga>();
+    if (!data || modo !== 'personalizado' || !rival.codigoLdp) return map;
+    for (const col of metricColumns(data)) {
+      const r = rankingEnLiga(data, rival.codigoLdp, col);
+      if (r) map.set(col, r);
+    }
+    return map;
+  }, [data, modo, rival.codigoLdp]);
 
   if (data === undefined) return <p className="text-sm text-slate-400 py-6">Cargando…</p>;
 
@@ -121,7 +124,12 @@ export default function GraficosPage() {
           </div>
 
           {modo === 'personalizado' && (
-            <MetricPicker columns={metricColumns(data)} seleccionadas={seleccionadas} onChange={setSeleccionadas} />
+            <MetricPicker
+              columns={metricColumns(data)}
+              seleccionadas={seleccionadas}
+              onChange={setSeleccionadas}
+              rankingPorColumna={rankingPorColumna}
+            />
           )}
 
           {series.length === 0 ? (
@@ -129,21 +137,12 @@ export default function GraficosPage() {
               Todavía no hay ninguna fila para graficar (asigná el código LDP del rival y el código propio arriba).
             </p>
           ) : (
-            <>
-              {modo === 'personalizado' && destacados.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {destacados.map(({ eje, ranking }) => (
-                    <DestacadoCard key={eje.columna} rivalNombre={rival.nombre} label={eje.label} ranking={ranking} />
-                  ))}
-                </div>
-              )}
-              <section className="card p-4">
-                <RadarLegend series={series} />
-                <div className="mt-3 max-w-xl mx-auto">
-                  <RadarChart ejeLabels={ejes.map((e) => e.label)} series={series} maxPorEje={maxPorEje} />
-                </div>
-              </section>
-            </>
+            <section className="card p-4">
+              <RadarLegend series={series} />
+              <div className="mt-3 max-w-xl mx-auto">
+                <RadarChart ejeLabels={ejes.map((e) => e.label)} series={series} maxPorEje={maxPorEje} />
+              </div>
+            </section>
           )}
         </>
       )}
@@ -295,39 +294,20 @@ function CodigoRivalCard({ rivalId, isViewer, onSaved }: { rivalId: string; isVi
   );
 }
 
-function DestacadoCard({
-  rivalNombre,
-  label,
-  ranking,
-}: {
-  rivalNombre: string;
-  label: string;
-  ranking: RankingLiga;
-}) {
-  const positivo = ranking.top3Positivo;
-  return (
-    <div
-      className={`border rounded-md px-3 py-2 text-sm ${
-        positivo ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
-      }`}
-    >
-      <span className="font-semibold">{positivo ? '▲ Top 3 mejor de la liga' : '▼ Top 3 peor de la liga'}</span> en{' '}
-      {label}: {rivalNombre} está {ranking.posicion}° de {ranking.total}
-      {ranking.mejorEsMayor ? '' : ' (menos es mejor en esta métrica)'}.
-    </div>
-  );
-}
-
 const MAX_PERSONALIZADO = 10;
 
 function MetricPicker({
   columns,
   seleccionadas,
   onChange,
+  rankingPorColumna,
 }: {
   columns: string[];
   seleccionadas: string[];
   onChange: (cols: string[]) => void;
+  // Para avisar, en la propia lista, si el rival queda top 3 mejor/peor de
+  // la liga en esa métrica — antes de elegirla, no después.
+  rankingPorColumna: Map<string, RankingLiga>;
 }) {
   const toggle = (col: string) => {
     if (seleccionadas.includes(col)) {
@@ -340,21 +320,40 @@ function MetricPicker({
   return (
     <section className="card p-4">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-slate-700">Elegí hasta {MAX_PERSONALIZADO} métricas</h4>
+        <h4 className="text-sm font-semibold text-slate-700">Elige hasta {MAX_PERSONALIZADO} métricas</h4>
         <span className="text-xs text-slate-400">{seleccionadas.length}/{MAX_PERSONALIZADO} elegidas</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 max-h-72 overflow-y-auto">
-        {columns.map((col) => (
-          <label key={col} className="flex items-center gap-1.5 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={seleccionadas.includes(col)}
-              disabled={!seleccionadas.includes(col) && seleccionadas.length >= MAX_PERSONALIZADO}
-              onChange={() => toggle(col)}
-            />
-            {col}
-          </label>
-        ))}
+        {columns.map((col) => {
+          const ranking = rankingPorColumna.get(col);
+          return (
+            <label key={col} className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={seleccionadas.includes(col)}
+                disabled={!seleccionadas.includes(col) && seleccionadas.length >= MAX_PERSONALIZADO}
+                onChange={() => toggle(col)}
+              />
+              <span>{col}</span>
+              {ranking?.top3Positivo && (
+                <span
+                  className="text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1 shrink-0"
+                  title={`Top 3 mejor de la liga: está ${ranking.posicion}° de ${ranking.total}`}
+                >
+                  ▲{ranking.posicion}
+                </span>
+              )}
+              {ranking?.top3Negativo && (
+                <span
+                  className="text-red-700 bg-red-50 border border-red-200 rounded px-1 shrink-0"
+                  title={`Top 3 peor de la liga: está ${ranking.posicion}° de ${ranking.total}`}
+                >
+                  ▼{ranking.posicion}
+                </span>
+              )}
+            </label>
+          );
+        })}
       </div>
     </section>
   );

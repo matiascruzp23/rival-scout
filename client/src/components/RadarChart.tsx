@@ -53,7 +53,7 @@ export function RadarChart({
   size?: number;
 }) {
   const n = ejeLabels.length;
-  if (n < 3) return <p className="text-sm text-slate-400">Elegí al menos 3 métricas para dibujar un radar.</p>;
+  if (n < 3) return <p className="text-sm text-slate-400">Elige al menos 3 métricas para dibujar un radar.</p>;
 
   const center = size / 2;
   const radius = size * 0.28;
