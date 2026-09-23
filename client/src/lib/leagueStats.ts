@@ -110,3 +110,58 @@ export function ligaMax(data: LeagueStatsImport, columna: string): number {
 export function metricColumns(data: LeagueStatsImport): string[] {
   return [...data.columns.slice(1)].sort((a, b) => a.localeCompare(b, 'es'));
 }
+
+// Métricas donde un valor más BAJO es mejor (eventos en contra propia,
+// básicamente): para el resto de la planilla (goles, tiros, pases,
+// posesión, duelos ganados, etc.) un valor más alto es mejor. No hay una
+// forma de inferir esto de forma confiable a partir del nombre de columna
+// solo, así que se listan a mano las que son "menos es mejor"; cualquier
+// columna que no esté acá se trata como "más es mejor".
+const MENOS_ES_MEJOR = new Set([
+  'Goles recibidos',
+  'Balones perdidos',
+  'Balones perdidos bajos',
+  'Balones perdidos medios',
+  'Balones perdidos altoss',
+  'Faltas',
+  'Tarjetas amarillas',
+  'Tarjetas rojas',
+  'Tiros en contra',
+  'Tiros en contra a la portería',
+  '%Tiros en contra a la portería',
+  'Fuera de juego',
+  'PPDA',
+]);
+
+export interface RankingLiga {
+  posicion: number; // 1 = mejor
+  total: number;
+  top3Positivo: boolean;
+  top3Negativo: boolean;
+  mejorEsMayor: boolean;
+}
+
+// Posición del rival entre todos los equipos de la liga (sin la fila
+// "PROMEDIO") para una métrica puntual, para poder avisar cuando el rival
+// está entre los 3 mejores o los 3 peores de la liga en algo.
+export function rankingEnLiga(data: LeagueStatsImport, codigoRival: string, columna: string): RankingLiga | null {
+  const col = equipoColumna(data);
+  if (!col) return null;
+  const mejorEsMayor = !MENOS_ES_MEJOR.has(columna);
+  const equipos = data.rows
+    .filter((r) => String(r[col] ?? '').trim().toUpperCase() !== CODIGO_PROMEDIO)
+    .map((r) => ({ codigo: String(r[col] ?? '').trim(), valor: valorNumerico(r, columna) }))
+    .sort((a, b) => (mejorEsMayor ? b.valor - a.valor : a.valor - b.valor));
+
+  const idx = equipos.findIndex((e) => e.codigo.toLowerCase() === codigoRival.trim().toLowerCase());
+  if (idx === -1) return null;
+  const posicion = idx + 1;
+  const total = equipos.length;
+  return {
+    posicion,
+    total,
+    top3Positivo: posicion <= 3,
+    top3Negativo: posicion > total - 3,
+    mejorEsMayor,
+  };
+}

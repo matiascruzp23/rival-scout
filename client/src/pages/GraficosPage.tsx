@@ -5,7 +5,16 @@ import { api } from '../api';
 import type { LeagueStatsImport } from '../types';
 import { useIsViewer } from '../lib/authContext';
 import { RadarChart, RadarLegend } from '../components/RadarChart';
-import { CODIGO_PROMEDIO, RADAR_PRESETS, findRow, ligaMax, metricColumns, valorNumerico } from '../lib/leagueStats';
+import {
+  CODIGO_PROMEDIO,
+  RADAR_PRESETS,
+  findRow,
+  ligaMax,
+  metricColumns,
+  rankingEnLiga,
+  valorNumerico,
+  type RankingLiga,
+} from '../lib/leagueStats';
 
 const COLOR_RIVAL = '#f97316';
 const COLOR_PROPIO = '#1e3a8a';
@@ -48,6 +57,17 @@ export default function GraficosPage() {
     if (!data) return [];
     return ejes.map((e) => ligaMax(data, e.columna));
   }, [data, ejes]);
+
+  // Solo para el modo Personalizado: entre las métricas elegidas, cuáles
+  // dejan al rival entre los 3 mejores o los 3 peores de la liga, para
+  // destacarlo aparte del radar (que muestra el valor pero no dónde queda
+  // parado dentro de toda la liga).
+  const destacados = useMemo(() => {
+    if (!data || modo !== 'personalizado' || !rival.codigoLdp) return [];
+    return ejes
+      .map((e) => ({ eje: e, ranking: rankingEnLiga(data, rival.codigoLdp!, e.columna) }))
+      .filter((d): d is { eje: (typeof ejes)[number]; ranking: RankingLiga } => !!d.ranking && (d.ranking.top3Positivo || d.ranking.top3Negativo));
+  }, [data, modo, ejes, rival.codigoLdp]);
 
   if (data === undefined) return <p className="text-sm text-slate-400 py-6">Cargando…</p>;
 
@@ -109,12 +129,21 @@ export default function GraficosPage() {
               Todavía no hay ninguna fila para graficar (asigná el código LDP del rival y el código propio arriba).
             </p>
           ) : (
-            <section className="card p-4">
-              <RadarLegend series={series} />
-              <div className="mt-3 max-w-xl mx-auto">
-                <RadarChart ejeLabels={ejes.map((e) => e.label)} series={series} maxPorEje={maxPorEje} />
-              </div>
-            </section>
+            <>
+              {modo === 'personalizado' && destacados.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {destacados.map(({ eje, ranking }) => (
+                    <DestacadoCard key={eje.columna} rivalNombre={rival.nombre} label={eje.label} ranking={ranking} />
+                  ))}
+                </div>
+              )}
+              <section className="card p-4">
+                <RadarLegend series={series} />
+                <div className="mt-3 max-w-xl mx-auto">
+                  <RadarChart ejeLabels={ejes.map((e) => e.label)} series={series} maxPorEje={maxPorEje} />
+                </div>
+              </section>
+            </>
           )}
         </>
       )}
@@ -262,6 +291,29 @@ function CodigoRivalCard({ rivalId, isViewer, onSaved }: { rivalId: string; isVi
         Guardar
       </button>
       {error && <p className="text-sm text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+function DestacadoCard({
+  rivalNombre,
+  label,
+  ranking,
+}: {
+  rivalNombre: string;
+  label: string;
+  ranking: RankingLiga;
+}) {
+  const positivo = ranking.top3Positivo;
+  return (
+    <div
+      className={`border rounded-md px-3 py-2 text-sm ${
+        positivo ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
+      }`}
+    >
+      <span className="font-semibold">{positivo ? '▲ Top 3 mejor de la liga' : '▼ Top 3 peor de la liga'}</span> en{' '}
+      {label}: {rivalNombre} está {ranking.posicion}° de {ranking.total}
+      {ranking.mejorEsMayor ? '' : ' (menos es mejor en esta métrica)'}.
     </div>
   );
 }
