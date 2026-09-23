@@ -103,17 +103,24 @@ export function RivalsCalendar({ rivals }: { rivals: RivalListItem[] }) {
               }`}
             >
               <span className={`text-xs ${isToday ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>{day}</span>
-              {rivalesDelDia.map((r) => (
-                <Link
-                  key={r.id}
-                  to={`/rivales/${r.id}`}
-                  className="flex items-center gap-1 bg-white border border-slate-200 rounded px-1 py-0.5 text-[11px] leading-tight hover:border-emerald-400 hover:bg-emerald-50 truncate"
-                  title={r.nombre}
-                >
-                  {r.escudoUrl && <img src={r.escudoUrl} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />}
-                  <span className="truncate">{r.nombre}</span>
-                </Link>
-              ))}
+              <div className="flex flex-wrap gap-1">
+                {rivalesDelDia.map((r) => (
+                  <Link
+                    key={r.id}
+                    to={`/rivales/${r.id}`}
+                    className="w-1/2 aspect-square flex items-center justify-center bg-white border border-slate-200 rounded hover:border-emerald-400 hover:bg-emerald-50 p-0.5"
+                    title={r.nombre}
+                  >
+                    {r.escudoUrl ? (
+                      <img src={r.escudoUrl} alt={r.nombre} className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-400">
+                        {r.nombre.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
             </div>
           );
         })}
