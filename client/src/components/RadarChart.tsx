@@ -120,6 +120,10 @@ export function RadarChart({
               const ty = center + frac * radius * Math.sin(ang);
               return (
                 <text
+                  // Sin rotar: girado según el ángulo del eje (como estaba
+                  // antes) un número de 2+ dígitos como "1.5" quedaba
+                  // vertical en los ejes casi horizontales (ej. xG) y se
+                  // leía como dos números sueltos en vez de uno.
                   key={ringIdx}
                   x={tx}
                   y={ty}
@@ -127,7 +131,6 @@ export function RadarChart({
                   dy={-3}
                   fontSize={size * 0.019}
                   fill="#94a3b8"
-                  transform={`rotate(${(ang * 180) / Math.PI + 90}, ${tx}, ${ty})`}
                 >
                   {formatTick(tickVal)}
                 </text>
