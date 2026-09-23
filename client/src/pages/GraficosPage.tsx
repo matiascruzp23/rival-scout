@@ -345,7 +345,14 @@ function MetricPicker({
     <section className="card p-4">
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-semibold text-slate-700">Elige hasta {MAX_PERSONALIZADO} métricas</h4>
-        <span className="text-xs text-slate-400">{seleccionadas.length}/{MAX_PERSONALIZADO} elegidas</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">{seleccionadas.length}/{MAX_PERSONALIZADO} elegidas</span>
+          {seleccionadas.length > 0 && (
+            <button className="text-xs text-emerald-700 hover:underline" onClick={() => onChange([])}>
+              Limpiar
+            </button>
+          )}
+        </div>
       </div>
       <div className="space-y-3 max-h-96 overflow-y-auto">
         {groups.map((g) => (
