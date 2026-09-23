@@ -23,7 +23,7 @@ const COLOR_RIVAL = '#f97316';
 const COLOR_PROPIO = '#1e3a8a';
 const COLOR_PROMEDIO = '#eab308';
 
-type Modo = (typeof RADAR_PRESETS)[number]['key'] | 'personalizado';
+type Modo = (typeof RADAR_PRESETS)[number]['key'] | 'personalizado' | 'individuales';
 
 export default function GraficosPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
@@ -112,101 +112,108 @@ export default function GraficosPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Gráficos y estadísticas</h2>
         <p className="text-xs text-slate-500 mt-0.5">
-          Comparación de {rival.nombre} contra el equipo propio y el promedio de la liga, a partir de una planilla
-          importada (dato compartido entre todos los rivales).
+          Comparación de {rival.nombre} contra el equipo propio y el promedio de la liga, más los líderes del
+          plantel por categoría, a partir de planillas importadas.
         </p>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <ImportCard data={data} isViewer={isViewer} onImported={load} />
+      <div className="flex items-center gap-1 text-sm flex-wrap">
+        {RADAR_PRESETS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setModo(p.key)}
+            className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
+              modo === p.key ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
+            }`}
+          >
+            {p.titulo}
+          </button>
+        ))}
+        <button
+          onClick={() => setModo('personalizado')}
+          className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
+            modo === 'personalizado' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
+          }`}
+        >
+          Personalizado
+        </button>
+        <button
+          onClick={() => setModo('individuales')}
+          className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
+            modo === 'individuales' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
+          }`}
+        >
+          Individuales
+        </button>
+      </div>
 
-      {data && (
-        <>
-          {!rival.codigoLdp && (
-            <CodigoRivalCard rivalId={rival.id} isViewer={isViewer} onSaved={reload} />
-          )}
-
-          {rival.codigoLdp && !rivalRow && (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              No se encontró "{rival.codigoLdp}" en la planilla importada. Revisá que el código coincida con la
-              columna "{data.columns[0]}" de la planilla.
-            </p>
-          )}
-
-          <div className="flex items-center gap-1 text-sm flex-wrap">
-            {RADAR_PRESETS.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setModo(p.key)}
-                className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
-                  modo === p.key ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
-                }`}
-              >
-                {p.titulo}
-              </button>
-            ))}
-            <button
-              onClick={() => setModo('personalizado')}
-              className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
-                modo === 'personalizado' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
-              }`}
-            >
-              Personalizado
-            </button>
-          </div>
-
-          {modo === 'personalizado' && (
-            <MetricPicker
-              groups={metricGroups(data)}
-              seleccionadas={seleccionadas}
-              onChange={setSeleccionadas}
-              rankingPorColumna={rankingPorColumna}
-              isViewer={isViewer}
-              guardando={guardando}
-              huboCambios={huboCambios}
-              onGuardar={guardarSeleccion}
-            />
-          )}
-
-          {series.length === 0 ? (
-            <p className="text-sm text-slate-400 py-6">
-              Todavía no hay ninguna fila para graficar (asigná el código LDP del rival y el código propio arriba).
-            </p>
-          ) : (
-            <section className="card p-4">
-              <RadarLegend series={series} />
-              <div className="mt-3 max-w-xl mx-auto">
-                <RadarChart
-                  ejeLabels={ejes.map((e) => e.label)}
-                  series={series}
-                  maxPorEje={maxPorEje}
-                  minPorEje={minPorEje}
-                  invertido={invertido}
-                />
+      {modo === 'individuales' ? (
+        <div>
+          <IndividualStatsImportCard rivalId={rival.id} data={rival.individualStats} isViewer={isViewer} onImported={reload} />
+          {rival.individualStats && (
+            rival.individualStats.rows.length === 0 ? (
+              <p className="text-sm text-slate-400 mt-3">La planilla importada no tiene filas.</p>
+            ) : (
+              <div className="mt-3">
+                <IndividualStatsBoard data={rival.individualStats} />
               </div>
-            </section>
+            )
+          )}
+        </div>
+      ) : (
+        <>
+          <ImportCard data={data} isViewer={isViewer} onImported={load} />
+
+          {data && (
+            <>
+              {!rival.codigoLdp && (
+                <CodigoRivalCard rivalId={rival.id} isViewer={isViewer} onSaved={reload} />
+              )}
+
+              {rival.codigoLdp && !rivalRow && (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  No se encontró "{rival.codigoLdp}" en la planilla importada. Revisá que el código coincida con la
+                  columna "{data.columns[0]}" de la planilla.
+                </p>
+              )}
+
+              {modo === 'personalizado' && (
+                <MetricPicker
+                  groups={metricGroups(data)}
+                  seleccionadas={seleccionadas}
+                  onChange={setSeleccionadas}
+                  rankingPorColumna={rankingPorColumna}
+                  isViewer={isViewer}
+                  guardando={guardando}
+                  huboCambios={huboCambios}
+                  onGuardar={guardarSeleccion}
+                />
+              )}
+
+              {series.length === 0 ? (
+                <p className="text-sm text-slate-400 py-6">
+                  Todavía no hay ninguna fila para graficar (asigná el código LDP del rival y el código propio arriba).
+                </p>
+              ) : (
+                <section className="card p-4">
+                  <RadarLegend series={series} />
+                  <div className="mt-3 max-w-xl mx-auto">
+                    <RadarChart
+                      ejeLabels={ejes.map((e) => e.label)}
+                      series={series}
+                      maxPorEje={maxPorEje}
+                      minPorEje={minPorEje}
+                      invertido={invertido}
+                    />
+                  </div>
+                </section>
+              )}
+            </>
           )}
         </>
       )}
-
-      <div className="pt-2 border-t border-slate-200">
-        <h3 className="text-base font-semibold text-slate-900">Datos individuales</h3>
-        <p className="text-xs text-slate-500 mt-0.5 mb-3">
-          Líderes del plantel de {rival.nombre} por categoría, a partir de una planilla de jugadores importada
-          (propia de este rival, a diferencia de la planilla de liga de arriba).
-        </p>
-        <IndividualStatsImportCard rivalId={rival.id} data={rival.individualStats} isViewer={isViewer} onImported={reload} />
-        {rival.individualStats && (
-          rival.individualStats.rows.length === 0 ? (
-            <p className="text-sm text-slate-400 mt-3">La planilla importada no tiene filas.</p>
-          ) : (
-            <div className="mt-3">
-              <IndividualStatsBoard data={rival.individualStats} />
-            </div>
-          )
-        )}
-      </div>
     </div>
   );
 }

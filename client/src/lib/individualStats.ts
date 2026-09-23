@@ -30,7 +30,6 @@ export const INDIVIDUAL_STAT_GROUPS: IndividualStatGroup[] = [
       { columna: 'Goles', etiqueta: 'Goleadores', formato: entero },
       { columna: 'Asistencias', etiqueta: 'Asistencias', formato: entero },
       { columna: 'xG', etiqueta: 'xG', formato: decimal1 },
-      { columna: 'Duelos atacantes ganados, %', etiqueta: '% Duelos ofensivos', formato: porcentaje },
       { columna: 'Regates/90', etiqueta: 'Regates/90', formato: decimal1 },
     ],
   },

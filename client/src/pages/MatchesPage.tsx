@@ -38,7 +38,8 @@ export default function MatchesPage() {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Partidos</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Últimos {matches.length} de 10 recomendados. Se ordenan por fecha, del más reciente al más antiguo.
+            {matches.length} partido{matches.length === 1 ? '' : 's'} registrado{matches.length === 1 ? '' : 's'}. Se
+            ordenan por fecha, del más reciente al más antiguo.
           </p>
         </div>
         {!isViewer && (
@@ -47,13 +48,6 @@ export default function MatchesPage() {
           </button>
         )}
       </div>
-
-      {matches.length > 10 && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
-          Hay {matches.length} partidos registrados. Considera mantener solo los últimos 10 para un análisis más
-          representativo.
-        </p>
-      )}
 
       <div className="card overflow-x-auto">
         <table>
