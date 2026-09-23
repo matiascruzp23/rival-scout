@@ -5,7 +5,19 @@ import { supabase, newId } from './supabaseClient.js';
 import { requireAuth } from './auth.js';
 import { parseCsv, isExcludedCategory } from './csv.js';
 import { parsePlayerImportFile, type ImportedPlayerRow } from './playerImport.js';
-import type { Player, Match, Rival, TorneoRegla, LineupEntry, Substitution, MatchEvent, MatchBaja, MatchCsv } from './types.js';
+import { parseLeagueStatsFile } from './leagueStats.js';
+import type {
+  Player,
+  Match,
+  Rival,
+  TorneoRegla,
+  LineupEntry,
+  Substitution,
+  MatchEvent,
+  MatchBaja,
+  MatchCsv,
+  LeagueStatsImport,
+} from './types.js';
 
 const app = express();
 app.use(cors());
@@ -111,8 +123,19 @@ function toRival(row: any, reglasTorneo: TorneoRegla[]): Rival {
     notaXI: row.nota_xi || undefined,
     reglasTorneo,
     escudoUrl: row.escudo_url || undefined,
+    codigoLdp: row.codigo_ldp || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function toLeagueStatsImport(row: any): LeagueStatsImport {
+  return {
+    fileName: row.file_name || '',
+    columns: row.columns || [],
+    rows: row.rows || [],
+    codigoPropio: row.codigo_propio || undefined,
+    uploadedAt: row.uploaded_at,
   };
 }
 
@@ -410,6 +433,7 @@ app.put('/api/rivals/:id', async (req, res) => {
   if (b.entrenadorPerdidos !== undefined) patch.entrenador_perdidos = b.entrenadorPerdidos;
   if (b.notasContexto !== undefined) patch.notas_contexto = b.notasContexto || null;
   if (b.notaXI !== undefined) patch.nota_xi = b.notaXI || null;
+  if (b.codigoLdp !== undefined) patch.codigo_ldp = b.codigoLdp?.trim() || null;
 
   const { data: updated, error } = await supabase.from('rivals').update(patch).eq('id', req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
@@ -749,6 +773,65 @@ app.put('/api/matches/:id/csv/rival-resolucion', async (req, res) => {
     .single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(toMatchCsv(saved));
+});
+
+// Planilla de estadísticas de toda la liga (Gráficos y estadísticas): un
+// único registro compartido entre todos los rivales, no una tabla por
+// rival — cada import reemplaza entero al anterior.
+const LEAGUE_STATS_ID = 'current';
+
+app.get('/api/league-stats', async (_req, res) => {
+  const { data, error } = await supabase.from('league_stats_import').select('*').eq('id', LEAGUE_STATS_ID).maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.json(null);
+  res.json(toLeagueStatsImport(data));
+});
+
+app.post('/api/league-stats/import', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Archivo Excel requerido' });
+
+  let parsed;
+  try {
+    parsed = parseLeagueStatsFile(req.file.buffer);
+  } catch {
+    return res.status(400).json({ error: 'No se pudo leer el archivo (¿es un .xlsx válido?)' });
+  }
+  if (parsed.columns.length === 0) return res.status(400).json({ error: 'La planilla está vacía o no se pudo leer' });
+
+  // El código propio ya cargado se mantiene si no se manda uno nuevo en
+  // este import (no siempre se resube junto con el archivo).
+  const { data: existing } = await supabase
+    .from('league_stats_import')
+    .select('codigo_propio')
+    .eq('id', LEAGUE_STATS_ID)
+    .maybeSingle();
+  const codigoPropio = (req.body as { codigoPropio?: string }).codigoPropio?.trim() || existing?.codigo_propio || null;
+
+  const row = {
+    id: LEAGUE_STATS_ID,
+    file_name: req.file.originalname,
+    columns: parsed.columns,
+    rows: parsed.rows,
+    codigo_propio: codigoPropio,
+    uploaded_at: now(),
+  };
+  const { data: saved, error } = await supabase.from('league_stats_import').upsert(row).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(toLeagueStatsImport(saved));
+});
+
+app.put('/api/league-stats/config', async (req, res) => {
+  const { codigoPropio } = req.body as { codigoPropio?: string };
+  const { data: existing } = await supabase.from('league_stats_import').select('id').eq('id', LEAGUE_STATS_ID).maybeSingle();
+  if (!existing) return res.status(404).json({ error: 'Todavía no se importó ninguna planilla' });
+  const { data: saved, error } = await supabase
+    .from('league_stats_import')
+    .update({ codigo_propio: codigoPropio?.trim() || null })
+    .eq('id', LEAGUE_STATS_ID)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(toLeagueStatsImport(saved));
 });
 
 // Middleware de error genérico: sin esto, un archivo rechazado por

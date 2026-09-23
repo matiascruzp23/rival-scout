@@ -29,6 +29,9 @@ create table if not exists rivals (
   notas_contexto text,
   nota_xi text,
   escudo_url text,
+  -- Código con el que este rival aparece en la planilla de estadísticas de
+  -- liga importada (ver league_stats_import) — se completa a mano.
+  codigo_ldp text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -148,6 +151,20 @@ create table if not exists match_bajas (
 );
 create index if not exists match_bajas_match_id_idx on match_bajas(match_id);
 
+-- Planilla de estadísticas de toda la liga (pestaña "Gráficos y
+-- estadísticas"): un único registro compartido entre todos los rivales, no
+-- una fila por rival — cada import la reemplaza entera. Mismo criterio de
+-- columnas dinámicas que match_csv (las métricas de la planilla no tienen
+-- un esquema fijo).
+create table if not exists league_stats_import (
+  id text primary key default 'current',
+  file_name text,
+  columns text[] not null default '{}',
+  rows jsonb not null default '[]',
+  codigo_propio text,
+  uploaded_at timestamptz not null default now()
+);
+
 -- Sin políticas: deniega todo a anon/authenticated. service_role (el
 -- servidor) sigue teniendo acceso completo, RLS no le aplica.
 alter table rivals enable row level security;
@@ -160,3 +177,4 @@ alter table substitutions enable row level security;
 alter table match_events enable row level security;
 alter table match_banca enable row level security;
 alter table match_bajas enable row level security;
+alter table league_stats_import enable row level security;

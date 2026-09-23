@@ -150,8 +150,30 @@ export interface Rival {
   reglasTorneo?: TorneoRegla[];
   // Ruta pública (bajo /uploads) del escudo subido, si hay uno.
   escudoUrl?: string;
+  // Código con el que este rival aparece en la planilla de estadísticas de
+  // liga importada (league_stats_import), para poder ubicar su fila ahí
+  // (ver LeagueStatsImport). Se completa a mano porque las abreviaciones de
+  // la planilla no se pueden inferir de forma confiable desde el nombre.
+  codigoLdp?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Planilla de estadísticas de toda la liga (una fila por equipo + una fila
+// "PROMEDIO"), importada desde un Excel externo. Es un dato compartido entre
+// todos los rivales (no por rival), así que se guarda como un único
+// registro que se reemplaza entero en cada import — mismo criterio de
+// columnas dinámicas que MatchCsv, porque las métricas de la planilla no
+// tienen un esquema fijo.
+export interface LeagueStatsImport {
+  fileName: string;
+  columns: string[];
+  rows: Record<string, string | number>[];
+  // Código (misma columna que identifica al equipo en `rows`) que
+  // corresponde al propio club, para poder graficarlo como una serie fija
+  // igual que a cualquier rival.
+  codigoPropio?: string;
+  uploadedAt: string;
 }
 
 export interface Database {

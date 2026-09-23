@@ -1,4 +1,14 @@
-import type { ImportedPlayerRow, ImportPreviewResult, Match, MatchCsv, Player, Rival, RivalDetail, RivalListItem } from './types';
+import type {
+  ImportedPlayerRow,
+  ImportPreviewResult,
+  LeagueStatsImport,
+  Match,
+  MatchCsv,
+  Player,
+  Rival,
+  RivalDetail,
+  RivalListItem,
+} from './types';
 import { supabase } from './supabaseClient';
 
 // '/api' relativo: en desarrollo lo resuelve el proxy de Vite
@@ -77,5 +87,16 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ rowIndex, porJugador }),
       }),
+  },
+  leagueStats: {
+    get: () => request<LeagueStatsImport | null>('/league-stats'),
+    import: (file: File, codigoPropio?: string) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (codigoPropio) form.append('codigoPropio', codigoPropio);
+      return request<LeagueStatsImport>('/league-stats/import', { method: 'POST', body: form });
+    },
+    setCodigoPropio: (codigoPropio: string) =>
+      request<LeagueStatsImport>('/league-stats/config', { method: 'PUT', body: JSON.stringify({ codigoPropio }) }),
   },
 };

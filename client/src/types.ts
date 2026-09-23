@@ -190,8 +190,21 @@ export interface Rival {
   notaXI?: string;
   reglasTorneo?: TorneoRegla[];
   escudoUrl?: string;
+  // Código con el que este rival aparece en la planilla de estadísticas de
+  // liga importada (ver LeagueStatsImport), para ubicar su fila ahí.
+  codigoLdp?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Planilla de estadísticas de toda la liga (una fila por equipo + una fila
+// "PROMEDIO"), compartida entre todos los rivales — no se guarda por rival.
+export interface LeagueStatsImport {
+  fileName: string;
+  columns: string[];
+  rows: Record<string, string | number>[];
+  codigoPropio?: string;
+  uploadedAt: string;
 }
 
 export interface RivalListItem extends Rival {
