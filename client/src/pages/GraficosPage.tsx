@@ -11,8 +11,10 @@ import {
   findRow,
   ligaMax,
   metricColumns,
+  metricGroups,
   rankingEnLiga,
   valorNumerico,
+  type MetricGroup,
   type RankingLiga,
 } from '../lib/leagueStats';
 
@@ -125,7 +127,7 @@ export default function GraficosPage() {
 
           {modo === 'personalizado' && (
             <MetricPicker
-              columns={metricColumns(data)}
+              groups={metricGroups(data)}
               seleccionadas={seleccionadas}
               onChange={setSeleccionadas}
               rankingPorColumna={rankingPorColumna}
@@ -297,12 +299,12 @@ function CodigoRivalCard({ rivalId, isViewer, onSaved }: { rivalId: string; isVi
 const MAX_PERSONALIZADO = 10;
 
 function MetricPicker({
-  columns,
+  groups,
   seleccionadas,
   onChange,
   rankingPorColumna,
 }: {
-  columns: string[];
+  groups: MetricGroup[];
   seleccionadas: string[];
   onChange: (cols: string[]) => void;
   // Para avisar, en la propia lista, si el rival queda top 3 mejor/peor de
@@ -323,37 +325,44 @@ function MetricPicker({
         <h4 className="text-sm font-semibold text-slate-700">Elige hasta {MAX_PERSONALIZADO} métricas</h4>
         <span className="text-xs text-slate-400">{seleccionadas.length}/{MAX_PERSONALIZADO} elegidas</span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 max-h-72 overflow-y-auto">
-        {columns.map((col) => {
-          const ranking = rankingPorColumna.get(col);
-          return (
-            <label key={col} className="flex items-center gap-1.5 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={seleccionadas.includes(col)}
-                disabled={!seleccionadas.includes(col) && seleccionadas.length >= MAX_PERSONALIZADO}
-                onChange={() => toggle(col)}
-              />
-              <span>{col}</span>
-              {ranking?.top3Positivo && (
-                <span
-                  className="text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1 shrink-0"
-                  title={`Top 3 mejor de la liga: está ${ranking.posicion}° de ${ranking.total}`}
-                >
-                  ▲{ranking.posicion}
-                </span>
-              )}
-              {ranking?.top3Negativo && (
-                <span
-                  className="text-red-700 bg-red-50 border border-red-200 rounded px-1 shrink-0"
-                  title={`Top 3 peor de la liga: está ${ranking.posicion}° de ${ranking.total}`}
-                >
-                  ▼{ranking.posicion}
-                </span>
-              )}
-            </label>
-          );
-        })}
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {groups.map((g) => (
+          <div key={g.titulo}>
+            <h5 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">{g.titulo}</h5>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+              {g.columnas.map((col) => {
+                const ranking = rankingPorColumna.get(col);
+                return (
+                  <label key={col} className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={seleccionadas.includes(col)}
+                      disabled={!seleccionadas.includes(col) && seleccionadas.length >= MAX_PERSONALIZADO}
+                      onChange={() => toggle(col)}
+                    />
+                    <span>{col}</span>
+                    {ranking?.top3Positivo && (
+                      <span
+                        className="text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1 shrink-0"
+                        title={`Top 3 mejor de la liga: está ${ranking.posicion}° de ${ranking.total}`}
+                      >
+                        ▲{ranking.posicion}
+                      </span>
+                    )}
+                    {ranking?.top3Negativo && (
+                      <span
+                        className="text-red-700 bg-red-50 border border-red-200 rounded px-1 shrink-0"
+                        title={`Top 3 peor de la liga: está ${ranking.posicion}° de ${ranking.total}`}
+                      >
+                        ▼{ranking.posicion}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
