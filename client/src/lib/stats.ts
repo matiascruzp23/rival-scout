@@ -769,14 +769,51 @@ function slotCountsFromHistory(matches: Match[]): Record<string, number> {
   return result;
 }
 
-// Si hay un sistema que predomina en los partidos recientes, las 11
-// posiciones vienen de ESE formato (evita sumar, por separado, las
-// posiciones de dos sistemas distintos, lo que puede dar más de 11 puestos,
-// y evita que un partido puntual con un sistema poco habitual desplace al
-// que realmente juega casi siempre). Si no hay un sistema que predomine
-// (o ninguno reconocido), se usa la moda histórica por posición como antes.
-function slotCountsForEstimate(recent: Match[]): Record<string, number> {
-  const dominante = topSistemasFormacion(recent)[0]?.item;
+// Cuánto pesa un partido puntual al proyectar el próximo (para elegir
+// sistema, puntuar jugadores y decidir a quién sumar por la regla de
+// cupos): más peso cuanto más reciente (igual que antes), MÁS un refuerzo
+// si el partido fue de la misma competencia que se viene jugar. Un equipo
+// suele rotar bastante entre torneos (ej. plantel B en Copa Chile) — sin
+// este refuerzo, la ventana general mezclaba ambos y terminaba proyectando
+// con el plantel equivocado.
+//
+// Es un refuerzo, no un filtro estricto por competencia: un partido viejo
+// de la misma competencia (ej. de hace 5 meses) no debería pesar más que
+// uno reciente de la otra, porque las planillas cambian con el tiempo —
+// por eso se multiplica el peso por recencia en vez de filtrar la ventana
+// a "solo partidos de esa competencia".
+const REFUERZO_MISMA_COMPETENCIA = 4;
+
+function pesoPartido(idx: number, n: number, match: Match, competenciaProxima?: string): number {
+  const base = n - idx;
+  const mismaCompetencia =
+    !!competenciaProxima &&
+    !!match.competencia &&
+    match.competencia.trim().toLowerCase() === competenciaProxima.trim().toLowerCase();
+  return base * (mismaCompetencia ? REFUERZO_MISMA_COMPETENCIA : 1);
+}
+
+// Las 11 posiciones vienen de una votación pesada (ver pesoPartido) entre
+// los sistemas jugados en la ventana reciente, no del sistema más usado en
+// bruto: así un cambio de sistema reciente (o el que suelen usar en la
+// competencia que se viene) pesa más que uno viejo, sin descartar del todo
+// el resto del historial. Si ningún partido de la ventana tiene sistema
+// cargado se usa la moda histórica por posición como respaldo.
+function slotCountsForEstimate(recent: Match[], competenciaProxima?: string): Record<string, number> {
+  const n = recent.length;
+  const pesos = new Map<string, number>();
+  recent.forEach((match, idx) => {
+    if (!match.sistema) return;
+    pesos.set(match.sistema, (pesos.get(match.sistema) || 0) + pesoPartido(idx, n, match, competenciaProxima));
+  });
+  let dominante: string | null = null;
+  let mejorPeso = 0;
+  for (const [sistema, peso] of pesos) {
+    if (peso > mejorPeso) {
+      dominante = sistema;
+      mejorPeso = peso;
+    }
+  }
   const template = dominante ? formationSlots(dominante) : null;
   if (template) {
     const counts: Record<string, number> = {};
@@ -837,7 +874,12 @@ function convocatoriaCargada(match: Match): boolean {
 // citados recientes, se completa con el mejor candidato disponible que haya
 // jugado ahí alguna vez (aunque no sea citado ni su posición principal)
 // antes de darla por sin cobertura.
-export function estimateNextXI(players: Player[], matches: Match[], regla: TorneoRegla | null = null): XIEstimate {
+export function estimateNextXI(
+  players: Player[],
+  matches: Match[],
+  regla: TorneoRegla | null = null,
+  competenciaProxima?: string
+): XIEstimate {
   const recent = lastN(matches, 10);
   const excluidosPorBaja = players.filter((p) => p.baja);
   const excluidosPorSeleccion = players.filter((p) => p.enSeleccion && !p.baja);
@@ -861,8 +903,7 @@ export function estimateNextXI(players: Player[], matches: Match[], regla: Torne
   const scoreFor = (player: Player) => {
     let score = 0;
     recent.forEach((match, idx) => {
-      const weight = n - idx; // el partido más reciente pesa más
-      score += weight * participationFor(player, match).minutos;
+      score += pesoPartido(idx, n, match, competenciaProxima) * participationFor(player, match).minutos;
     });
     return { player, score, posicion: playerTypicalPosition(player.id, recent) || player.posicion };
   };
@@ -875,7 +916,7 @@ export function estimateNextXI(players: Player[], matches: Match[], regla: Torne
   // de la regla del torneo (ver más abajo).
   const scoredDisponibles = players.filter((p) => !p.baja && !p.enSeleccion).map(scoreFor);
 
-  const slotCounts = slotCountsForEstimate(recent);
+  const slotCounts = slotCountsForEstimate(recent, competenciaProxima);
   const used = new Set<string>();
   const picks: XISlotPick[] = [];
   const sinCoberturaInicial: string[] = [];

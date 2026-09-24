@@ -46,8 +46,8 @@ export default function LineupsPage() {
     [rival.reglasTorneo, rival.proximoPartido]
   );
   const estimate = useMemo(
-    () => estimateNextXI(rival.players, matches, reglaAplicable),
-    [rival.players, matches, reglaAplicable]
+    () => estimateNextXI(rival.players, matches, reglaAplicable, rival.proximoPartido?.competicion),
+    [rival.players, matches, reglaAplicable, rival.proximoPartido]
   );
   const estimateTokens: PitchToken[] = useMemo(() => {
     const tokens: PitchToken[] = [];

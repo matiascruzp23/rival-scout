@@ -134,8 +134,8 @@ export default function InformePage() {
     [rival.reglasTorneo, rival.proximoPartido]
   );
   const xiEstimate = useMemo(
-    () => estimateNextXI(rival.players, rival.matches, reglaAplicable),
-    [rival.players, rival.matches, reglaAplicable]
+    () => estimateNextXI(rival.players, rival.matches, reglaAplicable, rival.proximoPartido?.competicion),
+    [rival.players, rival.matches, reglaAplicable, rival.proximoPartido]
   );
   const xiPitchTokens: PitchToken[] = useMemo(() => {
     const tokens: PitchToken[] = [];
