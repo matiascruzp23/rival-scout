@@ -601,14 +601,27 @@ function esFormativo(p: Player): boolean {
   return p.sub21 || p.sub18;
 }
 
+// Un partido "normal" sin alargue, para derivar un mínimo de jugadores a
+// partir de un mínimo de MINUTOS Sub-21 (ver minMinutosSub21): nadie llega
+// solo a, por ejemplo, 130' en un partido de 90', así que en la práctica
+// esa regla exige ceil(130/90) = 2 titulares Sub-21, no 1.
+const DURACION_PARTIDO_ESTANDAR = 90;
+
 // Algunos torneos reducen el mínimo de Sub-21 exigido cuando el plantel tiene
 // jugadores convocados a una selección nacional (regla.exencionPorSeleccionado
 // por cada uno). Solo cuentan los que están disponibles (no de baja).
 function minSub21Efectivo(regla: TorneoRegla, players: Player[]): number | null {
-  if (regla.minSub21 == null) return null;
+  // minMinutosSub21 (una suma de minutos por partido, ej. Copa Chile 130')
+  // manda sobre minSub21 (cantidad fija) cuando ambos vienen cargados — ver
+  // el comentario en TorneoRegla.minMinutosSub21.
+  const base =
+    regla.minMinutosSub21 != null
+      ? Math.ceil(regla.minMinutosSub21 / DURACION_PARTIDO_ESTANDAR)
+      : regla.minSub21;
+  if (base == null) return null;
   const seleccionados = players.filter((p) => p.enSeleccion && !p.baja).length;
   const exencion = (regla.exencionPorSeleccionado || 0) * seleccionados;
-  return Math.max(0, regla.minSub21 - exencion);
+  return Math.max(0, base - exencion);
 }
 
 export interface ReglaTorneoCheck {
@@ -659,14 +672,48 @@ export function checkReglaTorneo(
 // selección ya vienen excluidos de `scored` (no pueden jugar el partido) pero
 // igual deben contar para la exención. Cuando no hay candidato disponible
 // para un cambio, ese pick se deja igual (mejor esfuerzo).
+// Cuántas veces fue titular en partidos de esa competencia puntual, pesado
+// por recencia DENTRO de esa competencia (no de la ventana general): para
+// elegir a quién sumar por una regla de cupos de un torneo específico (ej.
+// Sub-21 en Copa Chile) importa mucho más quién arranca de titular ahí
+// habitualmente que los minutos totales acumulados, que arrastran partidos
+// de OTRA competencia donde el jugador puede ser titular fijo sin relación
+// con este cupo (ver el caso real que motivó esto: un Sub-21 que es titular
+// fijo en la liga le ganaba en minutos a uno que arrancó las últimas 2
+// fechas de Copa Chile, solo por jugar mucho más en un torneo aparte). Se
+// usa TODO el historial del rival, no la ventana de 10 partidos mixtos,
+// porque los partidos de una competencia puntual (ej. una copa) pueden caer
+// fuera de esa ventana general si se juega con poca frecuencia.
+function scoreTitularidadCompetencia(playerId: string, matchesDesc: Match[], competencia: string): number {
+  const relevantes = matchesDesc.filter((m) => m.competencia?.trim().toLowerCase() === competencia.trim().toLowerCase());
+  const n = relevantes.length;
+  let score = 0;
+  relevantes.forEach((m, idx) => {
+    if (m.lineup.some((l) => l.playerId === playerId)) score += n - idx;
+  });
+  return score;
+}
+
 function aplicarReglaTorneo(
   picks: XISlotPick[],
   scored: { player: Player; score: number; posicion: string }[],
   regla: TorneoRegla | null,
-  players: Player[]
+  players: Player[],
+  matchesAll: Match[] = []
 ): XISlotPick[] {
   if (!regla) return picks;
   const result = picks.map((p) => ({ ...p }));
+
+  // Si hay partidos jugados en la competencia exacta de esta regla, se
+  // ordena a los candidatos por titularidad reciente EN esa competencia
+  // (ver scoreTitularidadCompetencia) antes que por el score general — así
+  // no se termina eligiendo a alguien que casi no juega esa competencia
+  // puntual solo porque acumula más minutos en otra. Sin partidos de esa
+  // competencia todavía, se cae al score general de siempre.
+  const matchesDesc = sortMatchesDesc(matchesAll);
+  const hayPartidosDeEstaCompetencia = matchesDesc.some(
+    (m) => m.competencia?.trim().toLowerCase() === regla.torneo.trim().toLowerCase()
+  );
 
   // Sin exigir score > 0: la regla del torneo obliga a alinear al jugador
   // igual aunque no haya sumado minutos recientes (ej. no fue citado al
@@ -674,7 +721,15 @@ function aplicarReglaTorneo(
   const mejorCandidato = (posicion: string, usedIds: Set<string>, predicate: (p: Player) => boolean) =>
     scored
       .filter((s) => s.posicion === posicion && !usedIds.has(s.player.id) && predicate(s.player))
-      .sort((a, b) => b.score - a.score)[0];
+      .sort((a, b) => {
+        if (hayPartidosDeEstaCompetencia) {
+          const diff =
+            scoreTitularidadCompetencia(b.player.id, matchesDesc, regla.torneo) -
+            scoreTitularidadCompetencia(a.player.id, matchesDesc, regla.torneo);
+          if (diff !== 0) return diff;
+        }
+        return b.score - a.score;
+      })[0];
 
   const aplicarCambio = (index: number, candidato: { player: Player; score: number }) => {
     const original = result[index];
@@ -706,25 +761,47 @@ function aplicarReglaTorneo(
   const minSub21 = minSub21Efectivo(regla, players);
   if (minSub21 != null) {
     let formativosCount = result.filter((p) => esFormativo(p.player)).length;
-    const idxAsc = result
-      .map((p, i) => ({ p, i }))
-      .filter((x) => !esFormativo(x.p.player))
-      .sort((a, b) => a.p.score - b.p.score);
-    for (const { i } of idxAsc) {
-      if (formativosCount >= minSub21) break;
-      const usedIds = new Set(result.map((r) => r.player.id));
-      const extranjerosCount = result.filter((p) => p.player.extranjero).length;
-      const original = result[i];
-      const candidato = mejorCandidato(original.posicion, usedIds, (pl) => {
-        if (!esFormativo(pl)) return false;
-        if (regla.maxExtranjeros != null && pl.extranjero && !original.player.extranjero && extranjerosCount >= regla.maxExtranjeros)
-          return false;
-        return true;
+    const usedIds = new Set(result.map((r) => r.player.id));
+    // A diferencia del ajuste de extranjeros (donde ya se sabe qué pick
+    // puntual sobra), acá no hay un "culpable" puntual: se recorre a los
+    // MEJORES candidatos formativos disponibles (por titularidad reciente
+    // en esta competencia, mismo criterio que mejorCandidato) y a cada uno
+    // se lo ubica en SU posición natural — no en la del pick con menor
+    // puntaje del equipo, que puede ser una posición totalmente distinta a
+    // la que ese candidato realmente juega (ver el comentario de
+    // scoreTitularidadCompetencia: así se evita forzar a un Sub-21 a una
+    // posición ajena solo porque ahí es donde el equipo puntúa más bajo).
+    const candidatosFormativos = scored
+      .filter((s) => esFormativo(s.player) && !usedIds.has(s.player.id))
+      .sort((a, b) => {
+        if (hayPartidosDeEstaCompetencia) {
+          const diff =
+            scoreTitularidadCompetencia(b.player.id, matchesDesc, regla.torneo) -
+            scoreTitularidadCompetencia(a.player.id, matchesDesc, regla.torneo);
+          if (diff !== 0) return diff;
+        }
+        return b.score - a.score;
       });
-      if (candidato) {
-        aplicarCambio(i, candidato);
-        formativosCount += 1;
+
+    for (const candidato of candidatosFormativos) {
+      if (formativosCount >= minSub21) break;
+      const objetivo = result
+        .map((p, i) => ({ p, i }))
+        .filter((x) => !esFormativo(x.p.player) && x.p.posicion === candidato.posicion)
+        .sort((a, b) => a.p.score - b.p.score)[0];
+      if (!objetivo) continue;
+      const extranjerosCount = result.filter((p) => p.player.extranjero).length;
+      if (
+        regla.maxExtranjeros != null &&
+        candidato.player.extranjero &&
+        !objetivo.p.player.extranjero &&
+        extranjerosCount >= regla.maxExtranjeros
+      ) {
+        continue;
       }
+      aplicarCambio(objetivo.i, candidato);
+      formativosCount += 1;
+      usedIds.add(candidato.player.id);
     }
   }
 
@@ -946,7 +1023,7 @@ export function estimateNextXI(
   // Esto va ANTES de rellenar las posiciones sin cobertura porque un cambio
   // forzado por la regla puede liberar a alguien (ej. un extranjero que
   // sale) que resulta ser la mejor alternativa para esa posición vacía.
-  const picksConRegla = aplicarReglaTorneo(picks, scoredDisponibles, regla, players);
+  const picksConRegla = aplicarReglaTorneo(picks, scoredDisponibles, regla, players, matches);
 
   // Una posición sin cobertura (nadie citado recientemente la tiene como su
   // posición más habitual) no debe quedar vacía si hay alternativa: se busca

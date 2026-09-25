@@ -22,6 +22,7 @@ import { SubstitutionsEditor } from '../components/SubstitutionsEditor';
 import { MatchEventsEditor } from '../components/MatchEventsEditor';
 import { SystemSelect } from '../components/SystemSelect';
 import { PositionSelect } from '../components/PositionSelect';
+import { Pitch, type PitchToken } from '../components/Pitch';
 import { playerName } from '../lib/lookup';
 import { useIsViewer } from '../lib/authContext';
 
@@ -114,38 +115,14 @@ function SetupPartidoEnVivo({
   );
 }
 
-// Cronómetro con pausa (para el entretiempo): baseElapsedMs acumula el
-// tiempo corrido en segmentos anteriores (congelado mientras está en
-// pausa), runningSince es la marca de tiempo de cuando arrancó el segmento
-// actual (null = pausado). minutoActual = baseElapsedMs + lo corrido del
-// segmento actual, si lo hay.
-interface TimerState {
-  baseElapsedMs: number;
-  runningSince: number | null;
-}
-
-function timerKeyFor(matchId: string): string {
-  return `envivo_timer_${matchId}`;
-}
-
-function readTimer(matchId: string): TimerState | null {
-  try {
-    const v = localStorage.getItem(timerKeyFor(matchId));
-    return v ? (JSON.parse(v) as TimerState) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeTimer(matchId: string, value: TimerState | null) {
-  try {
-    if (value === null) localStorage.removeItem(timerKeyFor(matchId));
-    else localStorage.setItem(timerKeyFor(matchId), JSON.stringify(value));
-  } catch {
-    // localStorage puede fallar (modo privado, storage lleno): el
-    // cronómetro simplemente no persiste entre recargas, no es crítico.
-  }
-}
+// Sondeo periódico para quien solo mira (no edita): así ve avanzar el
+// cronómetro y aparecer goles/tarjetas/cambios que carga otra persona desde
+// otro dispositivo, sin tener que recargar la página a mano. Quien edita no
+// lo necesita — sus propias acciones ya actualizan localMatch al toque, y
+// pisar localMatch con lo del servidor cada tanto podría perder algo que
+// todavía no guardó (ver el comentario de más abajo sobre por qué localMatch
+// no se resincroniza en cada reload()).
+const POLL_MS = 10000;
 
 function PartidoEnVivo({
   match,
@@ -171,38 +148,26 @@ function PartidoEnVivo({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => setLocalMatch(match), [match.id]);
 
-  const [timer, setTimerState] = useState<TimerState | null>(() => readTimer(match.id));
+  // El cronómetro vive en el servidor (localMatch.cronometroBaseMs /
+  // cronometroRunningSince), no en localStorage: así cualquier dispositivo
+  // que abra este partido —incluso un viewer de solo lectura— calcula el
+  // mismo minuto actual. `now` solo se usa para que el minuto siga
+  // avanzando en pantalla entre sondeos, con matemática local (no hace
+  // falta pedirle la hora al servidor en cada tick).
   const [now, setNow] = useState(Date.now());
+  const started = localMatch.cronometroBaseMs != null;
+  const pausado = started && !localMatch.cronometroRunningSince;
   useEffect(() => {
-    if (!timer || timer.runningSince === null) return;
+    if (!started || pausado) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [timer]);
+  }, [started, pausado]);
 
-  const setTimer = (value: TimerState | null) => {
-    setTimerState(value);
-    writeTimer(localMatch.id, value);
-  };
-
-  const started = timer !== null;
-  const pausado = started && timer!.runningSince === null;
-  const elapsedMs = timer ? timer.baseElapsedMs + (timer.runningSince !== null ? now - timer.runningSince : 0) : 0;
+  const elapsedMs = started
+    ? (localMatch.cronometroBaseMs || 0) +
+      (localMatch.cronometroRunningSince ? now - new Date(localMatch.cronometroRunningSince).getTime() : 0)
+    : 0;
   const minutoActual = started ? Math.max(1, Math.floor(elapsedMs / 60000) + 1) : 1;
-
-  const iniciarCronometro = () => setTimer({ baseElapsedMs: 0, runningSince: Date.now() });
-  const pausarCronometro = () => {
-    if (!timer || timer.runningSince === null) return;
-    setTimer({ baseElapsedMs: timer.baseElapsedMs + (Date.now() - timer.runningSince), runningSince: null });
-  };
-  const reanudarCronometro = () => {
-    if (!timer || timer.runningSince !== null) return;
-    setTimer({ ...timer, runningSince: Date.now() });
-  };
-  const ajustarMinuto = (nuevoMinuto: number) =>
-    setTimer({
-      baseElapsedMs: Math.max(0, nuevoMinuto - 1) * 60000,
-      runningSince: timer && timer.runningSince !== null ? Date.now() : null,
-    });
 
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
@@ -214,6 +179,31 @@ function PartidoEnVivo({
     reload();
   };
 
+  // Sondeo periódico para quien solo mira (ver POLL_MS más arriba): pisa
+  // localMatch entero porque un viewer nunca tiene ediciones propias sin
+  // guardar que proteger, a diferencia de quien edita.
+  useEffect(() => {
+    if (!isViewer) return;
+    const id = setInterval(() => {
+      api.matches.get(localMatch.id).then(setLocalMatch).catch(() => {});
+    }, POLL_MS);
+    return () => clearInterval(id);
+  }, [isViewer, localMatch.id]);
+
+  const pausarCronometro = () => {
+    if (!started || pausado) return;
+    guardarRapido({ cronometroBaseMs: elapsedMs, cronometroRunningSince: null });
+  };
+  const reanudarCronometro = () => {
+    if (!started || !pausado) return;
+    guardarRapido({ cronometroRunningSince: new Date().toISOString() });
+  };
+  const ajustarMinuto = (nuevoMinuto: number) =>
+    guardarRapido({
+      cronometroBaseMs: Math.max(0, nuevoMinuto - 1) * 60000,
+      cronometroRunningSince: pausado ? null : new Date().toISOString(),
+    });
+
   const iniciarPartido = async () => {
     setSavingSetup(true);
     try {
@@ -221,10 +211,11 @@ function PartidoEnVivo({
         sistema: localMatch.sistema,
         lineup: localMatch.lineup,
         banca: localMatch.banca,
+        cronometroBaseMs: 0,
+        cronometroRunningSince: new Date().toISOString(),
       });
       setLocalMatch(updated);
       reload();
-      iniciarCronometro();
     } finally {
       setSavingSetup(false);
     }
@@ -241,6 +232,22 @@ function PartidoEnVivo({
     [players, localMatch.banca, enCanchaIds]
   );
   const posicionActual = (playerId: string) => currentLayout.find((l) => l.playerId === playerId)?.posicion || '';
+
+  // Campograma visual (de solo lectura acá — se edita desde "Editar en
+  // detalle" o QuickActions, no arrastrando estos tokens): quién está en
+  // cancha ahora mismo, para verlo de un vistazo tanto quien edita como
+  // quien solo mira.
+  const currentPitchTokens: PitchToken[] = useMemo(
+    () =>
+      currentLayout.map((l) => ({
+        key: l.playerId,
+        x: l.x ?? 50,
+        y: l.y ?? 50,
+        posicion: l.posicion,
+        player: players.find((p) => p.id === l.playerId),
+      })),
+    [currentLayout, players]
+  );
 
   // Jugadores marcados con problemas físicos durante el partido (solo en
   // pantalla, no se guarda en el partido): sirve para preguntar "¿quién
@@ -356,8 +363,13 @@ function PartidoEnVivo({
   const finalizar = async () => {
     setFinalizando(true);
     try {
-      await api.matches.update(localMatch.id, { enVivo: false, golesFavor, golesContra });
-      setTimer(null);
+      await api.matches.update(localMatch.id, {
+        enVivo: false,
+        golesFavor,
+        golesContra,
+        cronometroBaseMs: null,
+        cronometroRunningSince: null,
+      });
       reload();
       navigate(`/rivales/${rivalId}/partidos/${localMatch.id}`);
     } finally {
@@ -441,6 +453,11 @@ function PartidoEnVivo({
             {finalizando ? 'Finalizando…' : 'Finalizar partido'}
           </button>
         )}
+      </section>
+
+      <section className="card p-3">
+        <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Campograma actual</h3>
+        <Pitch tokens={currentPitchTokens} height={360} />
       </section>
 
       <PrediccionesPanel

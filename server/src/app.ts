@@ -99,6 +99,7 @@ function toTorneoRegla(row: any): TorneoRegla {
     torneo: row.torneo,
     maxExtranjeros: row.max_extranjeros,
     minSub21: row.min_sub21,
+    minMinutosSub21: row.min_minutos_sub21,
     exencionPorSeleccionado: row.exencion_por_seleccionado,
   };
 }
@@ -240,6 +241,8 @@ function toMatch(row: any, children: MatchChildren): Match {
     notas: row.notas || '',
     notaTactica: row.nota_tactica || '',
     enVivo: !!row.en_vivo,
+    cronometroBaseMs: row.cronometro_base_ms ?? null,
+    cronometroRunningSince: row.cronometro_running_since || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -490,6 +493,7 @@ app.put('/api/rivals/:id', async (req, res) => {
           torneo: r.torneo,
           max_extranjeros: r.maxExtranjeros ?? null,
           min_sub21: r.minSub21 ?? null,
+          min_minutos_sub21: r.minMinutosSub21 ?? null,
           exencion_por_seleccionado: r.exencionPorSeleccionado ?? null,
         }))
       );
@@ -787,6 +791,8 @@ app.put('/api/matches/:id', async (req, res) => {
   if (b.notas !== undefined) patch.notas = b.notas;
   if (b.notaTactica !== undefined) patch.nota_tactica = b.notaTactica;
   if (b.enVivo !== undefined) patch.en_vivo = b.enVivo;
+  if (b.cronometroBaseMs !== undefined) patch.cronometro_base_ms = b.cronometroBaseMs;
+  if (b.cronometroRunningSince !== undefined) patch.cronometro_running_since = b.cronometroRunningSince;
 
   const { error } = await supabase.from('matches').update(patch).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });

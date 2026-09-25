@@ -139,6 +139,14 @@ export interface Match {
   // es true, queda excluido de las estadísticas agregadas del rival y la app
   // redirige a la pantalla de carga en vivo en vez de a la ficha normal.
   enVivo: boolean;
+  // Cronómetro persistido en el servidor (no en localStorage), para que
+  // cualquier usuario en cualquier dispositivo —incluso de solo lectura—
+  // vea el mismo tiempo corriendo. null = todavía no se inició.
+  // cronometroBaseMs acumula lo corrido en segmentos ya cerrados (pausas
+  // por entretiempo); cronometroRunningSince es el inicio del segmento
+  // actual (null = pausado).
+  cronometroBaseMs?: number | null;
+  cronometroRunningSince?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -163,7 +171,17 @@ export interface TorneoRegla {
   // Máximo de jugadores extranjeros que pueden estar en cancha a la vez. null/undefined = sin tope.
   maxExtranjeros?: number | null;
   // Mínimo de jugadores Sub-21 que deben estar en cancha. null/undefined = sin mínimo.
+  // Mutuamente excluyente con minMinutosSub21 (una regla usa una forma u
+  // otra, no las dos) — si ambas vienen cargadas, minMinutosSub21 manda.
   minSub21?: number | null;
+  // Algunos torneos (ej. Copa Chile) no piden una cantidad fija de
+  // jugadores Sub-21 en cancha, sino una suma de MINUTOS Sub-21 por
+  // partido (ej. 130'). Como un solo jugador no puede sumar eso en un
+  // partido de 90', esto en la práctica exige 2+ titulares Sub-21 — el XI
+  // estimado calcula ese mínimo efectivo dividiendo por la duración del
+  // partido (ver minSub21Efectivo en lib/stats.ts). null/undefined = esta
+  // forma de regla no aplica (se usa minSub21 en su lugar, si hay).
+  minMinutosSub21?: number | null;
   // Cuánto reduce el mínimo de Sub-21 cada jugador del plantel convocado a
   // una selección nacional (ej. 1 = cada seleccionado resta 1 cupo exigido).
   // null/undefined = sin exención.

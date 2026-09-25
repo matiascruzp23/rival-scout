@@ -101,6 +101,16 @@ export interface Match {
   // Nota táctica libre sobre este partido puntual (ajustes, lectura del DT).
   notaTactica?: string;
   enVivo: boolean;
+  // Cronómetro del partido en vivo, persistido en el servidor (no en
+  // localStorage) para que cualquier usuario que abra la pestaña "En Vivo"
+  // —incluso de solo lectura, en otro dispositivo— vea el mismo tiempo
+  // corriendo. null = todavía no se inició. Mismo modelo de "segmento
+  // corriendo + acumulado" que antes vivía solo en el cliente:
+  // cronometroBaseMs acumula lo corrido en segmentos ya cerrados (pausas
+  // por entretiempo), cronometroRunningSince es el inicio del segmento
+  // actual (null = pausado).
+  cronometroBaseMs?: number | null;
+  cronometroRunningSince?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,7 +131,9 @@ export interface TorneoRegla {
   id: string;
   torneo: string;
   maxExtranjeros?: number | null;
+  // Mutuamente excluyente con minMinutosSub21 — ver client/src/types.ts.
   minSub21?: number | null;
+  minMinutosSub21?: number | null;
   exencionPorSeleccionado?: number | null;
 }
 

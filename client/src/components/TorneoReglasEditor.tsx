@@ -6,6 +6,7 @@ function newRegla(): TorneoRegla {
     torneo: '',
     maxExtranjeros: null,
     minSub21: null,
+    minMinutosSub21: null,
     exencionPorSeleccionado: null,
   };
 }
@@ -32,7 +33,9 @@ export function TorneoReglasEditor({
       <p className="text-xs text-slate-400 -mt-1 mb-1">
         Cupos de cada torneo en el que compite este rival (ej. máximo de extranjeros en cancha, mínimo de Sub-21), para
         contrastarlos contra el XI estimado cuando el próximo partido sea en ese torneo. La exención por seleccionado
-        reduce el mínimo de Sub-21 por cada jugador del plantel marcado como "En selección".
+        reduce el mínimo de Sub-21 por cada jugador del plantel marcado como "En selección". El mínimo de Sub-21 se
+        carga de una de dos formas (no las dos a la vez): una cantidad fija de jugadores, o minutos Sub-21 acumulados
+        por partido (ej. Copa Chile: 130' — como nadie llega solo a eso en 90', en la práctica exige 2 titulares).
       </p>
       {reglas.map((r, i) => (
         <div key={r.id} className="flex gap-2 items-end flex-wrap">
@@ -65,13 +68,36 @@ export function TorneoReglasEditor({
             />
           </div>
           <div className="w-36">
-            <label className="label">Mín. Sub-21</label>
+            <label className="label">Mín. Sub-21 (jugadores)</label>
             <input
               type="number"
               min={0}
               className="input"
               value={r.minSub21 ?? ''}
-              onChange={(e) => update(i, { minSub21: e.target.value === '' ? null : Number(e.target.value) })}
+              onChange={(e) =>
+                update(i, {
+                  minSub21: e.target.value === '' ? null : Number(e.target.value),
+                  minMinutosSub21: e.target.value === '' ? r.minMinutosSub21 : null,
+                })
+              }
+              placeholder="Sin mínimo"
+            />
+          </div>
+          <div className="w-36">
+            <label className="label" title="Suma de minutos jugados por Sub-21 exigida por partido (ej. Copa Chile: 130'), en vez de una cantidad fija de jugadores">
+              Mín. Sub-21 (minutos)
+            </label>
+            <input
+              type="number"
+              min={0}
+              className="input"
+              value={r.minMinutosSub21 ?? ''}
+              onChange={(e) =>
+                update(i, {
+                  minMinutosSub21: e.target.value === '' ? null : Number(e.target.value),
+                  minSub21: e.target.value === '' ? r.minSub21 : null,
+                })
+              }
               placeholder="Sin mínimo"
             />
           </div>
