@@ -117,8 +117,8 @@ const TEMPLATES: Record<string, string[]> = {
     'Medio centro derecho',
     'Medio centro izquierdo',
     'Carrilero izquierdo',
-    'Mediapunta',
-    'Mediapunta',
+    'Mediapunta derecho',
+    'Mediapunta izquierdo',
     'Delantero centro',
   ],
   '3-5-2': [

@@ -33,6 +33,12 @@ export const POSITIONS: PositionDef[] = [
   { label: 'Volante central', group: 'MED', x: 50, y: 62 },
   { label: 'Medio centro izquierdo', group: 'MED', x: 36, y: 50 },
   { label: 'Mediapunta', group: 'MED', x: 50, y: 36 },
+  // Para sistemas con DOS mediapuntas (ej. 3-4-2-1) — mismo ancho que el
+  // doble pivote (64/36), a la altura de "Mediapunta". La única
+  // "Mediapunta" (sin lado) sigue existiendo para los sistemas con uno solo
+  // (4-2-3-1, 4-3-1-2, etc.), sin tocar.
+  { label: 'Mediapunta derecho', group: 'MED', x: 64, y: 36 },
+  { label: 'Mediapunta izquierdo', group: 'MED', x: 36, y: 36 },
   { label: 'Extremo derecho', group: 'MED', x: 80, y: 22 },
   { label: 'Extremo izquierdo', group: 'MED', x: 20, y: 22 },
   { label: 'Delantero centro', group: 'DEL', x: 50, y: 10 },
@@ -59,6 +65,8 @@ const POSITION_ABBR: Record<string, string> = {
   'Volante central': 'VC',
   'Medio centro izquierdo': 'MCI',
   Mediapunta: 'MP',
+  'Mediapunta derecho': 'MPD',
+  'Mediapunta izquierdo': 'MPI',
   'Extremo derecho': 'ED',
   'Extremo izquierdo': 'EI',
   'Delantero centro': 'DC',
