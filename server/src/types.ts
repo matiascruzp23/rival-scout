@@ -131,10 +131,9 @@ export interface TorneoRegla {
   id: string;
   torneo: string;
   maxExtranjeros?: number | null;
-  // Mutuamente excluyente con minMinutosSub21 — ver client/src/types.ts.
-  minSub21?: number | null;
+  // Ver client/src/types.ts para el detalle de la semántica.
   minMinutosSub21?: number | null;
-  exencionPorSeleccionado?: number | null;
+  exencionMinutosPorSeleccionado?: number | null;
 }
 
 export interface Rival {

@@ -53,14 +53,12 @@ create table if not exists torneo_reglas (
   rival_id text not null references rivals(id) on delete cascade,
   torneo text not null,
   max_extranjeros integer,
-  min_sub21 integer,
-  -- Alternativa a min_sub21 para torneos que piden una suma de MINUTOS
-  -- Sub-21 por partido (ej. Copa Chile, 130') en vez de una cantidad fija
-  -- de jugadores en cancha. Mutuamente excluyente con min_sub21 — si ambas
-  -- vienen cargadas, min_minutos_sub21 manda (ver minSub21Efectivo en
-  -- client/src/lib/stats.ts).
+  -- Suma de MINUTOS Sub-21 exigida por partido (ej. Copa Chile, 130') — ver
+  -- minSub21Efectivo en client/src/lib/stats.ts.
   min_minutos_sub21 integer,
-  exencion_por_seleccionado integer
+  -- Minutos que reduce el mínimo exigido cada jugador convocado a una
+  -- selección nacional.
+  exencion_minutos_por_seleccionado integer
 );
 create index if not exists torneo_reglas_rival_id_idx on torneo_reglas(rival_id);
 

@@ -98,9 +98,8 @@ function toTorneoRegla(row: any): TorneoRegla {
     id: row.id,
     torneo: row.torneo,
     maxExtranjeros: row.max_extranjeros,
-    minSub21: row.min_sub21,
     minMinutosSub21: row.min_minutos_sub21,
-    exencionPorSeleccionado: row.exencion_por_seleccionado,
+    exencionMinutosPorSeleccionado: row.exencion_minutos_por_seleccionado,
   };
 }
 
@@ -492,9 +491,8 @@ app.put('/api/rivals/:id', async (req, res) => {
           rival_id: req.params.id,
           torneo: r.torneo,
           max_extranjeros: r.maxExtranjeros ?? null,
-          min_sub21: r.minSub21 ?? null,
           min_minutos_sub21: r.minMinutosSub21 ?? null,
-          exencion_por_seleccionado: r.exencionPorSeleccionado ?? null,
+          exencion_minutos_por_seleccionado: r.exencionMinutosPorSeleccionado ?? null,
         }))
       );
     }

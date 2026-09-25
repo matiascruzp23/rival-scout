@@ -607,21 +607,18 @@ function esFormativo(p: Player): boolean {
 // esa regla exige ceil(130/90) = 2 titulares Sub-21, no 1.
 const DURACION_PARTIDO_ESTANDAR = 90;
 
-// Algunos torneos reducen el mínimo de Sub-21 exigido cuando el plantel tiene
-// jugadores convocados a una selección nacional (regla.exencionPorSeleccionado
-// por cada uno). Solo cuentan los que están disponibles (no de baja).
+// Algunos torneos reducen los MINUTOS Sub-21 exigidos cuando el plantel
+// tiene jugadores convocados a una selección nacional
+// (regla.exencionMinutosPorSeleccionado por cada uno) — la exención se
+// descuenta de los minutos, antes de derivar el mínimo de titulares, no de
+// la cantidad de titulares directamente. Solo cuentan los seleccionados
+// disponibles (no de baja).
 function minSub21Efectivo(regla: TorneoRegla, players: Player[]): number | null {
-  // minMinutosSub21 (una suma de minutos por partido, ej. Copa Chile 130')
-  // manda sobre minSub21 (cantidad fija) cuando ambos vienen cargados — ver
-  // el comentario en TorneoRegla.minMinutosSub21.
-  const base =
-    regla.minMinutosSub21 != null
-      ? Math.ceil(regla.minMinutosSub21 / DURACION_PARTIDO_ESTANDAR)
-      : regla.minSub21;
-  if (base == null) return null;
+  if (regla.minMinutosSub21 == null) return null;
   const seleccionados = players.filter((p) => p.enSeleccion && !p.baja).length;
-  const exencion = (regla.exencionPorSeleccionado || 0) * seleccionados;
-  return Math.max(0, base - exencion);
+  const exencionMinutos = (regla.exencionMinutosPorSeleccionado || 0) * seleccionados;
+  const minutosExigidos = Math.max(0, regla.minMinutosSub21 - exencionMinutos);
+  return Math.ceil(minutosExigidos / DURACION_PARTIDO_ESTANDAR);
 }
 
 export interface ReglaTorneoCheck {

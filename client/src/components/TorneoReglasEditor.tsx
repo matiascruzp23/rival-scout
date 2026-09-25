@@ -5,9 +5,8 @@ function newRegla(): TorneoRegla {
     id: Math.random().toString(36).slice(2, 10),
     torneo: '',
     maxExtranjeros: null,
-    minSub21: null,
     minMinutosSub21: null,
-    exencionPorSeleccionado: null,
+    exencionMinutosPorSeleccionado: null,
   };
 }
 
@@ -31,11 +30,11 @@ export function TorneoReglasEditor({
   return (
     <fieldset disabled={readOnly} className="space-y-2">
       <p className="text-xs text-slate-400 -mt-1 mb-1">
-        Cupos de cada torneo en el que compite este rival (ej. máximo de extranjeros en cancha, mínimo de Sub-21), para
-        contrastarlos contra el XI estimado cuando el próximo partido sea en ese torneo. La exención por seleccionado
-        reduce el mínimo de Sub-21 por cada jugador del plantel marcado como "En selección". El mínimo de Sub-21 se
-        carga de una de dos formas (no las dos a la vez): una cantidad fija de jugadores, o minutos Sub-21 acumulados
-        por partido (ej. Copa Chile: 130' — como nadie llega solo a eso en 90', en la práctica exige 2 titulares).
+        Cupos de cada torneo en el que compite este rival (ej. máximo de extranjeros en cancha, mínimo de minutos
+        Sub-21 acumulados por partido — ej. Copa Chile: 130', como nadie llega solo a eso en 90', en la práctica exige
+        2 titulares), para contrastarlos contra el XI estimado cuando el próximo partido sea en ese torneo. La
+        exención por seleccionado descuenta minutos del mínimo exigido (no cantidad de jugadores) por cada jugador del
+        plantel marcado como "En selección".
       </p>
       {reglas.map((r, i) => (
         <div key={r.id} className="flex gap-2 items-end flex-wrap">
@@ -68,50 +67,29 @@ export function TorneoReglasEditor({
             />
           </div>
           <div className="w-36">
-            <label className="label">Mín. Sub-21 (jugadores)</label>
-            <input
-              type="number"
-              min={0}
-              className="input"
-              value={r.minSub21 ?? ''}
-              onChange={(e) =>
-                update(i, {
-                  minSub21: e.target.value === '' ? null : Number(e.target.value),
-                  minMinutosSub21: e.target.value === '' ? r.minMinutosSub21 : null,
-                })
-              }
-              placeholder="Sin mínimo"
-            />
-          </div>
-          <div className="w-36">
-            <label className="label" title="Suma de minutos jugados por Sub-21 exigida por partido (ej. Copa Chile: 130'), en vez de una cantidad fija de jugadores">
-              Mín. Sub-21 (minutos)
+            <label className="label" title="Suma de minutos jugados por Sub-21 exigida por partido (ej. Copa Chile: 130')">
+              Mín. minutos Sub-21
             </label>
             <input
               type="number"
               min={0}
               className="input"
               value={r.minMinutosSub21 ?? ''}
-              onChange={(e) =>
-                update(i, {
-                  minMinutosSub21: e.target.value === '' ? null : Number(e.target.value),
-                  minSub21: e.target.value === '' ? r.minSub21 : null,
-                })
-              }
+              onChange={(e) => update(i, { minMinutosSub21: e.target.value === '' ? null : Number(e.target.value) })}
               placeholder="Sin mínimo"
             />
           </div>
           <div className="w-44">
-            <label className="label" title="Cuánto reduce el mínimo de Sub-21 cada jugador del plantel convocado a una selección nacional">
-              Exención x seleccionado
+            <label className="label" title="Cuántos minutos descuenta del mínimo exigido cada jugador del plantel convocado a una selección nacional">
+              Exención x seleccionado (min.)
             </label>
             <input
               type="number"
               min={0}
               className="input"
-              value={r.exencionPorSeleccionado ?? ''}
+              value={r.exencionMinutosPorSeleccionado ?? ''}
               onChange={(e) =>
-                update(i, { exencionPorSeleccionado: e.target.value === '' ? null : Number(e.target.value) })
+                update(i, { exencionMinutosPorSeleccionado: e.target.value === '' ? null : Number(e.target.value) })
               }
               placeholder="Sin exención"
             />
