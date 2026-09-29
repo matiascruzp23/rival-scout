@@ -360,8 +360,16 @@ export function FormationLinesDiagram({ valor }: { valor: string }) {
 
 // "Presiona 9" -> el centrodelantero presiona solo. "Presiona 9-10" -> el
 // centrodelantero y el mediapunta presionan juntos. "Presiona 7-9-11" -> los
-// tres delanteros presionan juntos.
+// tres delanteros presionan juntos. "Presiona doble 9" -> dos jugadores
+// presionan ambos en el rol 9 (no hay un segundo dorsal real que anotar,
+// así que se repite el mismo número dos veces: el diagrama ya soporta
+// tokens repetidos sin cambios, solo dibuja dos fichas con la misma etiqueta).
 function parsePressingNumbers(tag: string): number[] | null {
+  const doble = tag.match(/^Presiona\s+doble\s+(\d+)$/i);
+  if (doble) {
+    const n = Number(doble[1]);
+    return ROLE_ORDER.includes(n) ? [n, n] : null;
+  }
   const m = tag.match(/^Presiona\s+([\d\-,\s]+)$/i);
   if (!m) return null;
   const nums = m[1]

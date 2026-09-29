@@ -369,7 +369,9 @@ function IndividualesCard({
 
       {data.combos.length === 0 ? (
         <p className="text-sm text-slate-400">
-          Sin combinaciones: la columna "Rivales" no viene rellena en estos registros.
+          {data.registrosConRival === 0
+            ? 'Sin combinaciones: la columna "Rivales" no viene rellena en estos registros.'
+            : 'Ninguna combinación se repite más de una vez todavía.'}
         </p>
       ) : (
         <ul className="space-y-1.5">

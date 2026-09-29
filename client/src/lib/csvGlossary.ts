@@ -73,6 +73,13 @@ export const ROLE_ORDER = [11, 9, 10, 8, 7];
 export function glossaryFor(tag: string): string | undefined {
   const clean = tag.trim();
   if (GLOSSARY[clean]) return GLOSSARY[clean];
+  const dobleMatch = clean.match(/^Presiona\s+doble\s+(\d+)$/i);
+  if (dobleMatch) {
+    const nombre = ROLE_NAMES[Number(dobleMatch[1])];
+    return nombre
+      ? `Presión combinada de dos jugadores en el rol ${nombre} (${dobleMatch[1]}) sobre la salida rival.`
+      : undefined;
+  }
   const presionMatch = clean.match(/^Presiona\s+([\d\-,\s]+)$/i);
   if (presionMatch) {
     const roles = presionMatch[1]

@@ -456,13 +456,18 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
   ],
   // El bloque se carga hacia el lado del balón (6 y 8 se cierran junto al
   // 7), el 11 queda en su lugar del otro lado, aislado, con un rival libre.
+  // El 11 se separa más de la zona (misma profundidad que el balón, bien
+  // abierto en su banda) para que se lea claramente aislado y no pegado al
+  // cuadrado; el rival libre queda dentro del cuadrado pero ya cruzando la
+  // mitad de cancha (x > 50), no apenas sobre la línea.
   'Libre lado opuesto': [
     { kind: 'override', num: '6', x: 56, y: 19 },
     { kind: 'override', num: '8', x: 56, y: 38 },
+    { kind: 'override', num: '11', x: 26, y: 93 },
     { kind: 'rival', x: 26, y: 10 },
     { kind: 'ball', x: 33, y: 10 },
     { kind: 'zone', x: 34, y: 48, w: 22, h: 30 },
-    { kind: 'rival', x: 44, y: 62 },
+    { kind: 'rival', x: 53, y: 62 },
   ],
   'Pierde espalda': [
     { kind: 'zone', x: shift('3', 2, -18).x, y: shift('3', 2, -18).y, w: 16, h: 14 },

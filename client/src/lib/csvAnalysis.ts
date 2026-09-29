@@ -486,7 +486,11 @@ function rivalSituacionCombos(
     }
     pendientes.push({ matchId: r.matchId, rowIndex: r.rowIndex, rival: rivales.join(', '), rivales, opciones: situaciones });
   }
+  // Igual criterio que el resto del análisis (ver soloRepetidos en
+  // tagBreakdown): un combo que aparece una sola vez no es un patrón, es
+  // ruido — se descarta en vez de listar cada comportamiento suelto.
   const combos = Array.from(counts.values())
+    .filter((c) => c.count > 1)
     .sort((a, b) => b.count - a.count)
     .slice(0, MAX_RIVAL_COMBOS);
   return { registrosConRival, combos, pendientes };
