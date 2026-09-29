@@ -455,15 +455,18 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'zone', x: shift('2', 2, -12).x, y: shift('2', 2, -12).y, w: 14, h: 10 },
   ],
   // El bloque se carga hacia el lado del balón (6 y 8 se cierran junto al
-  // 7), el 11 queda en su lugar del otro lado, aislado, con un rival libre.
-  // El 11 se separa más de la zona (misma profundidad que el balón, bien
-  // abierto en su banda) para que se lea claramente aislado y no pegado al
-  // cuadrado; el rival libre queda dentro del cuadrado pero ya cruzando la
-  // mitad de cancha (x > 50), no apenas sobre la línea.
+  // 7, y el propio 7 marca al poseedor). El 11 —que en un sistema con línea
+  // de 4 como el que usa formationOverridesFor ya es un interior, no un
+  // extremo abierto por la banda— queda justo por fuera del cuadrado,
+  // aislado, con un rival libre ahí dentro (misma profundidad de interior
+  // que le daría el sistema, no la banda). El rival libre queda dentro del
+  // cuadrado pero ya cruzando la mitad de cancha (x > 50), no apenas sobre
+  // la línea.
   'Libre lado opuesto': [
     { kind: 'override', num: '6', x: 56, y: 19 },
+    { kind: 'override', num: '7', x: 35, y: 13 },
     { kind: 'override', num: '8', x: 56, y: 38 },
-    { kind: 'override', num: '11', x: 26, y: 93 },
+    { kind: 'override', num: '11', x: 50, y: 82 },
     { kind: 'rival', x: 26, y: 10 },
     { kind: 'ball', x: 33, y: 10 },
     { kind: 'zone', x: 34, y: 48, w: 22, h: 30 },
