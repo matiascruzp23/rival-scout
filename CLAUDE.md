@@ -74,7 +74,9 @@ Crear antes `server/.env` y `client/.env` a partir de sus `.env.example`.
 También existe la config `rival-scout` en `.claude/launch.json` para el
 preview.
 
-Usuarios: `cd server && npx tsx scripts/create-user.ts <usuario> <password> [editor|viewer]`.
+Usuarios: `cd server && npx tsx scripts/create-user.ts <usuario> <password> [editor|viewer] [--restringido]`.
+`--restringido` hace que no vea los rivales públicos, solo los compartidos
+explícitamente con él (así está el usuario `demo`, viewer).
 El login es por usuario; se convierte a un correo ficticio
 `<usuario>@rivalscout.local` (ver `client/src/lib/username.ts`).
 

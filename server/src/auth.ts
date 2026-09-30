@@ -7,7 +7,9 @@ declare global {
       // Fijado por requireAuth una vez validada la sesión — id real de
       // auth.users, usado para decidir qué rivales puede ver cada quien
       // (ver puedeVerRival en app.ts).
-      user?: { id: string; isViewer: boolean };
+      // isRestricted: solo ve rivales compartidos explícitamente con él
+      // (visible_user_ids), nunca los públicos — p. ej. el usuario demo.
+      user?: { id: string; isViewer: boolean; isRestricted: boolean };
     }
   }
 }
@@ -33,6 +35,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(403).json({ error: 'Tu usuario es de solo lectura' });
   }
 
-  req.user = { id: data.user.id, isViewer };
+  const isRestricted = data.user.app_metadata?.restricted === true;
+  req.user = { id: data.user.id, isViewer, isRestricted };
   next();
 }

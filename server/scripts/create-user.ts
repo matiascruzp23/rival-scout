@@ -3,10 +3,14 @@
 // forma de dar de alta gente nueva.
 //
 // Uso:
-//   npx tsx scripts/create-user.ts <usuario> <password> [rol]
+//   npx tsx scripts/create-user.ts <usuario> <password> [rol] [--restringido]
 //
 // <rol> es opcional: "editor" (por defecto, puede ver y editar todo) o
 // "viewer" (solo puede ver, el servidor rechaza cualquier escritura suya).
+//
+// --restringido: el usuario no ve los rivales públicos, solo los que se le
+// compartan explícitamente (p. ej. un usuario demo). Ver puedeVerRival en
+// src/app.ts. Sin el flag queda en false (se le quita si lo tenía).
 //
 // Supabase Auth solo entiende email/password, no "usuario": acá se convierte
 // <usuario> a un correo inventado bajo un dominio reservado que nunca recibe
@@ -24,9 +28,11 @@ if (!url || !serviceRoleKey) {
   process.exit(1);
 }
 
-const [, , usernameArg, password, rolArg] = process.argv;
+const args = process.argv.slice(2);
+const restricted = args.includes('--restringido');
+const [usernameArg, password, rolArg] = args.filter((a) => a !== '--restringido');
 if (!usernameArg || !password) {
-  console.error('Uso: npx tsx scripts/create-user.ts <usuario> <password> [editor|viewer]');
+  console.error('Uso: npx tsx scripts/create-user.ts <usuario> <password> [editor|viewer] [--restringido]');
   process.exit(1);
 }
 const username = usernameArg.trim().toLowerCase();
@@ -43,13 +49,13 @@ async function main() {
   if (found) {
     const { error } = await supabase.auth.admin.updateUserById(found.id, {
       password,
-      app_metadata: { role },
+      app_metadata: { role, restricted },
     });
     if (error) {
       console.error('Error actualizando el usuario:', error.message);
       process.exit(1);
     }
-    console.log(`Usuario "${username}" actualizado (contraseña reseteada, rol: ${rol}).`);
+    console.log(`Usuario "${username}" actualizado (contraseña reseteada, rol: ${rol}${restricted ? ', restringido' : ''}).`);
     return;
   }
 
@@ -57,13 +63,13 @@ async function main() {
     email,
     password,
     email_confirm: true,
-    app_metadata: { role },
+    app_metadata: { role, restricted },
   });
   if (error) {
     console.error('Error creando el usuario:', error.message);
     process.exit(1);
   }
-  console.log(`Usuario "${username}" creado (rol: ${rol}).`);
+  console.log(`Usuario "${username}" creado (rol: ${rol}${restricted ? ', restringido' : ''}).`);
 }
 
 main();

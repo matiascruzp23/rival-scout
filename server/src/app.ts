@@ -164,10 +164,22 @@ function toIndividualStatsImport(row: any): IndividualStatsImport {
 // null/undefined en visible_user_ids = público (visible para todos, el
 // comportamiento de siempre); una lista (incluso vacía) restringe el rival
 // a su creador más quien esté en esa lista — ver Rival.visibleUserIds.
-function puedeVerRival(row: { created_by?: string | null; visible_user_ids?: string[] | null }, userId: string): boolean {
-  if (row.visible_user_ids == null) return true;
-  if (row.created_by === userId) return true;
-  return row.visible_user_ids.includes(userId);
+// Un usuario restringido (app_metadata.restricted, ver create-user.ts) no ve
+// los rivales públicos: solo los que se le compartieron explícitamente.
+function puedeVerRival(
+  row: { created_by?: string | null; visible_user_ids?: string[] | null },
+  user: { id: string; isRestricted: boolean },
+): boolean {
+  if (row.visible_user_ids == null) return !user.isRestricted;
+  if (row.created_by === user.id) return true;
+  return row.visible_user_ids.includes(user.id);
+}
+
+// Para las rutas de lectura colgadas de un rival (jugadores, partidos):
+// true si el rival existe y el usuario lo puede ver.
+async function rivalVisible(rivalId: string, user: { id: string; isRestricted: boolean }): Promise<boolean> {
+  const { data } = await supabase.from('rivals').select('id, created_by, visible_user_ids').eq('id', rivalId).maybeSingle();
+  return !!data && puedeVerRival(data, user);
 }
 
 async function getReglas(rivalId: string): Promise<TorneoRegla[]> {
@@ -400,7 +412,7 @@ app.get('/api/rivals', async (req, res) => {
   const matchCounts = countBy(matchRows);
 
   const list = (rivalRows || [])
-    .filter((r) => puedeVerRival(r, req.user!.id))
+    .filter((r) => puedeVerRival(r, req.user!))
     .map((r) => ({
       ...toRival(r, []),
       matchCount: matchCounts.get(r.id) || 0,
@@ -437,7 +449,7 @@ app.post('/api/rivals', async (req, res) => {
 app.get('/api/rivals/:id', async (req, res) => {
   const { data: rivalRow, error } = await supabase.from('rivals').select('*').eq('id', req.params.id).maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
-  if (!rivalRow || !puedeVerRival(rivalRow, req.user!.id)) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!rivalRow || !puedeVerRival(rivalRow, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
 
   const [reglas, { data: playerRows }, { data: matchRows }, { data: individualStatsRow }] = await Promise.all([
     getReglas(rivalRow.id),
@@ -460,7 +472,7 @@ app.put('/api/rivals/:id', async (req, res) => {
     .select('id, created_by, visible_user_ids')
     .eq('id', req.params.id)
     .maybeSingle();
-  if (!existing || !puedeVerRival(existing, req.user!.id)) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!existing || !puedeVerRival(existing, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
   const b = req.body as Partial<Rival>;
 
   const patch: Record<string, unknown> = { updated_at: now() };
@@ -520,7 +532,7 @@ app.post('/api/rivals/:id/escudo', escudoUpload.single('file'), async (req, res)
     .select('id, created_by, visible_user_ids')
     .eq('id', req.params.id)
     .maybeSingle();
-  if (!rivalRow || !puedeVerRival(rivalRow, req.user!.id)) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!rivalRow || !puedeVerRival(rivalRow, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
   if (!req.file) return res.status(400).json({ error: 'Imagen requerida' });
 
   const ext = ESCUDO_MIME_EXT[req.file.mimetype];
@@ -549,7 +561,7 @@ app.delete('/api/rivals/:id/escudo', async (req, res) => {
     .select('id, created_by, visible_user_ids')
     .eq('id', req.params.id)
     .maybeSingle();
-  if (!rivalRow || !puedeVerRival(rivalRow, req.user!.id)) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!rivalRow || !puedeVerRival(rivalRow, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
   await removeExistingEscudo(rivalRow.id);
   const { data: updated, error } = await supabase
     .from('rivals')
@@ -568,7 +580,7 @@ app.delete('/api/rivals/:id', async (req, res) => {
     .select('id, created_by, visible_user_ids')
     .eq('id', req.params.id)
     .maybeSingle();
-  if (!existing || !puedeVerRival(existing, req.user!.id)) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!existing || !puedeVerRival(existing, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
   await removeExistingEscudo(req.params.id);
   const { error } = await supabase.from('rivals').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
@@ -594,7 +606,7 @@ app.post('/api/rivals/:id/individual-stats/import', upload.single('file'), async
     .select('id, created_by, visible_user_ids')
     .eq('id', req.params.id)
     .maybeSingle();
-  if (!rivalRow || !puedeVerRival(rivalRow, req.user!.id)) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!rivalRow || !puedeVerRival(rivalRow, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
   if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
 
   let parsed;
@@ -622,7 +634,7 @@ app.delete('/api/rivals/:id/individual-stats', async (req, res) => {
     .select('id, created_by, visible_user_ids')
     .eq('id', req.params.id)
     .maybeSingle();
-  if (!rivalRow || !puedeVerRival(rivalRow, req.user!.id)) return res.status(404).json({ error: 'Rival no encontrado' });
+  if (!rivalRow || !puedeVerRival(rivalRow, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
   const { error } = await supabase.from('individual_stats_import').delete().eq('rival_id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.status(204).end();
@@ -631,6 +643,7 @@ app.delete('/api/rivals/:id/individual-stats', async (req, res) => {
 // ---------- Players ----------
 
 app.get('/api/rivals/:rivalId/players', async (req, res) => {
+  if (!(await rivalVisible(req.params.rivalId, req.user!))) return res.status(404).json({ error: 'Rival no encontrado' });
   const { data, error } = await supabase.from('players').select('*').eq('rival_id', req.params.rivalId).order('created_at');
   if (error) return res.status(500).json({ error: error.message });
   res.json((data || []).map(toPlayer));
@@ -730,6 +743,7 @@ app.delete('/api/players/:id', async (req, res) => {
 // ---------- Matches ----------
 
 app.get('/api/rivals/:rivalId/matches', async (req, res) => {
+  if (!(await rivalVisible(req.params.rivalId, req.user!))) return res.status(404).json({ error: 'Rival no encontrado' });
   const { data: rows, error } = await supabase
     .from('matches')
     .select('*')
@@ -779,7 +793,7 @@ app.post('/api/rivals/:rivalId/matches', async (req, res) => {
 
 app.get('/api/matches/:id', async (req, res) => {
   const full = await getMatchFull(req.params.id);
-  if (!full) return res.status(404).json({ error: 'Partido no encontrado' });
+  if (!full || !(await rivalVisible(full.rivalId, req.user!))) return res.status(404).json({ error: 'Partido no encontrado' });
   res.json(full);
 });
 
