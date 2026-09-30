@@ -293,11 +293,6 @@ function IndividualStatsImportCard({
   );
 }
 
-// Link para abrir la planilla en Excel Online (la que el servidor descarga
-// sola, ver LEAGUE_STATS_URL en server/src/app.ts).
-const LEAGUE_STATS_SHARE_URL =
-  'https://azulazulsa2021-my.sharepoint.com/:x:/g/personal/matias_cruz_udechile_cl/IQCDSRHMDmBATaN33CT5yHF1AU1vLfGBYfIv0XmMn1xWwfc?e=bvFsYT';
-
 function SyncCard({
   data,
   isViewer,
@@ -344,17 +339,7 @@ function SyncCard({
   return (
     <section className="card p-4">
       <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
-        <h3 className="font-semibold text-slate-800">
-          Planilla de la liga{' '}
-          <a
-            href={LEAGUE_STATS_SHARE_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs font-normal text-emerald-700 hover:underline"
-          >
-            Abrir en SharePoint ↗
-          </a>
-        </h3>
+        <h3 className="font-semibold text-slate-800">Planilla de la liga</h3>
         {data ? (
           <span className="text-xs text-slate-400">
             {data.rows.length} filas · sincronizada el{' '}
