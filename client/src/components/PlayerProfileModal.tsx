@@ -3,8 +3,9 @@ import type { Player, RivalDetail } from '../types';
 import { Modal } from './Modal';
 import { RadarChart, RadarLegend } from './RadarChart';
 import { PlayerBadges } from './PlayerBadges';
+import { PlayerPositionPitch } from './PlayerPositionPitch';
 import { api } from '../api';
-import { computePlayerStats, computePlayerEventStats, formatPct, lastN } from '../lib/stats';
+import { computePlayerStats, computePlayerEventStats, formatPct, lastN, playerPositionHistory } from '../lib/stats';
 import { filaDeJugador, filasSinCruzar, maxPorEjeJugadores, radarGroupForPosicion, valorDe } from '../lib/playerRadar';
 
 const VENTANA = 10;
@@ -27,6 +28,7 @@ export function PlayerProfileModal({
   const matches = useMemo(() => lastN(rival.matches, VENTANA), [rival.matches]);
   const stats = useMemo(() => computePlayerStats(player, matches), [player, matches]);
   const events = useMemo(() => computePlayerEventStats(player.id, matches), [player.id, matches]);
+  const historialPosiciones = useMemo(() => playerPositionHistory(player.id, matches), [player.id, matches]);
 
   const fila = rival.individualStats ? filaDeJugador(rival.individualStats, player) : null;
   const grupo = radarGroupForPosicion(player.posicion);
@@ -82,6 +84,13 @@ export function PlayerProfileModal({
             <Stat label="% Min. posibles" value={formatPct(stats.porcentajeMinutos)} />
             <Stat label="Goles" value={events.goles} />
             <Stat label="TA/TR" value={`${events.amarillas}/${events.rojas}`} />
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Posiciones jugadas de titular</h4>
+          <div className="max-w-xs mx-auto">
+            <PlayerPositionPitch historial={historialPosiciones} />
           </div>
         </div>
 

@@ -207,6 +207,29 @@ export function positionRotation(matches: Match[]): PositionRotation[] {
   return result.sort((a, b) => b.jugadoresDistintos - a.jugadoresDistintos);
 }
 
+export interface PlayerPositionCount {
+  posicion: string;
+  count: number;
+}
+
+// Lo inverso de positionRotation: en vez de "quiénes jugaron en esta
+// posición", "en qué posiciones jugó este jugador" — mismo criterio (solo
+// titularidades del lineup, no dónde entró un suplente), para ver su
+// historial real en cancha en la ficha individual.
+export function playerPositionHistory(playerId: string, matches: Match[]): PlayerPositionCount[] {
+  const counts = new Map<string, number>();
+  for (const match of matches) {
+    for (const entry of match.lineup) {
+      if (entry.playerId !== playerId) continue;
+      const pos = positionDef(entry.posicion)?.label || entry.posicion || 'Sin posición';
+      counts.set(pos, (counts.get(pos) || 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([posicion, count]) => ({ posicion, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export function recentPlayers(players: Player[], matches: Match[], windowSize: number): Player[] {
   const recent = lastN(matches, windowSize);
   const ids = new Set<string>();
