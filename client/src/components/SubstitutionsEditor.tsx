@@ -168,7 +168,7 @@ export function SubstitutionsEditor({
   );
 }
 
-function SubLayoutEditor({
+export function SubLayoutEditor({
   players,
   lineup,
   substitutions,

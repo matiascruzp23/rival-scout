@@ -13,10 +13,10 @@ export interface PitchToken {
 }
 
 // Cancha vertical (retrato): el equipo ataca hacia arriba, arco propio abajo.
-const VIEW_W = 68;
-const VIEW_H = 100;
+export const VIEW_W = 68;
+export const VIEW_H = 100;
 
-function Markings() {
+export function Markings() {
   const boxW = 40;
   const boxH = 18;
   const goalW = 18;

@@ -37,8 +37,10 @@ function marcadorHasta(events: MatchEvent[], minuto: number): { favor: number; c
   return { favor, contra };
 }
 
-function withDefaults(lineup: LineupEntry[]): LineupEntry[] {
-  const placed: LineupEntry[] = [];
+// Completa coordenadas por defecto a las entradas que no tengan (conserva
+// cualquier campo extra de cada entrada, útil para rastrear su índice).
+export function withDefaults<T extends LineupEntry>(lineup: T[]): T[] {
+  const placed: T[] = [];
   // Si ninguno de los dos delanteros tiene coordenada guardada todavía, se
   // resuelven juntos al final (simétricos); si alguno ya se movió a mano en
   // el campograma, esa posición manual se respeta y no se toca.
