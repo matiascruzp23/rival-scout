@@ -19,7 +19,6 @@ const tabs = [
   { to: 'analisis-csv', label: 'Análisis' },
   { to: 'graficos', label: 'Gráficos y estadísticas' },
   { to: 'informe', label: 'Informe' },
-  { to: 'conclusiones', label: 'Conclusiones' },
 ];
 
 export default function RivalLayout() {

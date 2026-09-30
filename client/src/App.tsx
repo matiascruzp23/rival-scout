@@ -12,7 +12,6 @@ import SubstitutionsPage from './pages/SubstitutionsPage';
 import CsvAnalysisPage from './pages/CsvAnalysisPage';
 import GraficosPage from './pages/GraficosPage';
 import InformePage from './pages/InformePage';
-import ConclusionesPage from './pages/ConclusionesPage';
 
 export default function App() {
   return (
@@ -31,7 +30,6 @@ export default function App() {
             <Route path="analisis-csv" element={<CsvAnalysisPage />} />
             <Route path="graficos" element={<GraficosPage />} />
             <Route path="informe" element={<InformePage />} />
-            <Route path="conclusiones" element={<ConclusionesPage />} />
           </Route>
         </Routes>
       </AuthGate>

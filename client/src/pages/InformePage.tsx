@@ -52,8 +52,6 @@ import { PlantelView } from '../components/PlantelView';
 import { useIsViewer } from '../lib/authContext';
 import { UserSharePicker } from '../components/UserSharePicker';
 import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
-import { MarkdownLite } from '../components/MarkdownLite';
-import { construirConclusiones } from '../lib/conclusionesReglas';
 import { Pitch, type PitchToken } from '../components/Pitch';
 import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
 import { situationDiagramFor } from '../components/SituationDiagrams';
@@ -687,13 +685,6 @@ export default function InformePage() {
             : 'No hay jugadores marcados como baja actualmente.'}
         </p>
       </section>
-
-      {leagueStats !== undefined && (
-        <section className="informe-section informe-page card p-4">
-          <h3 className="font-semibold text-slate-800 mb-3">Conclusiones</h3>
-          <MarkdownLite text={construirConclusiones(rival, leagueStats)} />
-        </section>
-      )}
     </div>
   );
 }

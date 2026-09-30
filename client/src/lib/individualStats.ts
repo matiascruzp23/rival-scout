@@ -150,23 +150,3 @@ export function topJugadores(
     .sort((a, b) => b.valor - a.valor)
     .slice(0, n);
 }
-
-// Como topJugadores pero ascendente (el peor en vez del mejor) — mismo
-// umbral de minutos y exclusión de arqueros, para detectar debilidades
-// individuales explotables (ver conclusionesReglas.ts).
-export function peorJugador(
-  data: IndividualStatsImport,
-  columna: string,
-  opts: { excluirPorteros?: boolean } = {}
-): JugadorRanking | null {
-  const col = jugadorColumna(data);
-  if (!col) return null;
-  const { activo, minMinutos } = umbralMinutos(data);
-  const ranking = data.rows
-    .filter((r) => !activo || valorNumerico(r, COLUMNA_MINUTOS) >= minMinutos)
-    .filter((r) => !opts.excluirPorteros || !esPortero(r))
-    .map((r) => ({ nombre: String(r[col] ?? '').trim(), valor: valorNumerico(r, columna) }))
-    .filter((j) => j.nombre && j.valor > 0)
-    .sort((a, b) => a.valor - b.valor);
-  return ranking[0] || null;
-}
