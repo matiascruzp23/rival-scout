@@ -77,6 +77,10 @@ preview.
 Usuarios: `cd server && npx tsx scripts/create-user.ts <usuario> <password> [editor|viewer] [--restringido]`.
 `--restringido` hace que no vea los rivales públicos, solo los compartidos
 explícitamente con él (así está el usuario `demo`, viewer).
+
+Rival de demostración: `cd server && npx tsx scripts/seed-demo-rival.ts`
+recrea desde cero "Cordillera FC" (datos inventados, todos los campos
+rellenos) compartido solo con `demo`.
 El login es por usuario; se convierte a un correo ficticio
 `<usuario>@rivalscout.local` (ver `client/src/lib/username.ts`).
 
