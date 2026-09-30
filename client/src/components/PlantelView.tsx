@@ -102,6 +102,7 @@ export function PlantelView({
   sistemaAlternativo = '',
   onChanged,
   onSaveSistemas,
+  onSelectPlayer,
 }: {
   players: Player[];
   editable?: boolean;
@@ -109,6 +110,7 @@ export function PlantelView({
   sistemaAlternativo?: string;
   onChanged?: () => void;
   onSaveSistemas?: (data: { sistemaPrincipal: string; sistemaAlternativo: string }) => Promise<void>;
+  onSelectPlayer?: (player: Player) => void;
 }) {
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -221,6 +223,7 @@ export function PlantelView({
                     setDragOver(null);
                     movePlayer(playerId, box.label);
                   }}
+                  onSelectPlayer={onSelectPlayer}
                 />
               </div>
             ))}
@@ -233,7 +236,7 @@ export function PlantelView({
           <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1.5">Sin posición reconocida</h4>
           <div className="border border-dashed border-slate-300 rounded-md p-2 flex flex-wrap gap-2">
             {sinClasificar.map((p) => (
-              <PlayerChip key={p.id} player={p} editable={editable} />
+              <PlayerChip key={p.id} player={p} editable={editable} onSelectPlayer={onSelectPlayer} />
             ))}
           </div>
         </div>
@@ -305,6 +308,7 @@ function PositionBox({
   onDragOverBox,
   onDragLeaveBox,
   onDropPlayer,
+  onSelectPlayer,
 }: {
   label: string;
   players: Player[];
@@ -313,6 +317,7 @@ function PositionBox({
   onDragOverBox: () => void;
   onDragLeaveBox: () => void;
   onDropPlayer: (playerId: string) => void;
+  onSelectPlayer?: (player: Player) => void;
 }) {
   return (
     <div
@@ -336,7 +341,7 @@ function PositionBox({
       </div>
       <div className="divide-y divide-slate-100">
         {players.map((p) => (
-          <PlayerRow key={p.id} player={p} editable={editable} />
+          <PlayerRow key={p.id} player={p} editable={editable} onSelectPlayer={onSelectPlayer} />
         ))}
         {players.length === 0 && <div className="px-2 py-2 text-[11px] text-slate-300 italic">Vacío</div>}
       </div>
@@ -344,13 +349,22 @@ function PositionBox({
   );
 }
 
-function PlayerRow({ player, editable }: { player: Player; editable: boolean }) {
+function PlayerRow({
+  player,
+  editable,
+  onSelectPlayer,
+}: {
+  player: Player;
+  editable: boolean;
+  onSelectPlayer?: (player: Player) => void;
+}) {
   const extra = [player.estatura ? `${player.estatura.toFixed(2)}m` : '', pieAbbr(player)].filter(Boolean).join(' · ');
   return (
     <div
       draggable={editable}
       onDragStart={(e) => e.dataTransfer.setData('text/plain', player.id)}
-      className={`px-2 py-1.5 text-xs flex items-baseline gap-1.5 ${categoryBg(player)} ${editable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      onClick={() => onSelectPlayer?.(player)}
+      className={`px-2 py-1.5 text-xs flex items-baseline gap-1.5 ${categoryBg(player)} ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${onSelectPlayer ? 'cursor-pointer hover:bg-slate-50' : ''}`}
     >
       {player.dorsal !== null && <span className="text-slate-400 font-semibold w-4 shrink-0">{player.dorsal}</span>}
       <span className={`font-medium truncate ${categoryClass(player)}`} title={player.nombre}>
@@ -362,12 +376,21 @@ function PlayerRow({ player, editable }: { player: Player; editable: boolean }) 
   );
 }
 
-function PlayerChip({ player, editable }: { player: Player; editable: boolean }) {
+function PlayerChip({
+  player,
+  editable,
+  onSelectPlayer,
+}: {
+  player: Player;
+  editable: boolean;
+  onSelectPlayer?: (player: Player) => void;
+}) {
   return (
     <div
       draggable={editable}
       onDragStart={(e) => e.dataTransfer.setData('text/plain', player.id)}
-      className={`text-xs px-2 py-1 rounded border border-slate-200 ${categoryBg(player)} ${categoryClass(player)} ${editable ? 'cursor-grab' : ''}`}
+      onClick={() => onSelectPlayer?.(player)}
+      className={`text-xs px-2 py-1 rounded border border-slate-200 ${categoryBg(player)} ${categoryClass(player)} ${editable ? 'cursor-grab' : ''} ${onSelectPlayer ? 'cursor-pointer hover:bg-slate-100' : ''}`}
     >
       {player.nombre} <span className="text-slate-400">({player.posicion || 'sin posición'})</span>
       {player.enSeleccion && <SeleccionBadge />}

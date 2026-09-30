@@ -5,6 +5,7 @@ import { api } from '../api';
 import type { Player, PieHabil } from '../types';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import { PlayerBadges } from '../components/PlayerBadges';
+import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { PositionSelect } from '../components/PositionSelect';
 import { ImportPlayersModal } from '../components/ImportPlayersModal';
 import { computeAllPlayerStats, computePlayerEventStats, formatPct, lastN, type PlayerStats } from '../lib/stats';
@@ -28,6 +29,7 @@ export default function PlayersPage() {
   const [editing, setEditing] = useState<Player | 'new' | null>(null);
   const [toDelete, setToDelete] = useState<Player | null>(null);
   const [importing, setImporting] = useState(false);
+  const [perfilJugador, setPerfilJugador] = useState<Player | null>(null);
   const isViewer = useIsViewer();
 
   const matchesWindow = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
@@ -175,6 +177,7 @@ export default function PlayersPage() {
                 onEdit={() => setEditing(s.player)}
                 onDelete={() => setToDelete(s.player)}
                 onToggleBaja={() => quickToggleBaja(s.player)}
+                onSelectPlayer={() => setPerfilJugador(s.player)}
                 isViewer={isViewer}
               />
             ))}
@@ -225,6 +228,10 @@ export default function PlayersPage() {
           }}
         />
       )}
+
+      {perfilJugador && (
+        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugador(null)} />
+      )}
     </div>
   );
 }
@@ -255,6 +262,7 @@ function PlayerRow({
   onEdit,
   onDelete,
   onToggleBaja,
+  onSelectPlayer,
   isViewer,
 }: {
   stats: PlayerStats;
@@ -262,13 +270,18 @@ function PlayerRow({
   onEdit: () => void;
   onDelete: () => void;
   onToggleBaja: () => void;
+  onSelectPlayer: () => void;
   isViewer: boolean;
 }) {
   const { player } = stats;
   return (
     <tr className={player.baja ? 'opacity-60' : ''}>
       <td className="text-slate-400">{player.dorsal ?? '—'}</td>
-      <td className="font-medium text-slate-800">{player.nombre}</td>
+      <td>
+        <button className="font-medium text-slate-800 hover:text-emerald-700 hover:underline" onClick={onSelectPlayer}>
+          {player.nombre}
+        </button>
+      </td>
       <td>{player.posicion || '—'}</td>
       <td>{stats.partidosJugados}</td>
       <td>{stats.titularidades}</td>

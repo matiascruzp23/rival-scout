@@ -22,12 +22,13 @@ import { playerMap, playerName } from '../lib/lookup';
 import { PlayerBadges } from '../components/PlayerBadges';
 import { SquadDepthPitch, labelsForSquadDepth } from '../components/SquadDepthPitch';
 import { PlantelView } from '../components/PlantelView';
+import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { outcomeRowClass, outcomeTextClass } from '../components/MatchReportCard';
 import { Pitch, type PitchToken } from '../components/Pitch';
 import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
 import { TorneoReglasEditor } from '../components/TorneoReglasEditor';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
-import type { TorneoRegla } from '../types';
+import type { Player, TorneoRegla } from '../types';
 import { api } from '../api';
 import { useIsViewer } from '../lib/authContext';
 
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const players = playerMap(rival.players);
   const isViewer = useIsViewer();
+  const [perfilJugador, setPerfilJugador] = useState<Player | null>(null);
   const matches = useMemo(() => lastN(rival.matches, 10), [rival.matches]);
   const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
 
@@ -166,6 +168,7 @@ export default function DashboardPage() {
                 reload();
               }
         }
+        onSelectPlayer={setPerfilJugador}
       />
 
       <section className="card p-4">
@@ -465,6 +468,10 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {perfilJugador && (
+        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugador(null)} />
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
-import type { LeagueStatsImport, ProximoPartido } from '../types';
+import type { LeagueStatsImport, Player, ProximoPartido } from '../types';
 import { RadarChart, RadarLegend } from '../components/RadarChart';
 import {
   CODIGO_PROMEDIO,
@@ -49,6 +49,7 @@ import {
 } from '../lib/csvAnalysis';
 import { playerMap, playerName } from '../lib/lookup';
 import { PlantelView } from '../components/PlantelView';
+import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { useIsViewer } from '../lib/authContext';
 import { UserSharePicker } from '../components/UserSharePicker';
 import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
@@ -72,6 +73,7 @@ const EMPTY_PROXIMO: ProximoPartido = { competicion: '', instancia: '', fecha: '
 export default function InformePage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const players = playerMap(rival.players);
+  const [perfilJugador, setPerfilJugador] = useState<Player | null>(null);
 
   // Chrome usa el <title> del documento como nombre sugerido al exportar a
   // PDF (y también lo muestra en el encabezado de impresión), así que se
@@ -241,6 +243,7 @@ export default function InformePage() {
           players={rival.players}
           sistemaPrincipal={rival.sistemaPrincipal || ''}
           sistemaAlternativo={rival.sistemaAlternativo || ''}
+          onSelectPlayer={setPerfilJugador}
         />
       </div>
 
@@ -685,6 +688,10 @@ export default function InformePage() {
             : 'No hay jugadores marcados como baja actualmente.'}
         </p>
       </section>
+
+      {perfilJugador && (
+        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugador(null)} />
+      )}
     </div>
   );
 }
