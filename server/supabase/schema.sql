@@ -20,6 +20,12 @@ create table if not exists rivals (
   proximo_partido_fecha text,
   proximo_partido_estadio text,
   proximo_partido_condicion text,
+  -- Partido de vuelta de una llave a ida y vuelta (ej. Copa Chile): mismo
+  -- rival y mismo informe, con su propia fecha/estadio/condición (la
+  -- competición e instancia se comparten con la ida).
+  proximo_partido_vuelta_fecha text,
+  proximo_partido_vuelta_estadio text,
+  proximo_partido_vuelta_condicion text,
   sistema_principal text,
   sistema_alternativo text,
   entrenador text,

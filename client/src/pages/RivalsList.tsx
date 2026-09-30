@@ -146,7 +146,7 @@ export default function RivalsList() {
 // no tienen dónde aparecer en el calendario, así que quedan aparte para no
 // perderlos de vista.
 function SinFecha({ rivals }: { rivals: RivalListItem[] }) {
-  const sinFecha = rivals.filter((r) => !r.proximoPartido?.fecha);
+  const sinFecha = rivals.filter((r) => !r.proximoPartido?.fecha && !r.proximoPartido?.vuelta?.fecha);
   if (sinFecha.length === 0) return null;
   return (
     <div className="card p-4">

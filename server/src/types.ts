@@ -121,6 +121,11 @@ export interface ProximoPartido {
   fecha: string;
   estadio: string;
   condicion: 'Local' | 'Visitante' | '';
+  vuelta?: {
+    fecha: string;
+    estadio: string;
+    condicion: 'Local' | 'Visitante' | '';
+  } | null;
 }
 
 // Reglas de cupos (extranjeros/formativos) de un torneo puntual, para

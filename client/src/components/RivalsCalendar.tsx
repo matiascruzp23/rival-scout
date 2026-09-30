@@ -34,20 +34,35 @@ function daysInMonth(year: number, month: number): number {
 const today = new Date();
 const TODAY_KEY = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
+interface CalendarEntry {
+  rival: RivalListItem;
+  // Cuál pierna de una llave a ida y vuelta es esta entrada (ver
+  // rival.proximoPartido.vuelta) — ambas apuntan al mismo informe, solo
+  // cambia en qué día del calendario aparecen.
+  leg: 'unico' | 'ida' | 'vuelta';
+}
+
 // Calendario mensual: cada rival aparece en la fecha de su "próximo
 // partido" (rival.proximoPartido.fecha) — a medida que esa fecha pasa,
 // sigue apareciendo ahí, solo que hay que retroceder en el calendario para
-// volver a verlo, en vez de tener que buscarlo en una lista larga.
+// volver a verlo, en vez de tener que buscarlo en una lista larga. Si el
+// rival tiene cargado un partido de vuelta (llave ida y vuelta), aparece
+// una segunda vez en la fecha de la vuelta, ambas veces enlazando al mismo
+// informe.
 export function RivalsCalendar({ rivals }: { rivals: RivalListItem[] }) {
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
 
   const byDate = useMemo(() => {
-    const map = new Map<string, RivalListItem[]>();
-    for (const r of rivals) {
-      const fecha = r.proximoPartido?.fecha;
-      if (!fecha) continue;
+    const map = new Map<string, CalendarEntry[]>();
+    const add = (fecha: string | undefined, entry: CalendarEntry) => {
+      if (!fecha) return;
       if (!map.has(fecha)) map.set(fecha, []);
-      map.get(fecha)!.push(r);
+      map.get(fecha)!.push(entry);
+    };
+    for (const r of rivals) {
+      const vuelta = r.proximoPartido?.vuelta;
+      add(r.proximoPartido?.fecha, { rival: r, leg: vuelta?.fecha ? 'ida' : 'unico' });
+      if (vuelta?.fecha) add(vuelta.fecha, { rival: r, leg: 'vuelta' });
     }
     return map;
   }, [rivals]);
@@ -104,18 +119,23 @@ export function RivalsCalendar({ rivals }: { rivals: RivalListItem[] }) {
             >
               <span className={`text-xs ${isToday ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>{day}</span>
               <div className="grid grid-cols-2 gap-1">
-                {rivalesDelDia.map((r) => (
+                {rivalesDelDia.map(({ rival: r, leg }, i) => (
                   <Link
-                    key={r.id}
+                    key={`${r.id}-${i}`}
                     to={`/rivales/${r.id}`}
-                    className="aspect-square flex items-center justify-center bg-white border border-slate-200 rounded hover:border-emerald-400 hover:bg-emerald-50 p-0.5"
-                    title={r.nombre}
+                    className="relative aspect-square flex items-center justify-center bg-white border border-slate-200 rounded hover:border-emerald-400 hover:bg-emerald-50 p-0.5"
+                    title={leg === 'unico' ? r.nombre : `${r.nombre} (${leg === 'ida' ? 'ida' : 'vuelta'})`}
                   >
                     {r.escudoUrl ? (
                       <img src={r.escudoUrl} alt={r.nombre} className="w-full h-full object-contain" />
                     ) : (
                       <span className="text-[10px] font-semibold text-slate-400">
                         {r.nombre.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    {leg !== 'unico' && (
+                      <span className="absolute -bottom-1 -right-1 bg-emerald-700 text-white text-[8px] leading-none rounded-full px-1 py-0.5">
+                        {leg === 'ida' ? 'I' : 'V'}
                       </span>
                     )}
                   </Link>

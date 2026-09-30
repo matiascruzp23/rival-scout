@@ -159,6 +159,15 @@ export interface ProximoPartido {
   fecha: string;
   estadio: string;
   condicion: 'Local' | 'Visitante' | '';
+  // Partido de vuelta de una llave a ida y vuelta (ej. Copa Chile): mismo
+  // rival y mismo informe, pero con su propia fecha/estadio/condición —
+  // aparece como una segunda entrada en el calendario. null/undefined =
+  // partido único (no es una llave doble).
+  vuelta?: {
+    fecha: string;
+    estadio: string;
+    condicion: 'Local' | 'Visitante' | '';
+  } | null;
 }
 
 // Reglas de cupos (extranjeros/formativos) de un torneo puntual, para

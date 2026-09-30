@@ -859,6 +859,62 @@ function Portada({
               </select>
             </div>
           </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={!!form.vuelta}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    vuelta: e.target.checked
+                      ? {
+                          fecha: '',
+                          estadio: '',
+                          condicion: form.condicion === 'Local' ? 'Visitante' : form.condicion === 'Visitante' ? 'Local' : '',
+                        }
+                      : null,
+                  })
+                }
+              />
+              Partido doble (ida y vuelta): agregar una segunda fecha para este mismo rival
+            </label>
+          </div>
+          {form.vuelta && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-slate-50 rounded-md p-3">
+              <div>
+                <label className="label">Fecha vuelta</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={form.vuelta.fecha}
+                  onChange={(e) => setForm({ ...form, vuelta: { ...form.vuelta!, fecha: e.target.value } })}
+                />
+              </div>
+              <div>
+                <label className="label">Estadio vuelta</label>
+                <input
+                  className="input"
+                  value={form.vuelta.estadio}
+                  onChange={(e) => setForm({ ...form, vuelta: { ...form.vuelta!, estadio: e.target.value } })}
+                />
+              </div>
+              <div>
+                <label className="label">Condición vuelta</label>
+                <select
+                  className="input"
+                  value={form.vuelta.condicion}
+                  onChange={(e) =>
+                    setForm({ ...form, vuelta: { ...form.vuelta!, condicion: e.target.value as ProximoPartido['condicion'] } })
+                  }
+                >
+                  <option value="">Sin especificar</option>
+                  <option value="Local">Local</option>
+                  <option value="Visitante">Visitante</option>
+                </select>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="label">Notas de contexto del plantel (una por línea)</label>
@@ -913,7 +969,13 @@ function Portada({
         )}
         {hasInfo && (
           <p className="text-sm text-slate-600 mt-4">
+            {p?.vuelta ? 'Ida: ' : ''}
             {[p?.fecha, p?.estadio, p?.condicion].filter(Boolean).join(' · ')}
+          </p>
+        )}
+        {p?.vuelta && (p.vuelta.fecha || p.vuelta.estadio || p.vuelta.condicion) && (
+          <p className="text-sm text-slate-600">
+            Vuelta: {[p.vuelta.fecha, p.vuelta.estadio, p.vuelta.condicion].filter(Boolean).join(' · ')}
           </p>
         )}
         {gep.jugados > 0 && (

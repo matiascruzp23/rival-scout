@@ -113,6 +113,14 @@ function toRival(row: any, reglasTorneo: TorneoRegla[]): Rival {
       fecha: row.proximo_partido_fecha || '',
       estadio: row.proximo_partido_estadio || '',
       condicion: (row.proximo_partido_condicion as 'Local' | 'Visitante' | '') || '',
+      vuelta:
+        row.proximo_partido_vuelta_fecha || row.proximo_partido_vuelta_estadio || row.proximo_partido_vuelta_condicion
+          ? {
+              fecha: row.proximo_partido_vuelta_fecha || '',
+              estadio: row.proximo_partido_vuelta_estadio || '',
+              condicion: (row.proximo_partido_vuelta_condicion as 'Local' | 'Visitante' | '') || '',
+            }
+          : undefined,
     },
     sistemaPrincipal: row.sistema_principal || undefined,
     sistemaAlternativo: row.sistema_alternativo || undefined,
@@ -463,6 +471,9 @@ app.put('/api/rivals/:id', async (req, res) => {
     patch.proximo_partido_fecha = p?.fecha || null;
     patch.proximo_partido_estadio = p?.estadio || null;
     patch.proximo_partido_condicion = p?.condicion || null;
+    patch.proximo_partido_vuelta_fecha = p?.vuelta?.fecha || null;
+    patch.proximo_partido_vuelta_estadio = p?.vuelta?.estadio || null;
+    patch.proximo_partido_vuelta_condicion = p?.vuelta?.condicion || null;
   }
   if (b.sistemaPrincipal !== undefined) patch.sistema_principal = b.sistemaPrincipal || null;
   if (b.sistemaAlternativo !== undefined) patch.sistema_alternativo = b.sistemaAlternativo || null;
