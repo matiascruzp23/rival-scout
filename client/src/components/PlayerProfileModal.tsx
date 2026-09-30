@@ -3,7 +3,7 @@ import type { Player, RivalDetail } from '../types';
 import { Modal } from './Modal';
 import { RadarChart, RadarLegend } from './RadarChart';
 import { PlayerBadges } from './PlayerBadges';
-import { PlayerPositionPitch } from './PlayerPositionPitch';
+import { PlayerPositionPitch, type PlayerPositionSeries } from './PlayerPositionPitch';
 import { api } from '../api';
 import { computePlayerStats, computePlayerEventStats, formatPct, lastN, playerPositionHistory } from '../lib/stats';
 import { filaDeJugador, filasSinCruzar, maxPorEjeJugadores, radarGroupForPosicion, valorDe } from '../lib/playerRadar';
@@ -45,10 +45,27 @@ export function PlayerProfileModal({
     [grupo, rival.players, player.id]
   );
   const compararCon = companerosMismoGrupo.find((p) => p.id === compararConId) || null;
+  const statsComparar = useMemo(
+    () => (compararCon ? computePlayerStats(compararCon, matches) : null),
+    [compararCon, matches]
+  );
+  const eventsComparar = useMemo(
+    () => (compararCon ? computePlayerEventStats(compararCon.id, matches) : null),
+    [compararCon, matches]
+  );
+  const historialComparar = useMemo(
+    () => (compararCon ? playerPositionHistory(compararCon.id, matches) : []),
+    [compararCon, matches]
+  );
   const filaComparar =
     compararCon && rival.individualStats ? filaDeJugador(rival.individualStats, compararCon) : null;
 
-  const series =
+  const posicionSeries: PlayerPositionSeries[] = [
+    { label: player.nombre, color: COLOR_JUGADOR, historial: historialPosiciones },
+    ...(compararCon ? [{ label: compararCon.nombre, color: COLOR_COMPARAR, historial: historialComparar }] : []),
+  ];
+
+  const radarSeries =
     grupo && fila
       ? [
           { label: player.nombre, color: COLOR_JUGADOR, valores: grupo.ejes.map((e) => valorDe(fila, e.columna)) },
@@ -67,30 +84,53 @@ export function PlayerProfileModal({
   return (
     <Modal title={player.nombre} onClose={onClose} wide>
       <div className="space-y-5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-slate-500">
-            {player.posicion || 'Sin posición'}
-            {player.dorsal != null ? ` · #${player.dorsal}` : ''}
-          </span>
-          <PlayerBadges player={player} size="md" />
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-slate-500">
+              {player.posicion || 'Sin posición'}
+              {player.dorsal != null ? ` · #${player.dorsal}` : ''}
+            </span>
+            <PlayerBadges player={player} size="md" />
+          </div>
+          {companerosMismoGrupo.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-slate-500">Comparar con:</label>
+              <select
+                className="input text-sm py-1"
+                style={{ width: 200 }}
+                value={compararConId}
+                onChange={(e) => setCompararConId(e.target.value)}
+              >
+                <option value="">Sin comparar</option>
+                {companerosMismoGrupo.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div>
           <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Últimos {matches.length} partidos (app)</h4>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-            <Stat label="PJ" value={stats.partidosJugados} />
-            <Stat label="Titular" value={stats.titularidades} />
-            <Stat label="Minutos" value={`${Math.round(stats.minutosJugados)}'`} />
-            <Stat label="% Min. posibles" value={formatPct(stats.porcentajeMinutos)} />
-            <Stat label="Goles" value={events.goles} />
-            <Stat label="TA/TR" value={`${events.amarillas}/${events.rojas}`} />
+          <div className="space-y-2">
+            <PlayerStatsRow
+              label={compararCon ? player.nombre : undefined}
+              color={COLOR_JUGADOR}
+              stats={stats}
+              events={events}
+            />
+            {compararCon && statsComparar && eventsComparar && (
+              <PlayerStatsRow label={compararCon.nombre} color={COLOR_COMPARAR} stats={statsComparar} events={eventsComparar} />
+            )}
           </div>
         </div>
 
         <div>
           <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Posiciones jugadas de titular</h4>
           <div className="max-w-xs mx-auto">
-            <PlayerPositionPitch historial={historialPosiciones} />
+            <PlayerPositionPitch series={posicionSeries} />
           </div>
         </div>
 
@@ -108,42 +148,55 @@ export function PlayerProfileModal({
             <SinCruzar rival={rival} player={player} onSaved={onSaved} />
           ) : (
             <div>
-              {companerosMismoGrupo.length > 0 && (
-                <div className="flex items-center gap-2 mb-3">
-                  <label className="text-xs text-slate-500">Comparar con:</label>
-                  <select
-                    className="input text-sm py-1"
-                    style={{ width: 220 }}
-                    value={compararConId}
-                    onChange={(e) => setCompararConId(e.target.value)}
-                  >
-                    <option value="">Sin comparar</option>
-                    {companerosMismoGrupo.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               {compararCon && !filaComparar && (
                 <p className="text-xs text-amber-700 mb-2">
                   No se encontró a {compararCon.nombre} en la planilla individual, así que no se puede comparar.
                 </p>
               )}
               <div className="max-w-sm mx-auto">
-                {series.length > 1 && (
+                {radarSeries.length > 1 && (
                   <div className="mb-2 flex justify-center">
-                    <RadarLegend series={series} />
+                    <RadarLegend series={radarSeries} />
                   </div>
                 )}
-                <RadarChart ejeLabels={grupo.ejes.map((e) => e.label)} series={series} maxPorEje={maxPorEje} />
+                <RadarChart ejeLabels={grupo.ejes.map((e) => e.label)} series={radarSeries} maxPorEje={maxPorEje} />
               </div>
             </div>
           )}
         </div>
       </div>
     </Modal>
+  );
+}
+
+function PlayerStatsRow({
+  label,
+  color,
+  stats,
+  events,
+}: {
+  label?: string;
+  color: string;
+  stats: ReturnType<typeof computePlayerStats>;
+  events: ReturnType<typeof computePlayerEventStats>;
+}) {
+  return (
+    <div>
+      {label && (
+        <div className="flex items-center gap-1.5 text-xs font-semibold mb-1" style={{ color }}>
+          <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+          {label}
+        </div>
+      )}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
+        <Stat label="PJ" value={stats.partidosJugados} />
+        <Stat label="Titular" value={stats.titularidades} />
+        <Stat label="Minutos" value={`${Math.round(stats.minutosJugados)}'`} />
+        <Stat label="% Min. posibles" value={formatPct(stats.porcentajeMinutos)} />
+        <Stat label="Goles" value={events.goles} />
+        <Stat label="TA/TR" value={`${events.amarillas}/${events.rojas}`} />
+      </div>
+    </div>
   );
 }
 
