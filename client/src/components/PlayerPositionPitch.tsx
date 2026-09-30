@@ -37,7 +37,21 @@ export function PlayerPositionPitch({ series }: { series: PlayerPositionSeries[]
         if (!def) return null;
         const compartida = (seriesPorPosicion.get(h.posicion) || 0) > 1;
         const offsetX = compartida ? (si % 2 === 0 ? -3.4 : 3.4) : 0;
-        return { posicion: h.posicion, count: h.count, x: def.x, y: def.y, group: def.group, color: s.color, offsetX };
+        // Cuando se comparten (misma posición para 2 jugadores), la burbuja
+        // de conteo se corre hacia AFUERA (mismo lado que el propio
+        // corrimiento), no hacia el centro — si no, queda debajo de la
+        // burbuja principal del otro jugador y el número no se lee.
+        const badgeDx = offsetX < 0 ? -4.0 : 4.0;
+        return {
+          posicion: h.posicion,
+          count: h.count,
+          x: def.x,
+          y: def.y,
+          group: def.group,
+          color: s.color,
+          offsetX,
+          badgeDx,
+        };
       })
       .filter((b): b is NonNullable<typeof b> => b !== null)
   );
@@ -89,12 +103,23 @@ export function PlayerPositionPitch({ series }: { series: PlayerPositionSeries[]
               >
                 {positionAbbr(b.posicion)}
               </text>
-              <g transform="translate(4.0, -4.0)">
-                <circle r={2.4} fill="white" stroke={fill} strokeWidth={0.5} />
-                <text textAnchor="middle" dy={0.85} fontSize={2.5} fontWeight={700} fill={fill}>
-                  {b.count}
-                </text>
-              </g>
+            </g>
+          );
+        })}
+        {/* Los badges de conteo se dibujan en una segunda pasada, encima de
+            TODAS las burbujas principales — si no, al comparar 2 jugadores en
+            la misma posición, la burbuja del segundo tapaba el badge del
+            primero según el orden de dibujo. */}
+        {bubbles.map((b, i) => {
+          const x = (b.x / 100) * VIEW_W + b.offsetX + b.badgeDx;
+          const y = (b.y / 100) * VIEW_H - 4.0;
+          const fill = comparando ? b.color : groupColor(b.group);
+          return (
+            <g key={`badge-${b.posicion}-${i}`} transform={`translate(${x}, ${y})`}>
+              <circle r={2.4} fill="white" stroke={fill} strokeWidth={0.5} />
+              <text textAnchor="middle" dy={0.85} fontSize={2.5} fontWeight={700} fill={fill}>
+                {b.count}
+              </text>
             </g>
           );
         })}
