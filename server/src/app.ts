@@ -502,6 +502,16 @@ app.put('/api/rivals/:id', async (req, res) => {
   // el rival visible solo para su creador. Solo `null` lo vuelve a hacer
   // público — ver puedeVerRival.
   if (b.visibleUserIds !== undefined) patch.visible_user_ids = b.visibleUserIds;
+  // Quien restringe un rival nunca debe quedarse afuera (el selector le
+  // promete "Vos siempre lo ves"): si el rival no tiene creador —los creados
+  // antes de que existiera created_by— lo toma como propio; si el creador
+  // es otro, se suma a la lista.
+  if (Array.isArray(b.visibleUserIds)) {
+    if (!existing.created_by) patch.created_by = req.user!.id;
+    else if (existing.created_by !== req.user!.id && !b.visibleUserIds.includes(req.user!.id)) {
+      patch.visible_user_ids = [...b.visibleUserIds, req.user!.id];
+    }
+  }
 
   const { data: updated, error } = await supabase.from('rivals').update(patch).eq('id', req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
