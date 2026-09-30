@@ -274,10 +274,19 @@ export default function DashboardPage() {
                   Sin candidato disponible en: {xiEstimate.sinCobertura.join(', ')}.
                 </p>
               )}
-              {xiEstimate.excluidos.length > 0 && (
+              {xiEstimate.excluidosPorBaja.length > 0 && (
                 <p className="text-xs text-red-600 mt-1">
-                  Excluidos por estar de baja, en selección o no citados al último partido:{' '}
-                  {xiEstimate.excluidos.map((p) => p.nombre).join(', ')}.
+                  De baja: {xiEstimate.excluidosPorBaja.map((p) => p.nombre).join(', ')}.
+                </p>
+              )}
+              {xiEstimate.excluidosPorSeleccion.length > 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  En selección: {xiEstimate.excluidosPorSeleccion.map((p) => p.nombre).join(', ')}.
+                </p>
+              )}
+              {xiEstimate.excluidosPorNoCitado.length > 0 && (
+                <p className="text-xs text-slate-500 mt-1">
+                  No citados al último partido: {xiEstimate.excluidosPorNoCitado.map((p) => p.nombre).join(', ')}.
                 </p>
               )}
               <ReglaTorneoBanner check={reglaCheck} />

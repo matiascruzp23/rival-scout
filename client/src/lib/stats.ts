@@ -584,6 +584,9 @@ export interface XIEstimate {
   // ningún candidato disponible (todos de baja o sin minutos registrados).
   sinCobertura: string[];
   excluidos: Player[];
+  excluidosPorBaja: Player[];
+  excluidosPorSeleccion: Player[];
+  excluidosPorNoCitado: Player[];
 }
 
 // Encuentra la regla del rival cuyo `torneo` coincide (sin distinguir
@@ -1044,11 +1047,20 @@ export function estimateNextXI(
   }
 
   const idsEnXI = new Set(picksFinal.map((p) => p.player.id));
-  const excluidos = [...excluidosPorBaja, ...excluidosPorSeleccion, ...excluidosPorNoCitado].filter(
-    (p) => !idsEnXI.has(p.id)
-  );
+  const noEnXI = (p: Player) => !idsEnXI.has(p.id);
+  const excluidosBajaFinal = excluidosPorBaja.filter(noEnXI);
+  const excluidosSeleccionFinal = excluidosPorSeleccion.filter(noEnXI);
+  const excluidosNoCitadoFinal = excluidosPorNoCitado.filter(noEnXI);
+  const excluidos = [...excluidosBajaFinal, ...excluidosSeleccionFinal, ...excluidosNoCitadoFinal];
 
-  return { picks: picksFinal, sinCobertura, excluidos };
+  return {
+    picks: picksFinal,
+    sinCobertura,
+    excluidos,
+    excluidosPorBaja: excluidosBajaFinal,
+    excluidosPorSeleccion: excluidosSeleccionFinal,
+    excluidosPorNoCitado: excluidosNoCitadoFinal,
+  };
 }
 
 export function formatMinutes(min: number): string {
