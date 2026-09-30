@@ -10,7 +10,7 @@ export interface Player {
   estatura: number | null;
   pie: PieHabil | null;
   sub21: boolean;
-  sub18: boolean;
+  sub19: boolean;
   extranjero: boolean;
   baja: boolean;
   // Disponibilidad incierta para el próximo partido (ej. duda física), a

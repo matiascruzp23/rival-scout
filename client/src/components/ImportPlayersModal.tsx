@@ -113,7 +113,7 @@ export function ImportPlayersModal({
                     <th className="p-2 text-left">Pie</th>
                     <th className="p-2 text-left">Altura (m)</th>
                     <th className="p-2 text-left">Sub-21</th>
-                    <th className="p-2 text-left">Sub-18</th>
+                    <th className="p-2 text-left">Sub-19</th>
                     <th className="p-2 text-left">Extranjero</th>
                   </tr>
                 </thead>
@@ -169,7 +169,7 @@ export function ImportPlayersModal({
                         <input type="checkbox" checked={r.sub21} onChange={(e) => update(i, { sub21: e.target.checked })} />
                       </td>
                       <td className="p-2 text-center">
-                        <input type="checkbox" checked={r.sub18} onChange={(e) => update(i, { sub18: e.target.checked })} />
+                        <input type="checkbox" checked={r.sub19} onChange={(e) => update(i, { sub19: e.target.checked })} />
                       </td>
                       <td className="p-2 text-center">
                         <input

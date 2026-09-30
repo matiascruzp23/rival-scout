@@ -34,7 +34,7 @@ function normalize(db: Database): Database {
     if (p.dorsal === undefined) p.dorsal = null;
     if (p.estatura === undefined) p.estatura = null;
     if (p.pie === undefined) p.pie = null;
-    if (p.sub18 === undefined) p.sub18 = false;
+    if (p.sub19 === undefined) p.sub19 = false;
     if (p.duda === undefined) p.duda = false;
     if (p.enSeleccion === undefined) p.enSeleccion = false;
   });
@@ -119,7 +119,7 @@ async function migratePlayer(p: Player) {
       estatura: p.estatura,
       pie: p.pie,
       sub21: p.sub21,
-      sub18: p.sub18,
+      sub19: p.sub19,
       extranjero: p.extranjero,
       baja: p.baja,
       duda: p.duda,

@@ -19,9 +19,9 @@ export function PlayerBadges({ player, size = 'sm' }: { player: Player; size?: '
           U21
         </span>
       )}
-      {player.sub18 && (
-        <span className={`badge bg-yellow-100 text-yellow-700 ${text}`} title="Sub-18">
-          U18
+      {player.sub19 && (
+        <span className={`badge bg-yellow-100 text-yellow-700 ${text}`} title="Sub-19">
+          U19
         </span>
       )}
       {player.extranjero && (

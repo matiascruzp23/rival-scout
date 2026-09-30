@@ -59,7 +59,7 @@ function toPlayer(row: any): Player {
     estatura: row.estatura,
     pie: row.pie,
     sub21: row.sub21,
-    sub18: row.sub18,
+    sub19: row.sub19,
     extranjero: row.extranjero,
     baja: row.baja,
     duda: row.duda,
@@ -83,7 +83,7 @@ function playerInsertRow(id: string, rivalId: string, b: Partial<Player>) {
       b.estatura === null || b.estatura === undefined || Number.isNaN(Number(b.estatura)) ? null : Number(b.estatura),
     pie: b.pie || null,
     sub21: !!b.sub21,
-    sub18: !!b.sub18,
+    sub19: !!b.sub19,
     extranjero: !!b.extranjero,
     baja: !!b.baja,
     duda: !!b.duda,
@@ -704,7 +704,7 @@ app.post('/api/rivals/:rivalId/players/import', async (req, res) => {
         estatura: r.estatura ?? null,
         pie: r.pie ?? null,
         sub21: !!r.sub21,
-        sub18: !!r.sub18,
+        sub19: !!r.sub19,
         extranjero: !!r.extranjero,
       })
     );
@@ -729,7 +729,7 @@ app.put('/api/players/:id', async (req, res) => {
     patch.estatura = b.estatura === null || Number.isNaN(Number(b.estatura)) ? null : Number(b.estatura);
   if (b.pie !== undefined) patch.pie = b.pie;
   if (b.sub21 !== undefined) patch.sub21 = !!b.sub21;
-  if (b.sub18 !== undefined) patch.sub18 = !!b.sub18;
+  if (b.sub19 !== undefined) patch.sub19 = !!b.sub19;
   if (b.extranjero !== undefined) patch.extranjero = !!b.extranjero;
   if (b.baja !== undefined) patch.baja = !!b.baja;
   if (b.duda !== undefined) patch.duda = !!b.duda;

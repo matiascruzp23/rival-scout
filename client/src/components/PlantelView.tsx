@@ -75,7 +75,7 @@ function categoryClass(p: Player): string {
   if (p.duda) return 'text-purple-700';
   if (p.extranjero) return 'text-sky-700';
   if (p.sub21) return 'text-emerald-700';
-  if (p.sub18) return 'text-yellow-700';
+  if (p.sub19) return 'text-yellow-700';
   return 'text-slate-800';
 }
 
@@ -84,7 +84,7 @@ function categoryBg(p: Player): string {
   if (p.duda) return 'bg-purple-50';
   if (p.extranjero) return 'bg-sky-50';
   if (p.sub21) return 'bg-emerald-50';
-  if (p.sub18) return 'bg-yellow-50';
+  if (p.sub19) return 'bg-yellow-50';
   return '';
 }
 
@@ -245,7 +245,7 @@ export function PlantelView({
       <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 mt-4 pt-3 border-t border-slate-100 text-xs font-semibold">
         <span className="text-sky-700">EXTRANJERO</span>
         <span className="text-emerald-700">SUB21</span>
-        <span className="text-yellow-700">SUB18</span>
+        <span className="text-yellow-700">SUB19</span>
         <span className="text-red-700">BAJAS</span>
         <span className="text-purple-700">DUDAS</span>
         <span className="text-indigo-700">SELECCIÓN</span>

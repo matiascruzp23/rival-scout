@@ -76,6 +76,36 @@ function primeraPosicion(raw: string): { posicion: string; needsReview: boolean;
   return { posicion: mapped.posicion, needsReview: !!mapped.needsReview, original: raw };
 }
 
+// Sub-21/Sub-19 incluyen a quienes CUMPLEN esa edad en algún momento de la
+// temporada en curso (nacidos el año actual menos 21/19 o después), no a
+// quienes todavía no tengan esa edad exacta hoy — un jugador nacido en
+// marzo de ese año sigue siendo Sub-21 aunque ya haya cumplido 21 en marzo.
+// Antes esto se calculaba con la edad exacta del día (edad < 21), lo que
+// dejaba afuera a cualquiera que ya hubiese cumplido años este año.
+function categoriasPorAnioNacimiento(anioNacimiento: number): { sub21: boolean; sub19: boolean } {
+  const anioActual = new Date().getFullYear();
+  return { sub21: anioNacimiento >= anioActual - 21, sub19: anioNacimiento >= anioActual - 19 };
+}
+
+// Cuando la planilla no trae año/fecha de nacimiento (solo una edad exacta
+// ya calculada, ej. el export genérico de Wyscout) no se puede aplicar el
+// criterio de arriba con precisión — se aproxima con la edad tal cual,
+// sabiendo que un jugador que ya cumplió años este mes puede quedar
+// afuera de su categoría real. El analista siempre puede corregir el
+// checkbox a mano en la vista previa antes de confirmar la importación.
+function categoriasPorEdadAproximada(edad: number): { sub21: boolean; sub19: boolean } {
+  return { sub21: edad <= 21, sub19: edad <= 19 };
+}
+
+// Primer año de 4 dígitos (19xx/20xx) que aparece en la celda de
+// nacimiento del paste de Transfermarkt (ej. "15.03.2005 (21)" o
+// "Mar 15, 2005 (21)") — el otro número de esa celda es la edad, entre
+// paréntesis, nunca un año de 4 dígitos.
+function anioNacimientoDeCelda(cell: string): number | null {
+  const match = cell.match(/\b(19|20)\d{2}\b/);
+  return match ? Number(match[0]) : null;
+}
+
 function mapPie(raw: string): PieHabil | null {
   const v = normalizeHeader(raw);
   if (v === 'derecho' || v === 'right') return 'Derecho';
@@ -171,6 +201,13 @@ function parseTransfermarktRows(aoa: string[][]): ImportedPlayerRow[] {
 
     const edadMatch = birthCell.match(/\((\d+)\)/);
     const edad = edadMatch ? Number(edadMatch[1]) : null;
+    const anioNacimiento = anioNacimientoDeCelda(birthCell);
+    const categorias =
+      anioNacimiento !== null
+        ? categoriasPorAnioNacimiento(anioNacimiento)
+        : edad !== null
+          ? categoriasPorEdadAproximada(edad)
+          : { sub21: false, sub19: false };
     const alturaMatch = alturaCell.match(/([\d]+(?:[,.]\d+)?)\s*m/i);
     const estatura = alturaMatch ? Number(alturaMatch[1].replace(',', '.')) : null;
     const posicionInfo = mapTransfermarktPosicion(posicionRaw);
@@ -184,8 +221,8 @@ function parseTransfermarktRows(aoa: string[][]): ImportedPlayerRow[] {
       edad,
       estatura,
       pie: mapPie(pieCell),
-      sub21: edad !== null && edad < 21,
-      sub18: edad !== null && edad < 18,
+      sub21: categorias.sub21,
+      sub19: categorias.sub19,
       extranjero: nacionalidad ? normalizeHeader(nacionalidad) !== PAIS_LOCAL : false,
     });
   }
@@ -202,7 +239,7 @@ export interface ImportedPlayerRow {
   estatura: number | null;
   pie: PieHabil | null;
   sub21: boolean;
-  sub18: boolean;
+  sub19: boolean;
   extranjero: boolean | null;
 }
 
@@ -262,8 +299,7 @@ export function parsePlayerImportFile(buffer: Buffer): ParsePlayerImportResult {
         edad,
         estatura,
         pie: mapPie(col.pie ? r[col.pie] : ''),
-        sub21: edad !== null && edad < 21,
-        sub18: edad !== null && edad < 18,
+        ...(edad !== null ? categoriasPorEdadAproximada(edad) : { sub21: false, sub19: false }),
         extranjero: esExtranjero(col.pasaporte ? r[col.pasaporte] : '', col.paisNacimiento ? r[col.paisNacimiento] : '') ?? false,
       };
     })

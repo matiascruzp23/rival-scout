@@ -102,7 +102,7 @@ export default function DashboardPage() {
   const tacticos = useMemo(() => cambiosTacticos(matches), [matches]);
 
   const sub21 = rival.players.filter((p) => p.sub21);
-  const sub18 = rival.players.filter((p) => p.sub18);
+  const sub19 = rival.players.filter((p) => p.sub19);
   const extranjeros = rival.players.filter((p) => p.extranjero);
   const bajas = rival.players.filter((p) => p.baja);
   const dudas = rival.players.filter((p) => p.duda);
@@ -364,7 +364,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <PlayerTag title="Jugadores Sub-21" players={sub21} color="sky" />
-        <PlayerTag title="Jugadores Sub-18" players={sub18} color="violet" />
+        <PlayerTag title="Jugadores Sub-19" players={sub19} color="violet" />
         <PlayerTag title="Jugadores extranjeros" players={extranjeros} color="amber" />
         <PlayerTag title="Jugadores en duda" players={dudas} color="purple" />
         <PlayerTag title="Jugadores de baja" players={bajas} color="red" />

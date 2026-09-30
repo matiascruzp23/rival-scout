@@ -19,7 +19,7 @@ export default function PlayersPage() {
   const [window, setWindowSize] = useState<3 | 5 | 10>(10);
   const [search, setSearch] = useState('');
   const [onlySub21, setOnlySub21] = useState(false);
-  const [onlySub18, setOnlySub18] = useState(false);
+  const [onlySub19, setOnlySub19] = useState(false);
   const [onlyExtranjero, setOnlyExtranjero] = useState(false);
   const [onlyBaja, setOnlyBaja] = useState(false);
   const [onlyDuda, setOnlyDuda] = useState(false);
@@ -42,9 +42,9 @@ export default function PlayersPage() {
       const q = search.trim().toLowerCase();
       list = list.filter((s) => s.player.nombre.toLowerCase().includes(q) || s.player.posicion.toLowerCase().includes(q));
     }
-    // Todo Sub-18 es, por edad, también Sub-21, así que el filtro Sub-21 los incluye.
-    if (onlySub21) list = list.filter((s) => s.player.sub21 || s.player.sub18);
-    if (onlySub18) list = list.filter((s) => s.player.sub18);
+    // Todo Sub-19 es, por edad, también Sub-21, así que el filtro Sub-21 los incluye.
+    if (onlySub21) list = list.filter((s) => s.player.sub21 || s.player.sub19);
+    if (onlySub19) list = list.filter((s) => s.player.sub19);
     if (onlyExtranjero) list = list.filter((s) => s.player.extranjero);
     if (onlyBaja) list = list.filter((s) => s.player.baja);
     if (onlyDuda) list = list.filter((s) => s.player.duda);
@@ -58,7 +58,7 @@ export default function PlayersPage() {
       } else cmp = (a[sortKey] as number) - (b[sortKey] as number);
       return cmp * sortDir;
     });
-  }, [stats, search, onlySub21, onlySub18, onlyExtranjero, onlyBaja, onlyDuda, onlyEnSeleccion, sortKey, sortDir]);
+  }, [stats, search, onlySub21, onlySub19, onlyExtranjero, onlyBaja, onlyDuda, onlyEnSeleccion, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 1 ? -1 : 1));
@@ -100,7 +100,7 @@ export default function PlayersPage() {
           <input type="checkbox" checked={onlySub21} onChange={(e) => setOnlySub21(e.target.checked)} /> Sub-21
         </label>
         <label className="flex items-center gap-1.5 text-sm text-slate-600">
-          <input type="checkbox" checked={onlySub18} onChange={(e) => setOnlySub18(e.target.checked)} /> Sub-18
+          <input type="checkbox" checked={onlySub19} onChange={(e) => setOnlySub19(e.target.checked)} /> Sub-19
         </label>
         <label className="flex items-center gap-1.5 text-sm text-slate-600">
           <input type="checkbox" checked={onlyExtranjero} onChange={(e) => setOnlyExtranjero(e.target.checked)} /> Extranjero
@@ -342,7 +342,7 @@ function PlayerFormModal({
   const [estatura, setEstatura] = useState(player?.estatura != null ? String(player.estatura) : '');
   const [pie, setPie] = useState<PieHabil | ''>(player?.pie || '');
   const [sub21, setSub21] = useState(player?.sub21 || false);
-  const [sub18, setSub18] = useState(player?.sub18 || false);
+  const [sub19, setSub19] = useState(player?.sub19 || false);
   const [extranjero, setExtranjero] = useState(player?.extranjero || false);
   const [baja, setBaja] = useState(player?.baja || false);
   const [duda, setDuda] = useState(player?.duda || false);
@@ -363,7 +363,7 @@ function PlayerFormModal({
         estatura: estatura.trim() === '' ? null : Number(estatura),
         pie: pie || null,
         sub21,
-        sub18,
+        sub19,
         extranjero,
         baja,
         duda,
@@ -437,7 +437,7 @@ function PlayerFormModal({
             <input type="checkbox" checked={sub21} onChange={(e) => setSub21(e.target.checked)} /> Sub-21
           </label>
           <label className="flex items-center gap-1.5 text-sm">
-            <input type="checkbox" checked={sub18} onChange={(e) => setSub18(e.target.checked)} /> Sub-18
+            <input type="checkbox" checked={sub19} onChange={(e) => setSub19(e.target.checked)} /> Sub-19
           </label>
           <label className="flex items-center gap-1.5 text-sm">
             <input type="checkbox" checked={extranjero} onChange={(e) => setExtranjero(e.target.checked)} /> Extranjero

@@ -78,7 +78,7 @@ create table if not exists players (
   estatura numeric,
   pie text,
   sub21 boolean not null default false,
-  sub18 boolean not null default false,
+  sub19 boolean not null default false,
   extranjero boolean not null default false,
   baja boolean not null default false,
   duda boolean not null default false,

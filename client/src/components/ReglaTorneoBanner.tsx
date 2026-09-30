@@ -12,7 +12,7 @@ export function ReglaTorneoBanner({ check }: { check: ReglaTorneoCheck | null })
     <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
       No se pudo cumplir del todo la regla de {regla.torneo}:{' '}
       {!cumpleExtranjeros && `${extranjerosEnXI} extranjeros en el XI (máx. ${regla.maxExtranjeros}). `}
-      {!cumpleSub21 && `solo ${sub21EnXI} Sub-21/Sub-18 disponibles (mín. ${minSub21Exigido}).`}
+      {!cumpleSub21 && `solo ${sub21EnXI} Sub-21/Sub-19 disponibles (mín. ${minSub21Exigido}).`}
     </div>
   );
 }

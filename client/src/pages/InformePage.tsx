@@ -366,7 +366,7 @@ export default function InformePage() {
                   <td className="text-xs">
                     {p.extranjero && <span className="text-sky-700 font-medium mr-2">EXT</span>}
                     {p.sub21 && <span className="text-emerald-700 font-medium mr-2">U21</span>}
-                    {p.sub18 && <span className="text-yellow-700 font-medium mr-2">U18</span>}
+                    {p.sub19 && <span className="text-yellow-700 font-medium mr-2">U19</span>}
                     {p.duda && <span className="text-purple-700 font-medium mr-2">DUDA</span>}
                     {p.baja && <span className="text-red-700 font-medium">BAJA</span>}
                   </td>
@@ -931,7 +931,7 @@ function Portada({
                 rows={3}
                 value={notasContexto}
                 onChange={(e) => setNotasContexto(e.target.value)}
-                placeholder={'Ej: Rebolledo y Reinoso siempre suplentes\nSub-18 con poca continuidad en Copa Chile'}
+                placeholder={'Ej: Rebolledo y Reinoso siempre suplentes\nSub-19 con poca continuidad en Copa Chile'}
               />
             </div>
             <div>

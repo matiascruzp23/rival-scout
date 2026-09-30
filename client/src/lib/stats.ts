@@ -621,10 +621,10 @@ export function findReglaTorneo(reglas: TorneoRegla[] | undefined, torneo: strin
   return reglas.find((r) => r.torneo.trim().toLowerCase() === target) || null;
 }
 
-// Todo Sub-18 es, por edad, también Sub-21 — cuenta para el cupo aunque el
+// Todo Sub-19 es, por edad, también Sub-21 — cuenta para el cupo aunque el
 // jugador no tenga marcada la casilla `sub21` por separado.
 function esFormativo(p: Player): boolean {
-  return p.sub21 || p.sub18;
+  return p.sub21 || p.sub19;
 }
 
 // Un partido "normal" sin alargue, para derivar un mínimo de jugadores a
@@ -685,7 +685,7 @@ export function checkReglaTorneo(
 // Ajusta los picks de un XI (ya elegidos por minutos/posición) para cumplir
 // la regla de cupos del torneo: si hay más extranjeros que el máximo, cambia
 // a los de menor puntaje por el mejor candidato disponible no-extranjero en
-// esa misma posición; si faltan Sub-21 (contando Sub-18) para el mínimo,
+// esa misma posición; si faltan Sub-21 (contando Sub-19) para el mínimo,
 // cambia a los picks de menor puntaje que no sean formativos por el mejor
 // candidato formativo disponible en esa posición, cuidando de no volver a
 // pasarse del máximo de extranjeros en el intento. El mínimo de Sub-21 usado
