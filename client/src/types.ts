@@ -47,6 +47,10 @@ export interface Player {
   // TorneoRegla.exencionPorSeleccionado).
   enSeleccion: boolean;
   notas?: string;
+  // Nombre exacto (columna "Jugador") con el que este jugador se cruza en la
+  // planilla individual importada, elegido a mano cuando el cruce automático
+  // por nombre no lo encontró — undefined = se sigue cruzando automático.
+  wyscoutNombre?: string;
   createdAt: string;
   updatedAt: string;
 }

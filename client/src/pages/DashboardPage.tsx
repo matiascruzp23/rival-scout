@@ -28,7 +28,7 @@ import { Pitch, type PitchToken } from '../components/Pitch';
 import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
 import { TorneoReglasEditor } from '../components/TorneoReglasEditor';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
-import type { Player, TorneoRegla } from '../types';
+import type { TorneoRegla } from '../types';
 import { api } from '../api';
 import { useIsViewer } from '../lib/authContext';
 
@@ -36,7 +36,8 @@ export default function DashboardPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const players = playerMap(rival.players);
   const isViewer = useIsViewer();
-  const [perfilJugador, setPerfilJugador] = useState<Player | null>(null);
+  const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
+  const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;
   const matches = useMemo(() => lastN(rival.matches, 10), [rival.matches]);
   const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
 
@@ -168,7 +169,7 @@ export default function DashboardPage() {
                 reload();
               }
         }
-        onSelectPlayer={setPerfilJugador}
+        onSelectPlayer={(p) => setPerfilJugadorId(p.id)}
       />
 
       <section className="card p-4">
@@ -470,7 +471,7 @@ export default function DashboardPage() {
       </section>
 
       {perfilJugador && (
-        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugador(null)} />
+        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugadorId(null)} onSaved={reload} />
       )}
     </div>
   );

@@ -84,6 +84,10 @@ create table if not exists players (
   duda boolean not null default false,
   en_seleccion boolean not null default false,
   notas text,
+  -- Nombre exacto (columna "Jugador") con el que este jugador se cruza en la
+  -- planilla individual importada, elegido a mano cuando el cruce automático
+  -- por nombre no lo encontró. null = se sigue cruzando automático.
+  wyscout_nombre text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

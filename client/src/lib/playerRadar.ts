@@ -112,15 +112,43 @@ function normaliza(s: string): string {
 // Cruza un jugador propio con su fila en la planilla individual importada:
 // Wyscout suele exportar el nombre abreviado ("G. Graciani", igual al
 // formato de shortName()) en vez del nombre completo que se carga acá, así
-// que se prueban las dos formas antes de dar por no encontrado.
+// que se prueban las dos formas antes de dar por no encontrado. Si el
+// jugador tiene un cruce elegido a mano (wyscoutNombre, ver
+// filasSinCruzar), ese nombre exacto manda por sobre el cruce automático.
 export function filaDeJugador(
   data: IndividualStatsImport,
   jugador: Player
 ): Record<string, string | number> | null {
   const col = data.columns[0];
   if (!col) return null;
-  const candidatos = new Set([normaliza(jugador.nombre), normaliza(shortName(jugador.nombre))]);
+  const candidatos = jugador.wyscoutNombre
+    ? new Set([normaliza(jugador.wyscoutNombre)])
+    : new Set([normaliza(jugador.nombre), normaliza(shortName(jugador.nombre))]);
   return data.rows.find((r) => candidatos.has(normaliza(String(r[col] ?? '')))) || null;
+}
+
+// Nombres (columna "Jugador") de la planilla individual que todavía no
+// quedaron cruzados con ningún jugador del plantel propio (ni por el cruce
+// automático ni por uno elegido a mano) — para ofrecerlos como opciones
+// cuando el cruce automático de un jugador puntual falla.
+export function filasSinCruzar(data: IndividualStatsImport, jugadores: Player[]): string[] {
+  const col = data.columns[0];
+  if (!col) return [];
+  const usados = new Set<string>();
+  for (const j of jugadores) {
+    const fila = filaDeJugador(data, j);
+    if (fila) usados.add(normaliza(String(fila[col] ?? '')));
+  }
+  const vistos = new Set<string>();
+  const out: string[] = [];
+  for (const row of data.rows) {
+    const nombre = String(row[col] ?? '').trim();
+    const norm = normaliza(nombre);
+    if (!nombre || usados.has(norm) || vistos.has(norm)) continue;
+    vistos.add(norm);
+    out.push(nombre);
+  }
+  return out;
 }
 
 export function valorDe(row: Record<string, string | number> | null, columna: string): number {

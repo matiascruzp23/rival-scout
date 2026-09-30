@@ -29,7 +29,8 @@ export default function PlayersPage() {
   const [editing, setEditing] = useState<Player | 'new' | null>(null);
   const [toDelete, setToDelete] = useState<Player | null>(null);
   const [importing, setImporting] = useState(false);
-  const [perfilJugador, setPerfilJugador] = useState<Player | null>(null);
+  const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
+  const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;
   const isViewer = useIsViewer();
 
   const matchesWindow = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
@@ -177,7 +178,7 @@ export default function PlayersPage() {
                 onEdit={() => setEditing(s.player)}
                 onDelete={() => setToDelete(s.player)}
                 onToggleBaja={() => quickToggleBaja(s.player)}
-                onSelectPlayer={() => setPerfilJugador(s.player)}
+                onSelectPlayer={() => setPerfilJugadorId(s.player.id)}
                 isViewer={isViewer}
               />
             ))}
@@ -230,7 +231,12 @@ export default function PlayersPage() {
       )}
 
       {perfilJugador && (
-        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugador(null)} />
+        <PlayerProfileModal
+          player={perfilJugador}
+          rival={rival}
+          onClose={() => setPerfilJugadorId(null)}
+          onSaved={reload}
+        />
       )}
     </div>
   );

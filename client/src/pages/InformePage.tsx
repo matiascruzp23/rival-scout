@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
-import type { LeagueStatsImport, Player, ProximoPartido } from '../types';
+import type { LeagueStatsImport, ProximoPartido } from '../types';
 import { RadarChart, RadarLegend } from '../components/RadarChart';
 import {
   CODIGO_PROMEDIO,
@@ -73,7 +73,8 @@ const EMPTY_PROXIMO: ProximoPartido = { competicion: '', instancia: '', fecha: '
 export default function InformePage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const players = playerMap(rival.players);
-  const [perfilJugador, setPerfilJugador] = useState<Player | null>(null);
+  const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
+  const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;
 
   // Chrome usa el <title> del documento como nombre sugerido al exportar a
   // PDF (y también lo muestra en el encabezado de impresión), así que se
@@ -243,7 +244,7 @@ export default function InformePage() {
           players={rival.players}
           sistemaPrincipal={rival.sistemaPrincipal || ''}
           sistemaAlternativo={rival.sistemaAlternativo || ''}
-          onSelectPlayer={setPerfilJugador}
+          onSelectPlayer={(p) => setPerfilJugadorId(p.id)}
         />
       </div>
 
@@ -690,7 +691,7 @@ export default function InformePage() {
       </section>
 
       {perfilJugador && (
-        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugador(null)} />
+        <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugadorId(null)} onSaved={reload} />
       )}
     </div>
   );

@@ -18,6 +18,7 @@ export interface Player {
   duda: boolean;
   enSeleccion: boolean;
   notas?: string;
+  wyscoutNombre?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -65,6 +65,7 @@ function toPlayer(row: any): Player {
     duda: row.duda,
     enSeleccion: row.en_seleccion,
     notas: row.notas || '',
+    wyscoutNombre: row.wyscout_nombre || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -711,6 +712,7 @@ app.put('/api/players/:id', async (req, res) => {
   if (b.duda !== undefined) patch.duda = !!b.duda;
   if (b.enSeleccion !== undefined) patch.en_seleccion = !!b.enSeleccion;
   if (b.notas !== undefined) patch.notas = b.notas;
+  if (b.wyscoutNombre !== undefined) patch.wyscout_nombre = b.wyscoutNombre?.trim() || null;
 
   const { data, error } = await supabase.from('players').update(patch).eq('id', req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
