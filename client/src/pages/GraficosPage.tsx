@@ -164,7 +164,7 @@ export default function GraficosPage() {
         </div>
       ) : (
         <>
-          <ImportCard data={data} isViewer={isViewer} onImported={load} />
+          <SyncCard data={data} isViewer={isViewer} onSynced={load} />
 
           {data && (
             <>
@@ -174,7 +174,7 @@ export default function GraficosPage() {
 
               {rival.codigoLdp && !rivalRow && (
                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                  No se encontró "{rival.codigoLdp}" en la planilla importada. Revisá que el código coincida con la
+                  No se encontró "{rival.codigoLdp}" en la planilla de la liga. Revisá que el código coincida con la
                   columna "{data.columns[0]}" de la planilla.
                 </p>
               )}
@@ -293,16 +293,20 @@ function IndividualStatsImportCard({
   );
 }
 
-function ImportCard({
+// Link para abrir la planilla en Excel Online (la que el servidor descarga
+// sola, ver LEAGUE_STATS_URL en server/src/app.ts).
+const LEAGUE_STATS_SHARE_URL =
+  'https://azulazulsa2021-my.sharepoint.com/:x:/g/personal/matias_cruz_udechile_cl/IQCDSRHMDmBATaN33CT5yHF1AU1vLfGBYfIv0XmMn1xWwfc?e=bvFsYT';
+
+function SyncCard({
   data,
   isViewer,
-  onImported,
+  onSynced,
 }: {
   data: LeagueStatsImport | null;
   isViewer: boolean;
-  onImported: () => void;
+  onSynced: () => void;
 }) {
-  const [file, setFile] = useState<File | null>(null);
   const [codigoPropio, setCodigoPropio] = useState(data?.codigoPropio || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -311,18 +315,12 @@ function ImportCard({
     setCodigoPropio(data?.codigoPropio || '');
   }, [data?.codigoPropio]);
 
-  if (isViewer && !data) {
-    return <p className="text-sm text-slate-400">Todavía no se importó ninguna planilla de estadísticas de liga.</p>;
-  }
-
-  const doImport = async () => {
-    if (!file) return;
+  const doSync = async () => {
     setSaving(true);
     setError('');
     try {
-      await api.leagueStats.import(file, codigoPropio.trim() || undefined);
-      setFile(null);
-      onImported();
+      await api.leagueStats.sync();
+      onSynced();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -335,7 +333,7 @@ function ImportCard({
     setError('');
     try {
       await api.leagueStats.setCodigoPropio(codigoPropio.trim());
-      onImported();
+      onSynced();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -345,42 +343,51 @@ function ImportCard({
 
   return (
     <section className="card p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-slate-800">Planilla de la liga</h3>
-        {data && (
+      <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
+        <h3 className="font-semibold text-slate-800">
+          Planilla de la liga{' '}
+          <a
+            href={LEAGUE_STATS_SHARE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-normal text-emerald-700 hover:underline"
+          >
+            Abrir en SharePoint ↗
+          </a>
+        </h3>
+        {data ? (
           <span className="text-xs text-slate-400">
-            {data.fileName} · {data.rows.length} filas · subida el {new Date(data.uploadedAt).toLocaleDateString('es-CL')}
+            {data.rows.length} filas · sincronizada el{' '}
+            {new Date(data.uploadedAt).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
           </span>
+        ) : (
+          <span className="text-xs text-slate-400">Todavía no se pudo sincronizar la planilla.</span>
         )}
       </div>
+      <p className="text-xs text-slate-500 mb-3">
+        Los datos se toman directo del Excel en SharePoint y se actualizan solos cada hora.
+      </p>
       {!isViewer && (
         <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="label">Archivo (.xlsx)</label>
-            <input
-              type="file"
-              accept=".xlsx"
-              className="input"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-            />
-          </div>
-          <div>
-            <label className="label">Código propio (ej. UCH)</label>
-            <input
-              className="input"
-              style={{ width: 140 }}
-              value={codigoPropio}
-              onChange={(e) => setCodigoPropio(e.target.value)}
-              placeholder="UCH"
-            />
-          </div>
-          <button className="btn-primary" disabled={!file || saving} onClick={doImport}>
-            {data ? 'Reemplazar planilla' : 'Importar planilla'}
+          <button className="btn-primary" disabled={saving} onClick={doSync}>
+            {saving ? 'Sincronizando…' : 'Sincronizar ahora'}
           </button>
           {data && (
-            <button className="btn-secondary" disabled={saving} onClick={saveCodigoPropio}>
-              Guardar código propio
-            </button>
+            <>
+              <div>
+                <label className="label">Código propio (ej. UCH)</label>
+                <input
+                  className="input"
+                  style={{ width: 140 }}
+                  value={codigoPropio}
+                  onChange={(e) => setCodigoPropio(e.target.value)}
+                  placeholder="UCH"
+                />
+              </div>
+              <button className="btn-secondary" disabled={saving} onClick={saveCodigoPropio}>
+                Guardar código propio
+              </button>
+            </>
           )}
         </div>
       )}

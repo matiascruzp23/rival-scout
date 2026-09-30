@@ -97,12 +97,7 @@ export const api = {
   },
   leagueStats: {
     get: () => request<LeagueStatsImport | null>('/league-stats'),
-    import: (file: File, codigoPropio?: string) => {
-      const form = new FormData();
-      form.append('file', file);
-      if (codigoPropio) form.append('codigoPropio', codigoPropio);
-      return request<LeagueStatsImport>('/league-stats/import', { method: 'POST', body: form });
-    },
+    sync: () => request<LeagueStatsImport>('/league-stats/sync', { method: 'POST' }),
     setCodigoPropio: (codigoPropio: string) =>
       request<LeagueStatsImport>('/league-stats/config', { method: 'PUT', body: JSON.stringify({ codigoPropio }) }),
   },

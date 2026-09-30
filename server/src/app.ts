@@ -907,47 +907,78 @@ const LEAGUE_STATS_ID = 'current';
 app.get('/api/league-stats', async (_req, res) => {
   const { data, error } = await supabase.from('league_stats_import').select('*').eq('id', LEAGUE_STATS_ID).maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
+  const vencida = !data || Date.now() - new Date(data.uploaded_at).getTime() > LEAGUE_STATS_MAX_AGE_MS;
+  if (vencida) {
+    try {
+      return res.json(toLeagueStatsImport(await syncLeagueStats()));
+    } catch {
+      // Si SharePoint falla, se sigue mostrando la última copia guardada.
+    }
+  }
   if (!data) return res.json(null);
   res.json(toLeagueStatsImport(data));
 });
 
-app.post('/api/league-stats/import', upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Archivo Excel requerido' });
+// La planilla vive en el OneDrive/SharePoint del club: en vez de subirla a
+// mano, el servidor la descarga directo desde ahí. El link compartido
+// (".../:x:/g/personal/matias_cruz_udechile_cl/IQCDSRHM...?e=bvFsYT") abre
+// Excel Online, así que se usa su variante de descarga directa
+// (_layouts/15/download.aspx?share=<token>), que devuelve el .xlsx tal cual.
+const LEAGUE_STATS_URL =
+  process.env.LEAGUE_STATS_URL ||
+  'https://azulazulsa2021-my.sharepoint.com/personal/matias_cruz_udechile_cl/_layouts/15/download.aspx?share=IQCDSRHMDmBATaN33CT5yHF1AU1vLfGBYfIv0XmMn1xWwfc';
+const LEAGUE_STATS_FILE_NAME = 'BBDD LDP (SharePoint)';
+// Cada cuánto se vuelve a descargar sola al abrir la pestaña (además del
+// botón "Sincronizar ahora"), para que los cambios en el Excel lleguen sin
+// que nadie tenga que hacer nada.
+const LEAGUE_STATS_MAX_AGE_MS = 60 * 60 * 1000;
+
+async function syncLeagueStats() {
+  const resp = await fetch(LEAGUE_STATS_URL);
+  if (!resp.ok) throw new Error(`No se pudo descargar la planilla desde SharePoint (HTTP ${resp.status})`);
+  const buffer = Buffer.from(await resp.arrayBuffer());
 
   let parsed;
   try {
-    parsed = parseLeagueStatsFile(req.file.buffer);
+    parsed = parseLeagueStatsFile(buffer);
   } catch {
-    return res.status(400).json({ error: 'No se pudo leer el archivo (¿es un .xlsx válido?)' });
+    throw new Error('No se pudo leer la planilla de SharePoint (¿el link sigue apuntando a un .xlsx?)');
   }
-  if (parsed.columns.length === 0) return res.status(400).json({ error: 'La planilla está vacía o no se pudo leer' });
+  if (parsed.columns.length === 0) throw new Error('La planilla de SharePoint está vacía o no se pudo leer');
 
-  // El código propio ya cargado se mantiene si no se manda uno nuevo en
-  // este import (no siempre se resube junto con el archivo).
+  // El código propio es configuración local, no viene del Excel: se
+  // mantiene entre sincronizaciones.
   const { data: existing } = await supabase
     .from('league_stats_import')
     .select('codigo_propio')
     .eq('id', LEAGUE_STATS_ID)
     .maybeSingle();
-  const codigoPropio = (req.body as { codigoPropio?: string }).codigoPropio?.trim() || existing?.codigo_propio || null;
 
   const row = {
     id: LEAGUE_STATS_ID,
-    file_name: req.file.originalname,
+    file_name: LEAGUE_STATS_FILE_NAME,
     columns: parsed.columns,
     rows: parsed.rows,
-    codigo_propio: codigoPropio,
+    codigo_propio: existing?.codigo_propio || null,
     uploaded_at: now(),
   };
   const { data: saved, error } = await supabase.from('league_stats_import').upsert(row).select().single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(toLeagueStatsImport(saved));
+  if (error) throw new Error(error.message);
+  return saved;
+}
+
+app.post('/api/league-stats/sync', async (_req, res) => {
+  try {
+    res.json(toLeagueStatsImport(await syncLeagueStats()));
+  } catch (e) {
+    res.status(502).json({ error: (e as Error).message });
+  }
 });
 
 app.put('/api/league-stats/config', async (req, res) => {
   const { codigoPropio } = req.body as { codigoPropio?: string };
   const { data: existing } = await supabase.from('league_stats_import').select('id').eq('id', LEAGUE_STATS_ID).maybeSingle();
-  if (!existing) return res.status(404).json({ error: 'Todavía no se importó ninguna planilla' });
+  if (!existing) return res.status(404).json({ error: 'Todavía no se sincronizó la planilla' });
   const { data: saved, error } = await supabase
     .from('league_stats_import')
     .update({ codigo_propio: codigoPropio?.trim() || null })
