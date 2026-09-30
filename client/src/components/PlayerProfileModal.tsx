@@ -161,7 +161,7 @@ export function PlayerProfileModal({
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Comportamientos individuales (Análisis CSV)</h4>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Comportamientos individuales</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <ComportamientosCard
               titulo="Ofensivos"
@@ -183,7 +183,7 @@ export function PlayerProfileModal({
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Planilla individual (Wyscout)</h4>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Planilla individual</h4>
           {!rival.individualStats ? (
             <p className="text-sm text-slate-400">
               Todavía no se importó una planilla individual para este rival (pestaña "Gráficos y estadísticas").
