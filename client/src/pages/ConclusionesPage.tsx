@@ -27,9 +27,8 @@ export default function ConclusionesPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Conclusiones</h2>
         <p className="text-xs text-slate-500 mt-0.5">
-          Lectura automática (reglas fijas sobre los datos ya cargados en las demás pestañas, sin IA) de qué tener en
-          cuenta para neutralizar a {rival.nombre} y de qué manera se le puede hacer daño. Se actualiza sola a medida
-          que cambian los datos.
+          Lectura automática de qué tener en cuenta para neutralizar a {rival.nombre} y de qué manera se le puede
+          hacer daño. Se actualiza sola a medida que cambian los datos.
         </p>
       </div>
 
