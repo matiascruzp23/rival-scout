@@ -398,11 +398,16 @@ function IndividualesCard({
 
 function PendienteRow({ pendiente, onResolved }: { pendiente: PendienteResolucion; onResolved: () => void }) {
   const [saving, setSaving] = useState(false);
-  // 2 rivales + 2 situaciones suele ser en realidad "cada uno hizo una
-  // distinta", no que los dos hicieron las dos: se ofrece armar ese pareo
-  // además de la opción de una sola situación para ambos.
-  const esPareable = pendiente.rivales.length === 2 && pendiente.opciones.length === 2;
-  const [par, setPar] = useState<[string, string]>([pendiente.opciones[0], pendiente.opciones[1] ?? pendiente.opciones[0]]);
+  // Varios rivales + varias situaciones suele ser en realidad "cada uno hizo
+  // una distinta", no que todos hicieron todas: se ofrece asignar una
+  // situación a cada jugador (las que sobren, p. ej. una acción colectiva sin
+  // jugador asociado, no cuentan como individuales), además de la opción de
+  // una sola situación para todos.
+  const esPareable = pendiente.rivales.length >= 2 && pendiente.opciones.length >= 2;
+  const [par, setPar] = useState<string[]>(() =>
+    pendiente.rivales.map((_, i) => pendiente.opciones[i % pendiente.opciones.length])
+  );
+  const etiquetaTodos = pendiente.rivales.length === 1 ? '' : pendiente.rivales.length === 2 ? ' (ambos)' : ' (todos)';
 
   const resolver = async (situacion: string) => {
     setSaving(true);
@@ -417,10 +422,11 @@ function PendienteRow({ pendiente, onResolved }: { pendiente: PendienteResolucio
   const resolverPorJugador = async () => {
     setSaving(true);
     try {
-      await api.matches.resolveRivalSituacionPorJugador(pendiente.matchId, pendiente.rowIndex, {
-        [pendiente.rivales[0]]: par[0],
-        [pendiente.rivales[1]]: par[1],
-      });
+      await api.matches.resolveRivalSituacionPorJugador(
+        pendiente.matchId,
+        pendiente.rowIndex,
+        Object.fromEntries(pendiente.rivales.map((riv, i) => [riv, par[i]]))
+      );
       onResolved();
     } finally {
       setSaving(false);
@@ -439,38 +445,34 @@ function PendienteRow({ pendiente, onResolved }: { pendiente: PendienteResolucio
               onClick={() => resolver(op)}
               className="px-2 py-1 text-xs rounded border border-amber-300 bg-white hover:bg-amber-100 text-amber-800 disabled:opacity-50"
             >
-              {op} (ambos)
+              {op}
+              {etiquetaTodos}
             </button>
           ))}
         </div>
       </div>
       {esPareable && (
         <div className="flex flex-wrap items-center gap-1.5 pl-1">
-          <span className="text-xs text-slate-500">O cada uno hizo una distinta:</span>
-          <span className="text-xs text-slate-600">{pendiente.rivales[0]}</span>
-          <select
-            className="input py-0.5 text-xs w-auto"
-            value={par[0]}
-            onChange={(e) => setPar([e.target.value, par[1]])}
-          >
-            {pendiente.opciones.map((op) => (
-              <option key={op} value={op}>
-                {op}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-slate-600">{pendiente.rivales[1]}</span>
-          <select
-            className="input py-0.5 text-xs w-auto"
-            value={par[1]}
-            onChange={(e) => setPar([par[0], e.target.value])}
-          >
-            {pendiente.opciones.map((op) => (
-              <option key={op} value={op}>
-                {op}
-              </option>
-            ))}
-          </select>
+          <span className="text-xs text-slate-500">
+            O cada uno hizo una distinta
+            {pendiente.opciones.length > pendiente.rivales.length && ' (las que no se asignen no cuentan como individuales)'}:
+          </span>
+          {pendiente.rivales.map((riv, i) => (
+            <span key={riv} className="inline-flex items-center gap-1">
+              <span className="text-xs text-slate-600">{riv}</span>
+              <select
+                className="input py-0.5 text-xs w-auto"
+                value={par[i]}
+                onChange={(e) => setPar(par.map((v, j) => (j === i ? e.target.value : v)))}
+              >
+                {pendiente.opciones.map((op) => (
+                  <option key={op} value={op}>
+                    {op}
+                  </option>
+                ))}
+              </select>
+            </span>
+          ))}
           <button
             disabled={saving}
             onClick={resolverPorJugador}
