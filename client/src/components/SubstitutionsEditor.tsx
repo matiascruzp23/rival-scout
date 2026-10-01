@@ -150,7 +150,8 @@ export function SubstitutionsEditor({
               events={events}
               subId={s.id}
               onSave={(layout) => {
-                update(i, { layoutResultante: layout });
+                // La distribución es del minuto: se guarda en todos sus cambios.
+                onChange(substitutions.map((x) => (x.minuto === s.minuto ? { ...x, layoutResultante: layout } : x)));
                 setEditingLayout(null);
               }}
               onCancel={() => setEditingLayout(null)}
@@ -206,8 +207,9 @@ export function SubLayoutEditor({
   return (
     <div className="mt-3 border-t border-slate-100 pt-3">
       <p className="text-xs text-slate-500 mb-2">
-        Distribución de los 11 en cancha justo después de este cambio. Arrastra a cualquier jugador que también haya
-        cambiado de posición (no solo al que entró).
+        Distribución en cancha justo después de los cambios de este minuto (si hubo más de uno, todos comparten esta
+        misma distribución). Arrastra a cualquier jugador que también haya cambiado de posición, no solo a los que
+        entraron.
       </p>
       <Pitch tokens={tokens} onMove={moveToken} height={300} />
       <div className="flex justify-end gap-2 mt-2">

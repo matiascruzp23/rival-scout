@@ -334,7 +334,10 @@ export function MatchTimelineEditor({
       )}
 
       {layoutSub && (
-        <Modal title={`Distribución tras el cambio del ${layoutSub.minuto}'`} onClose={() => setLayoutFor(null)}>
+        <Modal
+          title={`Distribución tras ${substitutions.filter((x) => x.minuto === layoutSub.minuto).length > 1 ? 'los cambios' : 'el cambio'} del ${layoutSub.minuto}'`}
+          onClose={() => setLayoutFor(null)}
+        >
           <SubLayoutEditor
             players={players}
             lineup={lineup}
@@ -342,7 +345,11 @@ export function MatchTimelineEditor({
             events={events}
             subId={layoutSub.id}
             onSave={(layout) => {
-              updateSub(layoutSub.id, { layoutResultante: layout });
+              // La distribución es del minuto, no de cada cambio: se guarda
+              // en todos los cambios de ese minuto para que no diverjan.
+              onChange({
+                substitutions: substitutions.map((x) => (x.minuto === layoutSub.minuto ? { ...x, layoutResultante: layout } : x)),
+              });
               setLayoutFor(null);
             }}
             onCancel={() => setLayoutFor(null)}

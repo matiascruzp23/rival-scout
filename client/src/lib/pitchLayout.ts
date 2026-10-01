@@ -3,14 +3,11 @@ import { defaultCoordsFor, symmetrizeBackThree, symmetrizeDoublePivote, symmetri
 
 type MatchLineupData = Pick<Match, 'lineup' | 'substitutions' | 'events'>;
 
-type ChangeItem =
-  | { kind: 'sub'; minuto: number; sub: Substitution }
-  | { kind: 'roja'; minuto: number; event: MatchEvent };
-
-interface FineCheckpoint {
+interface MinuteCheckpoint {
   minuto: number;
   layout: LineupEntry[];
-  change: ChangeItem;
+  subs: Substitution[];
+  rojas: MatchEvent[];
 }
 
 export interface LayoutCheckpoint {
@@ -153,63 +150,55 @@ function deriveAfterRedCard(prevLayout: LineupEntry[], event: MatchEvent): Lineu
   return prevLayout.filter((e) => e.playerId !== event.jugadorId);
 }
 
-function buildChangeList(match: MatchLineupData): ChangeItem[] {
-  const subs: ChangeItem[] = match.substitutions.map((sub) => ({ kind: 'sub' as const, minuto: sub.minuto, sub }));
-  const rojas: ChangeItem[] = (match.events || [])
-    .filter((e) => e.tipo === 'roja' && e.jugadorId)
-    .map((event) => ({ kind: 'roja' as const, minuto: event.minuto, event }));
-  return [...subs, ...rojas].sort((a, b) => a.minuto - b.minuto);
-}
+// Hitos por minuto: todos los cambios (sustituciones y rojas) de un mismo
+// minuto se aplican juntos y comparten una sola distribución ajustada, porque
+// el orden entre ellos es ambiguo y en la cancha ocurren a la vez.
+function buildMinuteTimeline(match: MatchLineupData): MinuteCheckpoint[] {
+  const minutos = new Set<number>(match.substitutions.map((s) => s.minuto));
+  const rojas = (match.events || []).filter((e) => e.tipo === 'roja' && e.jugadorId);
+  for (const e of rojas) minutos.add(e.minuto);
 
-// Secuencia fina de cambios: uno por cada sustitución o tarjeta roja, en
-// orden cronológico, cada uno aplicado sobre el resultado del anterior.
-function buildFineTimeline(match: MatchLineupData): FineCheckpoint[] {
-  const initial = withDefaults(match.lineup);
-  const changes = buildChangeList(match);
-  const checkpoints: FineCheckpoint[] = [];
-  let current = initial;
-  for (const change of changes) {
-    const layout =
-      change.kind === 'sub'
-        ? change.sub.layoutResultante && change.sub.layoutResultante.length > 0
-          ? withDefaults(change.sub.layoutResultante)
-          : deriveAfterSub(current, change.sub)
-        : deriveAfterRedCard(current, change.event);
-    checkpoints.push({ minuto: change.minuto, layout, change });
+  const checkpoints: MinuteCheckpoint[] = [];
+  let current = withDefaults(match.lineup);
+  for (const minuto of [...minutos].sort((a, b) => a - b)) {
+    const subs = match.substitutions.filter((s) => s.minuto === minuto);
+    const rojasMin = rojas.filter((e) => e.minuto === minuto);
+    let derived = current;
+    for (const sub of subs) derived = deriveAfterSub(derived, sub);
+    for (const event of rojasMin) derived = deriveAfterRedCard(derived, event);
+    const saved = [...subs].reverse().find((s) => s.layoutResultante && s.layoutResultante.length > 0)?.layoutResultante;
+    const layout = saved ? applySavedLayout(derived, saved) : derived;
+    checkpoints.push({ minuto, layout, subs, rojas: rojasMin });
     current = layout;
   }
   return checkpoints;
 }
 
-// Construye los hitos del campograma para navegar el partido: el XI inicial
-// y uno por cada minuto en que hubo cambios (sustituciones y/o tarjetas
-// rojas agrupadas si coinciden en el mismo minuto).
-export function buildLayoutTimeline(match: MatchLineupData): LayoutCheckpoint[] {
-  const initial = withDefaults(match.lineup);
-  const fine = buildFineTimeline(match);
-  const events = match.events || [];
-  const groups: LayoutCheckpoint[] = [
-    { minuto: 0, label: 'Inicio', layout: initial, subs: [], rojas: [], marcador: marcadorHasta(events, 0) },
-  ];
+// La distribución ajustada a mano solo aporta posiciones y coordenadas: quién
+// está en cancha lo deciden siempre los cambios registrados. Así, si después
+// se edita un cambio (o se agrega otro en el mismo minuto), el campograma no
+// muestra jugadores de más ni de menos.
+function applySavedLayout(derived: LineupEntry[], saved: LineupEntry[]): LineupEntry[] {
+  const byPlayer = new Map(dedupeLayout(saved).map((e) => [e.playerId, e]));
+  return derived.map((e) => {
+    const s = byPlayer.get(e.playerId);
+    if (!s) return e;
+    return { ...e, posicion: s.posicion || e.posicion, x: s.x ?? e.x, y: s.y ?? e.y };
+  });
+}
 
-  for (const cp of fine) {
-    const last = groups[groups.length - 1];
-    if (groups.length > 1 && last.minuto === cp.minuto) {
-      last.layout = cp.layout;
-      if (cp.change.kind === 'sub') last.subs.push(cp.change.sub);
-      else last.rojas.push(cp.change.event);
-    } else {
-      groups.push({
-        minuto: cp.minuto,
-        label: `Min. ${cp.minuto}'`,
-        layout: cp.layout,
-        subs: cp.change.kind === 'sub' ? [cp.change.sub] : [],
-        rojas: cp.change.kind === 'roja' ? [cp.change.event] : [],
-        marcador: marcadorHasta(events, cp.minuto),
-      });
-    }
-  }
-  return groups;
+// Construye los hitos del campograma para navegar el partido: el XI inicial
+// y uno por cada minuto en que hubo cambios.
+export function buildLayoutTimeline(match: MatchLineupData): LayoutCheckpoint[] {
+  const events = match.events || [];
+  return [
+    { minuto: 0, label: 'Inicio', layout: withDefaults(match.lineup), subs: [], rojas: [], marcador: marcadorHasta(events, 0) },
+    ...buildMinuteTimeline(match).map((cp) => ({
+      ...cp,
+      label: `Min. ${cp.minuto}'`,
+      marcador: marcadorHasta(events, cp.minuto),
+    })),
+  ];
 }
 
 // Quiénes están efectivamente en cancha justo antes de que ocurra un cambio
@@ -218,7 +207,7 @@ export function buildLayoutTimeline(match: MatchLineupData): LayoutCheckpoint[] 
 // que se está editando no se aplican, porque su orden entre sí es ambiguo.
 export function onFieldBefore(match: MatchLineupData, minuto: number, excludeSubId?: string): LineupEntry[] {
   const filtered: MatchLineupData = { ...match, substitutions: match.substitutions.filter((s) => s.id !== excludeSubId) };
-  const fine = buildFineTimeline(filtered);
+  const fine = buildMinuteTimeline(filtered);
   let result = withDefaults(filtered.lineup);
   for (const cp of fine) {
     if (cp.minuto < minuto) result = cp.layout;
@@ -228,7 +217,7 @@ export function onFieldBefore(match: MatchLineupData, minuto: number, excludeSub
 }
 
 export function layoutAtMinute(match: MatchLineupData, minuto: number): LineupEntry[] {
-  const fine = buildFineTimeline(match);
+  const fine = buildMinuteTimeline(match);
   let result = withDefaults(match.lineup);
   for (const cp of fine) {
     if (cp.minuto <= minuto) result = cp.layout;
@@ -237,10 +226,11 @@ export function layoutAtMinute(match: MatchLineupData, minuto: number): LineupEn
   return result;
 }
 
-// Distribución "por defecto" tras una sustitución puntual (sin ajustes
-// manuales), usada para precargar el editor de campograma de esa sustitución.
+// Distribución tras todos los cambios del minuto de una sustitución (con el
+// ajuste manual guardado, si hay), usada para precargar el editor de
+// campograma de ese minuto.
 export function computeDefaultLayoutForSub(match: MatchLineupData, subId: string): LineupEntry[] {
-  const fine = buildFineTimeline(match);
-  const cp = fine.find((c) => c.change.kind === 'sub' && c.change.sub.id === subId);
+  const sub = match.substitutions.find((s) => s.id === subId);
+  const cp = sub && buildMinuteTimeline(match).find((c) => c.minuto === sub.minuto);
   return cp ? cp.layout : withDefaults(match.lineup);
 }
