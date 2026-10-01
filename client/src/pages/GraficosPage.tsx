@@ -147,6 +147,7 @@ export default function GraficosPage() {
         >
           Individuales
         </button>
+        {modo !== 'individuales' && <SyncCard data={data} isViewer={isViewer} onSynced={load} />}
       </div>
 
       {modo === 'individuales' ? (
@@ -164,8 +165,6 @@ export default function GraficosPage() {
         </div>
       ) : (
         <>
-          <SyncCard data={data} isViewer={isViewer} onSynced={load} />
-
           {data && (
             <>
               {!rival.codigoLdp && (
@@ -336,48 +335,54 @@ function SyncCard({
     }
   };
 
+  const cambioCodigo = codigoPropio.trim() !== (data?.codigoPropio || '');
+
+  // Va en la misma fila que los botones de modo (no como tarjeta aparte),
+  // para que el radar quede a la vista sin tener que scrollear.
   return (
-    <section className="card p-4">
-      <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
-        <h3 className="font-semibold text-slate-800">Planilla de la liga</h3>
-        {data ? (
-          <span className="text-xs text-slate-400">
-            {data.rows.length} filas · sincronizada el{' '}
-            {new Date(data.uploadedAt).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
-          </span>
-        ) : (
-          <span className="text-xs text-slate-400">Todavía no se pudo sincronizar la planilla.</span>
-        )}
-      </div>
-      <p className="text-xs text-slate-500 mb-3">
-        Los datos se toman directo del Excel en SharePoint y se actualizan solos cada hora.
-      </p>
+    <div
+      className="ml-auto flex items-center gap-2 text-xs text-slate-400 flex-wrap"
+      title="Los datos se toman directo del Excel en SharePoint y se actualizan solos cada hora."
+    >
+      {error && <span className="text-red-600">{error}</span>}
+      <span>
+        {data
+          ? `Planilla LDP · ${data.rows.length} filas · ${new Date(data.uploadedAt).toLocaleString('es-CL', {
+              dateStyle: 'short',
+              timeStyle: 'short',
+            })}`
+          : 'Planilla LDP sin sincronizar'}
+      </span>
       {!isViewer && (
-        <div className="flex flex-wrap items-end gap-3">
-          <button className="btn-primary" disabled={saving} onClick={doSync}>
-            {saving ? 'Sincronizando…' : 'Sincronizar ahora'}
+        <>
+          <button
+            className="text-emerald-700 hover:underline disabled:opacity-50"
+            disabled={saving}
+            onClick={doSync}
+          >
+            {saving ? 'Sincronizando…' : '↻ Sincronizar'}
           </button>
           {data && (
-            <>
-              <div>
-                <label className="label">Código propio (ej. UCH)</label>
-                <input
-                  className="input"
-                  style={{ width: 140 }}
-                  value={codigoPropio}
-                  onChange={(e) => setCodigoPropio(e.target.value)}
-                  placeholder="UCH"
-                />
-              </div>
-              <button className="btn-secondary" disabled={saving} onClick={saveCodigoPropio}>
-                Guardar código propio
-              </button>
-            </>
+            <label className="flex items-center gap-1">
+              Propio:
+              <input
+                className="border border-slate-300 rounded px-1.5 py-0.5 text-xs text-slate-700"
+                style={{ width: 56 }}
+                value={codigoPropio}
+                onChange={(e) => setCodigoPropio(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && cambioCodigo && saveCodigoPropio()}
+                placeholder="UCH"
+              />
+              {cambioCodigo && (
+                <button className="text-emerald-700 hover:underline" disabled={saving} onClick={saveCodigoPropio}>
+                  Guardar
+                </button>
+              )}
+            </label>
           )}
-        </div>
+        </>
       )}
-      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
-    </section>
+    </div>
   );
 }
 
