@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Player, RivalDetail } from '../types';
 import { Modal } from './Modal';
-import { RadarChart, RadarLegend } from './RadarChart';
+import { RadarChart } from './RadarChart';
 import { PlayerBadges } from './PlayerBadges';
 import { PlayerPositionPitch, type PlayerPositionSeries } from './PlayerPositionPitch';
 import { api } from '../api';
@@ -138,17 +138,25 @@ export function PlayerProfileModal({
           )}
         </div>
 
+        {compararCon && (
+          <div className="flex items-center gap-4 text-sm text-slate-700 -mt-2">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_JUGADOR }} />
+              {player.nombre}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_COMPARAR }} />
+              {compararCon.nombre}
+            </span>
+          </div>
+        )}
+
         <div>
           <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Últimos {matches.length} partidos (app)</h4>
           <div className="space-y-2">
-            <PlayerStatsRow
-              label={compararCon ? player.nombre : undefined}
-              color={COLOR_JUGADOR}
-              stats={stats}
-              events={events}
-            />
+            <PlayerStatsRow color={compararCon ? COLOR_JUGADOR : undefined} stats={stats} events={events} />
             {compararCon && statsComparar && eventsComparar && (
-              <PlayerStatsRow label={compararCon.nombre} color={COLOR_COMPARAR} stats={statsComparar} events={eventsComparar} />
+              <PlayerStatsRow color={COLOR_COMPARAR} stats={statsComparar} events={eventsComparar} />
             )}
           </div>
         </div>
@@ -181,11 +189,6 @@ export function PlayerProfileModal({
                   </p>
                 )}
                 <div className="max-w-sm mx-auto">
-                  {radarSeries.length > 1 && (
-                    <div className="mb-2 flex justify-center">
-                      <RadarLegend series={radarSeries} />
-                    </div>
-                  )}
                   <RadarChart ejeLabels={grupo.ejes.map((e) => e.label)} series={radarSeries} maxPorEje={maxPorEje} />
                 </div>
               </div>
@@ -199,18 +202,14 @@ export function PlayerProfileModal({
             <ComportamientosCard
               titulo="Ofensivos"
               situaciones={ofensivosJugador}
-              label={compararCon ? player.nombre : undefined}
-              color={COLOR_JUGADOR}
+              color={compararCon ? COLOR_JUGADOR : undefined}
               situacionesComparar={compararCon ? ofensivosComparar : undefined}
-              labelComparar={compararCon?.nombre}
             />
             <ComportamientosCard
               titulo="Defensivos"
               situaciones={defensivosJugador}
-              label={compararCon ? player.nombre : undefined}
-              color={COLOR_JUGADOR}
+              color={compararCon ? COLOR_JUGADOR : undefined}
               situacionesComparar={compararCon ? defensivosComparar : undefined}
-              labelComparar={compararCon?.nombre}
             />
           </div>
         </div>
@@ -220,24 +219,22 @@ export function PlayerProfileModal({
 }
 
 function PlayerStatsRow({
-  label,
   color,
   stats,
   events,
 }: {
-  label?: string;
-  color: string;
+  // Solo se pasa cuando se está comparando — el nombre ya se ve una vez en
+  // la leyenda compartida de arriba, así que acá alcanza con un acento de
+  // color para saber a cuál de los dos corresponde cada fila.
+  color?: string;
   stats: ReturnType<typeof computePlayerStats>;
   events: ReturnType<typeof computePlayerEventStats>;
 }) {
   return (
-    <div>
-      {label && (
-        <div className="flex items-center gap-1.5 text-xs font-semibold mb-1" style={{ color }}>
-          <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-          {label}
-        </div>
-      )}
+    <div
+      className={color ? 'border-l-2 pl-2' : undefined}
+      style={color ? { borderColor: color } : undefined}
+    >
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
         <Stat label="PJ" value={stats.partidosJugados} />
         <Stat label="Titular" value={stats.titularidades} />
@@ -360,41 +357,33 @@ function situacionesDeJugador(bloque: IndividualesBloque, jugador: Player): stri
 function ComportamientosCard({
   titulo,
   situaciones,
-  label,
   color,
   situacionesComparar,
-  labelComparar,
 }: {
   titulo: string;
   situaciones: string[];
-  label?: string;
-  color: string;
+  // Solo se pasa cuando se está comparando — mismo criterio que
+  // PlayerStatsRow: el nombre ya aparece una vez en la leyenda compartida.
+  color?: string;
   situacionesComparar?: string[];
-  labelComparar?: string;
 }) {
   const comparando = situacionesComparar !== undefined;
   return (
     <section className="card p-3">
       <h5 className="text-xs font-semibold text-slate-700 mb-2">{titulo}</h5>
-      <SituacionesList label={label} color={color} situaciones={situaciones} />
+      <SituacionesList color={color} situaciones={situaciones} />
       {comparando && (
         <div className="mt-2 pt-2 border-t border-slate-100">
-          <SituacionesList label={labelComparar} color={COLOR_COMPARAR} situaciones={situacionesComparar!} />
+          <SituacionesList color={COLOR_COMPARAR} situaciones={situacionesComparar!} />
         </div>
       )}
     </section>
   );
 }
 
-function SituacionesList({ label, color, situaciones }: { label?: string; color: string; situaciones: string[] }) {
+function SituacionesList({ color, situaciones }: { color?: string; situaciones: string[] }) {
   return (
-    <div>
-      {label && (
-        <div className="flex items-center gap-1.5 text-xs font-semibold mb-1" style={{ color }}>
-          <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-          {label}
-        </div>
-      )}
+    <div className={color ? 'border-l-2 pl-2' : undefined} style={color ? { borderColor: color } : undefined}>
       {situaciones.length === 0 ? (
         <p className="text-xs text-slate-400">Sin registros en el CSV.</p>
       ) : (

@@ -67,16 +67,6 @@ export function PlayerPositionPitch({ series }: { series: PlayerPositionSeries[]
 
   return (
     <div>
-      {comparando && (
-        <div className="flex items-center justify-center gap-4 mb-2 flex-wrap">
-          {series.map((s) => (
-            <div key={s.label} className="flex items-center gap-1.5 text-sm text-slate-700">
-              <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-              {s.label}
-            </div>
-          ))}
-        </div>
-      )}
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         style={{ width: '100%', height: 320, background: 'linear-gradient(#1f7a3d, #1a6b35)', borderRadius: 8 }}
