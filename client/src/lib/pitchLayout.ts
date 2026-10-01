@@ -39,7 +39,8 @@ function marcadorHasta(events: MatchEvent[], minuto: number): { favor: number; c
 
 // Completa coordenadas por defecto a las entradas que no tengan (conserva
 // cualquier campo extra de cada entrada, útil para rastrear su índice).
-export function withDefaults<T extends LineupEntry>(lineup: T[]): T[] {
+export function withDefaults<T extends LineupEntry>(rawLineup: T[]): T[] {
+  const lineup = dedupeLayout(rawLineup);
   const placed: T[] = [];
   // Si ninguno de los dos delanteros tiene coordenada guardada todavía, se
   // resuelven juntos al final (simétricos); si alguno ya se movió a mano en
@@ -106,8 +107,29 @@ export function withDefaults<T extends LineupEntry>(lineup: T[]): T[] {
   return placed;
 }
 
+// Un jugador no puede estar dos veces en cancha. Puede pasar con datos
+// inconsistentes (p. ej. dos cambios en el mismo minuto cuya distribución
+// ajustada ya incluía al que entra en el otro cambio): se conserva la primera
+// aparición, priorizando la que tiene posición asignada.
+function dedupeLayout<T extends LineupEntry>(layout: T[]): T[] {
+  const result: T[] = [];
+  for (const entry of layout) {
+    if (!entry.playerId) {
+      result.push(entry);
+      continue;
+    }
+    const prevIdx = result.findIndex((e) => e.playerId === entry.playerId);
+    if (prevIdx === -1) result.push(entry);
+    else if (!result[prevIdx].posicion && entry.posicion) result[prevIdx] = entry;
+  }
+  return result;
+}
+
 function deriveAfterSub(prevLayout: LineupEntry[], sub: Substitution): LineupEntry[] {
   const idx = prevLayout.findIndex((e) => e.playerId === sub.jugadorSaleId);
+  // Si el que entra ya figura en cancha (el cambio ya quedó reflejado en una
+  // distribución ajustada previa), no se agrega de nuevo.
+  if (idx === -1 && prevLayout.some((e) => e.playerId === sub.jugadorEntraId)) return prevLayout;
   if (idx === -1) {
     // El jugador que sale no estaba en la cancha según los datos registrados;
     // se agrega igualmente al que entra en una posición por defecto.
