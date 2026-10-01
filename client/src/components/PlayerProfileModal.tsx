@@ -153,10 +153,43 @@ export function PlayerProfileModal({
           </div>
         </div>
 
-        <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Posiciones jugadas de titular</h4>
-          <div className="max-w-xs mx-auto">
-            <PlayerPositionPitch series={posicionSeries} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Posiciones jugadas de titular</h4>
+            <div className="max-w-xs mx-auto">
+              <PlayerPositionPitch series={posicionSeries} />
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Planilla individual</h4>
+            {!rival.individualStats ? (
+              <p className="text-sm text-slate-400">
+                Todavía no se importó una planilla individual para este rival (pestaña "Gráficos y estadísticas").
+              </p>
+            ) : !grupo ? (
+              <p className="text-sm text-slate-400">
+                Sin un set de métricas de radar definido para "{player.posicion || 'sin posición'}".
+              </p>
+            ) : !fila ? (
+              <SinCruzar rival={rival} player={player} onSaved={onSaved} />
+            ) : (
+              <div>
+                {compararCon && !filaComparar && (
+                  <p className="text-xs text-amber-700 mb-2">
+                    No se encontró a {compararCon.nombre} en la planilla individual, así que no se puede comparar.
+                  </p>
+                )}
+                <div className="max-w-sm mx-auto">
+                  {radarSeries.length > 1 && (
+                    <div className="mb-2 flex justify-center">
+                      <RadarLegend series={radarSeries} />
+                    </div>
+                  )}
+                  <RadarChart ejeLabels={grupo.ejes.map((e) => e.label)} series={radarSeries} maxPorEje={maxPorEje} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -180,37 +213,6 @@ export function PlayerProfileModal({
               labelComparar={compararCon?.nombre}
             />
           </div>
-        </div>
-
-        <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Planilla individual</h4>
-          {!rival.individualStats ? (
-            <p className="text-sm text-slate-400">
-              Todavía no se importó una planilla individual para este rival (pestaña "Gráficos y estadísticas").
-            </p>
-          ) : !grupo ? (
-            <p className="text-sm text-slate-400">
-              Sin un set de métricas de radar definido para "{player.posicion || 'sin posición'}".
-            </p>
-          ) : !fila ? (
-            <SinCruzar rival={rival} player={player} onSaved={onSaved} />
-          ) : (
-            <div>
-              {compararCon && !filaComparar && (
-                <p className="text-xs text-amber-700 mb-2">
-                  No se encontró a {compararCon.nombre} en la planilla individual, así que no se puede comparar.
-                </p>
-              )}
-              <div className="max-w-sm mx-auto">
-                {radarSeries.length > 1 && (
-                  <div className="mb-2 flex justify-center">
-                    <RadarLegend series={radarSeries} />
-                  </div>
-                )}
-                <RadarChart ejeLabels={grupo.ejes.map((e) => e.label)} series={radarSeries} maxPorEje={maxPorEje} />
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </Modal>
