@@ -519,9 +519,14 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
   ],
   'Central a banda': [{ kind: 'move', from: POS['5'], to: { x: 50, y: 75 }, dashed: true }],
   'Mano a mano': manMarkAll(),
+  // El lateral rival, pegado a la banda, sale a la altura del 2 y este lo
+  // salta a marcar. Los extremos (7 y 11) se adelantan para dejar libre el
+  // carril donde ocurre la jugada.
   'Lateral con lateral': [
-    { kind: 'rival', x: shift('2', -16, 6).x, y: shift('2', -16, 6).y },
-    { kind: 'move', from: POS['2'], to: shift('2', -16, 6), dashed: false },
+    { kind: 'override', num: '7', x: 28, y: 10 },
+    { kind: 'override', num: '11', x: 28, y: 93 },
+    { kind: 'rival', x: 48, y: 7 },
+    { kind: 'move', from: POS['2'], to: { x: 48, y: 7 }, dashed: false },
   ],
   'Volante forma linea de 5': [{ kind: 'move', from: POS['8'], to: shift('3', 0, 4), dashed: true }],
   'Wing op cierra con vc': [
