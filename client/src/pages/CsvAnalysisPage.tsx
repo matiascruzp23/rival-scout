@@ -9,6 +9,10 @@ import {
   construccionSituacionCombos,
   DEFENSIVE_CATEGORIES,
   estructuraCambiaPorEstado,
+  fraseCambios,
+  CAMBIO_MIN_PUNTOS,
+  CAMBIO_MIN_RELATIVO,
+  MIN_REGISTROS_COMPARACION,
   matchesWithCsvCount,
   OFFENSIVE_CATEGORIES,
   type ComboCount,
@@ -305,6 +309,11 @@ function PhaseView({
               <EstadoCard key={r.estado} data={r} />
             ))}
           </div>
+          <p className="text-[11px] text-slate-400 mt-2">
+            Cada resultado se compara con el resto: un concepto aumenta o se reduce cuando su frecuencia (% de
+            registros que lo marcan) cambia al menos {CAMBIO_MIN_PUNTOS} puntos y un {CAMBIO_MIN_RELATIVO * 100}%.
+            Se necesitan {MIN_REGISTROS_COMPARACION}+ registros por lado para comparar.
+          </p>
         </section>
       )}
     </div>
@@ -578,8 +587,36 @@ function EstadoCard({ data }: { data: EstadoResumen }) {
           Más frecuente: {data.situacionesTop.map((s) => `${s.tag} (${s.pct}%)`).join(', ')}
         </p>
       )}
+      {data.cambios ? (
+        <CambiosEstado data={data} />
+      ) : (
+        <p className="text-xs text-slate-400 mt-2">Muestra chica para comparar con los otros resultados.</p>
+      )}
       {!data.estructuraTop && data.situacionesTop.length === 0 && (
         <p className="text-xs text-slate-400">Sin patrón destacado.</p>
+      )}
+    </div>
+  );
+}
+
+function CambiosEstado({ data }: { data: EstadoResumen }) {
+  const cambios = data.cambios!;
+  const frase = fraseCambios(data.estado, cambios);
+  const detalle = [
+    ...cambios.reducen.map((c) => ({ ...c, signo: '↓', clase: 'text-red-700' })),
+    ...cambios.aumentan.map((c) => ({ ...c, signo: '↑', clase: 'text-emerald-700' })),
+  ];
+  return (
+    <div className="mt-2 pt-2 border-t border-slate-200/70">
+      <p className="text-sm text-slate-800">{frase ?? 'Sin cambios marcados respecto de los otros resultados.'}</p>
+      {detalle.length > 0 && (
+        <ul className="mt-1 space-y-0.5">
+          {detalle.map((c) => (
+            <li key={c.tag} className="text-[11px] text-slate-500">
+              <span className={`font-semibold ${c.clase}`}>{c.signo}</span> {c.tag}: {c.pct}% (resto {c.pctResto}%)
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

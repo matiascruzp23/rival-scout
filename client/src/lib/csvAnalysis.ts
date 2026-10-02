@@ -257,6 +257,104 @@ export interface EstadoResumen {
   total: number;
   estructuraTop: { valor: string; pct: number } | null;
   situacionesTop: { tag: string; pct: number }[];
+  // Conceptos cuya frecuencia en este resultado cambia considerablemente
+  // respecto de los otros resultados (ver compararConceptos). null si la
+  // muestra no alcanza para comparar.
+  cambios: CambiosConcepto | null;
+}
+
+export interface ConceptoCambio {
+  tag: string;
+  // % de registros de este resultado que marcan el concepto, y % en el
+  // resto de los resultados juntos.
+  pct: number;
+  pctResto: number;
+}
+
+export interface CambiosConcepto {
+  aumentan: (ConceptoCambio & { predomina: boolean })[];
+  reducen: (ConceptoCambio & { desaparece: boolean })[];
+  mantienen: ConceptoCambio[];
+}
+
+// Umbrales para decir que un concepto "aumentó" o "se redujo" en un
+// resultado: la frecuencia (% de registros que lo marcan) tiene que moverse
+// al menos CAMBIO_MIN_PUNTOS puntos porcentuales Y al menos un
+// CAMBIO_MIN_RELATIVO respecto del resto de los resultados. Pedir las dos
+// cosas evita que 2% -> 4% (el doble, pero irrelevante) o 60% -> 70% (10
+// puntos, pero el mismo patrón) cuenten como cambio.
+export const CAMBIO_MIN_PUNTOS = 10;
+export const CAMBIO_MIN_RELATIVO = 0.5;
+// Con menos registros que esto en el resultado (o en el resto) los
+// porcentajes saltan demasiado con un solo registro: no se compara.
+export const MIN_REGISTROS_COMPARACION = 5;
+// Para hablar de que un concepto "se mantiene" o "dejan de usarlo", tiene
+// que ser algo habitual en el resto de los resultados.
+const MIN_PCT_RELEVANTE = 15;
+const MAX_CAMBIOS_POR_TIPO = 2;
+
+function tagsDeFila(row: Record<string, string>, columnas: string[]): Set<string> {
+  const tags = new Set<string>();
+  for (const col of columnas) {
+    const v = row[col];
+    if (!v) continue;
+    for (const tag of splitTags(v)) tags.add(tag);
+  }
+  return tags;
+}
+
+function frecuencias(rows: TaggedRow[], columnas: string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const r of rows) for (const tag of tagsDeFila(r.row, columnas)) counts.set(tag, (counts.get(tag) || 0) + 1);
+  return counts;
+}
+
+function compararConceptos(estadoRows: TaggedRow[], restoRows: TaggedRow[], columnas: string[]): CambiosConcepto | null {
+  if (estadoRows.length < MIN_REGISTROS_COMPARACION || restoRows.length < MIN_REGISTROS_COMPARACION) return null;
+  const enEstado = frecuencias(estadoRows, columnas);
+  const enResto = frecuencias(restoRows, columnas);
+  const pctDe = (count: number, total: number) => Math.round((count / total) * 100);
+  const topEstado = Array.from(enEstado.entries()).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  const aumentan: CambiosConcepto['aumentan'] = [];
+  const reducen: CambiosConcepto['reducen'] = [];
+  const mantienen: ConceptoCambio[] = [];
+  for (const tag of new Set([...enEstado.keys(), ...enResto.keys()])) {
+    const countEstado = enEstado.get(tag) || 0;
+    const pct = pctDe(countEstado, estadoRows.length);
+    const pctResto = pctDe(enResto.get(tag) || 0, restoRows.length);
+    const diff = pct - pctResto;
+    if (diff >= CAMBIO_MIN_PUNTOS && pct >= pctResto * (1 + CAMBIO_MIN_RELATIVO) && countEstado >= 2) {
+      aumentan.push({ tag, pct, pctResto, predomina: tag === topEstado });
+    } else if (-diff >= CAMBIO_MIN_PUNTOS && pct <= pctResto * (1 - CAMBIO_MIN_RELATIVO) && pctResto >= MIN_PCT_RELEVANTE) {
+      reducen.push({ tag, pct, pctResto, desaparece: countEstado === 0 });
+    } else if (pct >= MIN_PCT_RELEVANTE && pctResto >= MIN_PCT_RELEVANTE && Math.abs(diff) < CAMBIO_MIN_PUNTOS) {
+      mantienen.push({ tag, pct, pctResto });
+    }
+  }
+  return {
+    aumentan: aumentan.sort((a, b) => b.pct - b.pctResto - (a.pct - a.pctResto)).slice(0, MAX_CAMBIOS_POR_TIPO),
+    reducen: reducen.sort((a, b) => b.pctResto - b.pct - (a.pctResto - a.pct)).slice(0, MAX_CAMBIOS_POR_TIPO),
+    mantienen: mantienen.sort((a, b) => b.pct - a.pct).slice(0, 1),
+  };
+}
+
+function listaConY(items: string[]): string {
+  return items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
+}
+
+// Frase determinista para la tarjeta de cada resultado, p. ej. "Ganando,
+// dejan de usar Centro 3/4 y predomina Pasaje del lateral" o "Ganando,
+// mantienen Juego directo".
+export function fraseCambios(estado: GameStateLabel, cambios: CambiosConcepto): string | null {
+  const partes: string[] = [];
+  for (const r of cambios.reducen) partes.push(`${r.desaparece ? 'dejan de usar' : 'usan menos'} ${r.tag}`);
+  for (const a of cambios.aumentan) partes.push(`${a.predomina ? 'predomina' : 'usan más'} ${a.tag}`);
+  // "Mantienen" solo aporta si no hay cambios, o como contraste del
+  // concepto principal que sigue igual.
+  if (cambios.mantienen.length > 0 && partes.length < 3) partes.push(`mantienen ${cambios.mantienen[0].tag}`);
+  if (partes.length === 0) return null;
+  return `${estado}, ${listaConY(partes)}.`;
 }
 
 function estadoResumen(rows: TaggedRow[], estructuraColumna: string | null, situacionColumnas: string[]): EstadoResumen[] {
@@ -275,7 +373,10 @@ function estadoResumen(rows: TaggedRow[], estructuraColumna: string | null, situ
       .tags.slice(0, 2)
       .map((t) => ({ tag: t.tag, pct: t.pct }));
 
-    result.push({ estado, total: stateRows.length, estructuraTop, situacionesTop: tags });
+    const restoRows = rows.filter((r) => r.row['RESULTADO'] !== estado && GAME_STATES.includes(r.row['RESULTADO'] as GameStateLabel));
+    const cambios = compararConceptos(stateRows, restoRows, situacionColumnas);
+
+    result.push({ estado, total: stateRows.length, estructuraTop, situacionesTop: tags, cambios });
   }
   return result;
 }
