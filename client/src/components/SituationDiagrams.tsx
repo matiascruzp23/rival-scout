@@ -380,9 +380,12 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'move', from: shift('7', -3, 2), to: { x: 14, y: 40 }, dashed: false, curve: -10, fromBall: true },
   ],
   'Volante a banda': [{ kind: 'move', from: POS['7'], to: { x: 30, y: 15 }, dashed: true }],
+  // El 10 ya juega de mediapunta entre líneas (entre el 9 y el doble
+  // pivote), dentro del cuadrado; el 9 queda solo y centrado arriba.
   'Mediapunta en cuadrado': [
-    { kind: 'zone', x: 38, y: 28, w: 20, h: 34 },
-    { kind: 'move', from: POS['10'], to: { x: 46, y: 45 }, dashed: true },
+    { kind: 'override', num: '9', x: 20, y: 48 },
+    { kind: 'override', num: '10', x: 33, y: 48 },
+    { kind: 'zone', x: 26.5, y: 37, w: 13, h: 22 },
   ],
 
   // --- Situaciones de presión (vulnerabilidades) ---
