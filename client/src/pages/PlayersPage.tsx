@@ -11,6 +11,7 @@ import { ImportPlayersModal } from '../components/ImportPlayersModal';
 import { computeAllPlayerStats, computePlayerEventStats, formatPct, lastN, type PlayerStats } from '../lib/stats';
 import { positionOrderIndex } from '../lib/positions';
 import { useIsViewer } from '../lib/authContext';
+import { exportPlantelKeynote } from '../lib/plantelExport';
 
 type SortKey = 'nombre' | 'posicion' | 'partidosJugados' | 'titularidades' | 'minutosJugados' | 'porcentajeMinutos';
 
@@ -32,6 +33,21 @@ export default function PlayersPage() {
   const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
   const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;
   const isViewer = useIsViewer();
+  const [exporting, setExporting] = useState(false);
+
+  const exportarKeynote = async () => {
+    setExporting(true);
+    try {
+      await exportPlantelKeynote({
+        rivalNombre: rival.nombre,
+        players: rival.players,
+        sistemaPrincipal: rival.sistemaPrincipal || '',
+        sistemaAlternativo: rival.sistemaAlternativo || '',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const matchesWindow = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
   const stats = useMemo(() => computeAllPlayerStats(rival.players, matchesWindow), [rival.players, matchesWindow]);
@@ -77,16 +93,26 @@ export default function PlayersPage() {
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h2 className="text-lg font-semibold text-slate-900">Jugadores</h2>
-        {!isViewer && (
-          <div className="flex gap-2">
-            <button className="btn-secondary" onClick={() => setImporting(true)}>
-              Importar planilla
-            </button>
-            <button className="btn-primary" onClick={() => setEditing('new')}>
-              + Nuevo jugador
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <button
+            className="btn-secondary"
+            disabled={exporting}
+            onClick={exportarKeynote}
+            title="Descarga un .pptx que se abre directo en Keynote"
+          >
+            {exporting ? 'Exportando…' : 'Exportar a Keynote'}
+          </button>
+          {!isViewer && (
+            <>
+              <button className="btn-secondary" onClick={() => setImporting(true)}>
+                Importar planilla
+              </button>
+              <button className="btn-primary" onClick={() => setEditing('new')}>
+                + Nuevo jugador
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="card p-3 mb-4 flex flex-wrap items-center gap-3">

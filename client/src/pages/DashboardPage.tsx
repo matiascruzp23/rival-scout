@@ -157,6 +157,7 @@ export default function DashboardPage() {
 
       <PlantelView
         players={rival.players}
+        rivalNombre={rival.nombre}
         editable={!isViewer}
         onChanged={reload}
         sistemaPrincipal={rival.sistemaPrincipal || ''}
