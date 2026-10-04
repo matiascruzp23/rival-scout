@@ -30,10 +30,8 @@ export function LineupEditor({
   onChange: (lineup: LineupEntry[]) => void;
   readOnly?: boolean;
 }) {
-  const [showBaja, setShowBaja] = useState(false);
   const [view, setView] = useState<'lista' | 'campograma'>('lista');
   const usedIds = new Set(lineup.map((l) => l.playerId));
-  const selectable = players.filter((p) => showBaja || !p.baja);
   const template = formationSlots(system);
 
   const copyPrevious = () => {
@@ -77,7 +75,7 @@ export function LineupEditor({
   }, [system]);
 
   const addSlot = () => {
-    const next = selectable.find((p) => !usedIds.has(p.id));
+    const next = players.find((p) => !usedIds.has(p.id));
     const { x, y } = defaultCoordsFor('', lineup);
     onChange([...lineup, { playerId: next?.id || '', posicion: '', x, y }]);
   };
@@ -209,10 +207,6 @@ export function LineupEditor({
               Aplicar posiciones de {system}
             </button>
           )}
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
-            <input type="checkbox" checked={showBaja} onChange={(e) => setShowBaja(e.target.checked)} />
-            Mostrar jugadores marcados como baja
-          </label>
           <div className="flex items-center gap-1 text-xs">
             <button
               onClick={() => setView('lista')}
@@ -248,7 +242,6 @@ export function LineupEditor({
 
       <fieldset disabled={readOnly} className="space-y-2">
         {lineup.map((entry, i) => {
-          const player = players.find((p) => p.id === entry.playerId);
           return (
             <div key={i} className="flex gap-2 items-center">
               <select
@@ -257,22 +250,19 @@ export function LineupEditor({
                 onChange={(e) => update(i, { playerId: e.target.value })}
               >
                 <option value="">Seleccionar jugador…</option>
-                {playersForPosition(players, entry.posicion)
-                  .filter((p) => showBaja || !p.baja || p.id === entry.playerId)
-                  .map((p) => (
-                    <option key={p.id} value={p.id} disabled={usedIds.has(p.id) && p.id !== entry.playerId}>
-                      {p.posicion === entry.posicion && entry.posicion ? '★ ' : ''}
-                      {p.dorsal ? `#${p.dorsal} ` : ''}
-                      {p.nombre} {p.baja ? '(baja)' : ''}
-                    </option>
-                  ))}
+                {playersForPosition(players, entry.posicion).map((p) => (
+                  <option key={p.id} value={p.id} disabled={usedIds.has(p.id) && p.id !== entry.playerId}>
+                    {p.posicion === entry.posicion && entry.posicion ? '★ ' : ''}
+                    {p.dorsal ? `#${p.dorsal} ` : ''}
+                    {p.nombre}
+                  </option>
+                ))}
               </select>
               {template ? (
                 <span className="input w-48 bg-slate-50 text-slate-600 flex items-center">{entry.posicion || '—'}</span>
               ) : (
                 <PositionSelect className="input w-48" value={entry.posicion} onChange={(v) => update(i, { posicion: v })} />
               )}
-              {player?.baja && <span className="badge bg-red-100 text-red-700 text-[10px]">BAJA</span>}
               {!readOnly && (
                 <button className="text-slate-400 hover:text-red-600 text-lg leading-none px-1" onClick={() => remove(i)}>
                   &times;

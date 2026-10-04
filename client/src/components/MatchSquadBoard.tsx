@@ -306,7 +306,6 @@ export function MatchSquadBoard({
     .sort((a, b) => a.minuto - b.minuto)
     .map((s) => ({ sub: s, player: byId.get(s.jugadorEntraId) }))
     .filter((x): x is { sub: Substitution; player: Player } => !!x.player);
-  const bajasPlantel = players.filter((p) => p.baja && !xiIds.has(p.id) && !banca.includes(p.id) && !entraronIds.has(p.id));
 
   const onDropZone = (zone: 'banca' | 'nocitados') => (e: React.DragEvent) => {
     e.preventDefault();
@@ -414,7 +413,7 @@ export function MatchSquadBoard({
     const candidatos = players
       .filter((p) => !entraronIds.has(p.id) && lineup[index]?.playerId !== p.id)
       .filter((p) => !q || p.nombre.toLowerCase().includes(q) || String(p.dorsal ?? '') === q)
-      .sort((a, b) => Number(a.baja) - Number(b.baja) || Number(xiIds.has(a.id)) - Number(xiIds.has(b.id)) || tierFor(a, posicion) - tierFor(b, posicion) || (a.dorsal ?? 999) - (b.dorsal ?? 999));
+      .sort((a, b) => Number(xiIds.has(a.id)) - Number(xiIds.has(b.id)) || tierFor(a, posicion) - tierFor(b, posicion) || (a.dorsal ?? 999) - (b.dorsal ?? 999));
     return (
       <>
         <input
@@ -436,11 +435,9 @@ export function MatchSquadBoard({
                   {posicion && tier === 1 && 'alt.'}
                   {xiIds.has(p.id) && 'en XI'}
                   {banca.includes(p.id) && 'banca'}
-                  {p.baja && <span className="badge bg-red-100 text-red-700 text-[9px]">BAJA</span>}
                 </span>
               </>,
-              () => assignToSlot(index, p.id),
-              p.baja ? 'opacity-60' : ''
+              () => assignToSlot(index, p.id)
             );
           })}
         </div>
@@ -746,12 +743,6 @@ export function MatchSquadBoard({
             )}
           </div>
 
-          {bajasPlantel.length > 0 && (
-            <p className="text-[11px] text-slate-400">
-              Bajas del plantel (no se consideran para la convocatoria):{' '}
-              {bajasPlantel.map((p) => shortName(p.nombre)).join(', ')}.
-            </p>
-          )}
         </div>
       </div>
 

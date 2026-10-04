@@ -47,7 +47,7 @@ function syncBajas(match: Match, players: Player[]): Match {
     ...match.substitutions.map((s) => s.jugadorEntraId),
     ...match.banca,
   ]);
-  const noCitadoIds = new Set(players.filter((p) => !p.baja && !citadoIds.has(p.id)).map((p) => p.id));
+  const noCitadoIds = new Set(players.filter((p) => !citadoIds.has(p.id)).map((p) => p.id));
   const currentIds = new Set(match.bajas.map((b) => b.jugadorId));
   const sinCambios = noCitadoIds.size === currentIds.size && [...noCitadoIds].every((id) => currentIds.has(id));
   if (sinCambios) return match;
