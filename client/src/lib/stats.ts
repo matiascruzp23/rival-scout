@@ -1064,6 +1064,21 @@ export function estimateNextXI(
       .sort((a, b) => b.score - a.score)[0];
     if (candidato) {
       picksFinal.push({ posicion, player: candidato.player, score: candidato.score });
+      continue;
+    }
+    // Último recurso: nadie disponible jugó nunca ahí (típico cuando el
+    // titular habitual está de baja y los demás ya fueron usados en otra
+    // posición, p. ej. por la regla de Sub-21) — se toma al mejor
+    // disponible de la misma línea (arco/defensa/medio/ataque) antes que
+    // dejar el XI con un jugador menos.
+    const grupo = positionDef(posicion)?.group;
+    const mismaLinea = grupo
+      ? scoredDisponibles
+          .filter((s) => !usedIds.has(s.player.id) && positionDef(s.posicion)?.group === grupo)
+          .sort((a, b) => b.score - a.score)[0]
+      : undefined;
+    if (mismaLinea) {
+      picksFinal.push({ posicion, player: mismaLinea.player, score: mismaLinea.score });
     } else {
       sinCobertura.push(posicion);
     }
