@@ -1066,6 +1066,28 @@ export function estimateNextXI(
       picksFinal.push({ posicion, player: candidato.player, score: candidato.score });
       continue;
     }
+    // Alguien que ya quedó en el XI en otra posición pero también jugó esta
+    // (ej. un interior que alguna vez cubrió el medio centro derecho): se
+    // lo corre acá si el puesto que deja tiene un reemplazo natural libre —
+    // mejor que poner a alguien que nunca jugó ahí. Se prefiere correr a un
+    // formativo: la regla del torneo lo hace jugar de todos modos, sea cual
+    // sea su posición, y así deja libre su puesto natural al titular de ahí.
+    const mover = picksFinal
+      .map((p, idx) => ({ p, idx }))
+      .filter(({ p }) => p.posicion !== posicion && playerPositionsPlayed(p.player.id, recent).has(posicion))
+      .map(({ p, idx }) => {
+        const reemplazo = scoredDisponibles
+          .filter((s) => !usedIds.has(s.player.id) && s.posicion === p.posicion && s.score > 0)
+          .sort((a, b) => b.score - a.score)[0];
+        return reemplazo ? { p, idx, reemplazo } : null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => Number(esFormativo(b.p.player)) - Number(esFormativo(a.p.player)) || b.p.score - a.p.score)[0];
+    if (mover) {
+      picksFinal[mover.idx] = { posicion: mover.p.posicion, player: mover.reemplazo.player, score: mover.reemplazo.score };
+      picksFinal.push({ posicion, player: mover.p.player, score: mover.p.score });
+      continue;
+    }
     // Último recurso: nadie disponible jugó nunca ahí (típico cuando el
     // titular habitual está de baja y los demás ya fueron usados en otra
     // posición, p. ej. por la regla de Sub-21) — se toma al mejor
