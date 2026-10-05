@@ -11,7 +11,6 @@ import {
   findReglaTorneo,
   formatPct,
   golesAgregados,
-  lastN,
   positionRotation,
   recordGEP,
   recordGEPPorCondicion,
@@ -38,8 +37,9 @@ export default function DashboardPage() {
   const isViewer = useIsViewer();
   const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
   const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;
-  const matches = useMemo(() => lastN(rival.matches, 10), [rival.matches]);
-  const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
+  // Todas las estadísticas usan todos los partidos registrados del rival;
+  // solo la tabla de resultados muestra los 10 más recientes.
+  const matches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
 
   const stats = useMemo(() => computeAllPlayerStats(rival.players, matches), [rival.players, matches]);
   const topMinutos = [...stats].sort((a, b) => b.minutosJugados - a.minutosJugados).slice(0, 6);
@@ -175,7 +175,7 @@ export default function DashboardPage() {
 
       <section className="card p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-slate-800">Últimos {matches.length} resultados</h3>
+          <h3 className="font-semibold text-slate-800">Últimos {Math.min(matches.length, 10)} resultados</h3>
           <Link to={`/rivales/${rival.id}/partidos`} className="text-xs text-emerald-700 hover:underline">
             Ver partidos →
           </Link>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {allMatches.slice(0, 10).map((m) => (
+            {matches.slice(0, 10).map((m) => (
               <tr key={m.id} className={outcomeRowClass(m)}>
                 <td className="whitespace-nowrap">{m.fecha}</td>
                 <td>{m.oponente || '—'}</td>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
                 </td>
               </tr>
             ))}
-            {allMatches.length === 0 && (
+            {matches.length === 0 && (
               <tr>
                 <td colSpan={5} className="text-center text-slate-400 py-6">
                   Aún no hay partidos registrados.
@@ -336,7 +336,7 @@ export default function DashboardPage() {
       </div>
 
       <section className="card p-4">
-        <h3 className="font-semibold text-slate-800 mb-3">Rotación real en cancha (últimos {matches.length} partidos)</h3>
+        <h3 className="font-semibold text-slate-800 mb-3">Rotación real en cancha ({matches.length} partidos)</h3>
         {rotation.length === 0 ? (
           <p className="text-sm text-slate-400">Sin datos de XI todavía.</p>
         ) : (
@@ -398,9 +398,8 @@ export default function DashboardPage() {
         <section className="card p-4">
           <h3 className="font-semibold text-slate-800 mb-3">Cambios tácticos registrados</h3>
           <p className="text-sm text-slate-600 mb-2">
-            {tacticos.length} {tacticos.length === 1 ? 'sustitución' : 'sustituciones'} con cambio táctico en los últimos{' '}
-            {matches.length}{' '}
-            partidos.
+            {tacticos.length} {tacticos.length === 1 ? 'sustitución' : 'sustituciones'} con cambio táctico en los {matches.length}{' '}
+            partidos registrados.
           </p>
           <ul className="text-sm space-y-1">
             {tacticos.slice(0, 5).map(({ match, sub }) => (

@@ -1,3 +1,4 @@
+import { MatchWindowSelector } from '../components/MatchWindowSelector';
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
@@ -24,7 +25,7 @@ import {
   type StructureBar,
   type TagCount,
 } from '../lib/csvAnalysis';
-import { lastN, topSistemasFormacion } from '../lib/stats';
+import { matchesInWindow, type MatchWindow, topSistemasFormacion } from '../lib/stats';
 import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
 import { situationDiagramFor } from '../components/SituationDiagrams';
 
@@ -40,9 +41,9 @@ const ESTADO_STYLE: Record<EstadoResumen['estado'], { border: string; bg: string
 export default function CsvAnalysisPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const isViewer = useIsViewer();
-  const [window, setWindowSize] = useState<3 | 5 | 10>(10);
+  const [window, setWindowSize] = useState<MatchWindow>('todos');
   const [tab, setTab] = useState<Tab>('Fase ofensiva');
-  const matches = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
+  const matches = useMemo(() => matchesInWindow(rival.matches, window), [rival.matches, window]);
   const withCsv = matchesWithCsvCount(matches);
   // Sistema con el que se dibuja el 11 de fondo de los diagramas de
   // circulación, para que se parezca a cómo juega el rival en vez de a un
@@ -106,29 +107,16 @@ export default function CsvAnalysisPage() {
             Patrones y frecuencias a partir de los CSV cargados, con lo que suele cambiar según el resultado parcial.
           </p>
         </div>
-        <div className="flex items-center gap-1 text-sm">
-          <span className="text-slate-500 mr-1">Ventana:</span>
-          {[3, 5, 10].map((n) => (
-            <button
-              key={n}
-              onClick={() => setWindowSize(n as 3 | 5 | 10)}
-              className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
-                window === n ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
-              }`}
-            >
-              últimos {n}
-            </button>
-          ))}
-        </div>
+        <MatchWindowSelector value={window} onChange={setWindowSize} total={rival.matches.length} label="Partidos:" />
       </div>
 
       <div className="card p-3 text-sm text-slate-600">
-        {withCsv} de {matches.length} partido{matches.length === 1 ? '' : 's'} en esta ventana tienen CSV cargado.
+        {withCsv} de {matches.length} partido{matches.length === 1 ? '' : 's'} seleccionados tienen CSV cargado.
       </div>
 
       {withCsv === 0 ? (
         <div className="card p-10 text-center text-slate-400">
-          No hay datos de Sportscode cargados en esta ventana. Carga un CSV desde el detalle de un partido.
+          No hay datos de Sportscode cargados en los partidos seleccionados. Carga un CSV desde el detalle de un partido.
         </div>
       ) : (
         <>
@@ -337,7 +325,7 @@ function IndividualesView({
   if (circulaciones.registrosConRival === 0 && presiones.registrosConRival === 0) {
     return (
       <p className="text-sm text-slate-400 py-6">
-        No hay registros con la columna "Rivales" rellenada en los CSV cargados en esta ventana.
+        No hay registros con la columna "Rivales" rellenada en los CSV cargados en los partidos seleccionados.
       </p>
     );
   }

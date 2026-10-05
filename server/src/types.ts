@@ -153,7 +153,7 @@ export interface Rival {
   sistemaAlternativo?: string;
   entrenador?: string;
   // Récord del entrenador con este equipo cargado a mano (a diferencia del
-  // G-E-P calculado del informe, que solo cuenta los últimos partidos
+  // G-E-P calculado del informe, que solo cuenta los partidos
   // analizados con detalle): para reflejar toda su gestión en el club.
   entrenadorGanados?: number | null;
   entrenadorEmpatados?: number | null;

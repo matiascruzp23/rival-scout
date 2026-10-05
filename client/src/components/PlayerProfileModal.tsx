@@ -5,7 +5,7 @@ import { RadarChart } from './RadarChart';
 import { PlayerBadges } from './PlayerBadges';
 import { PlayerPositionPitch, type PlayerPositionSeries } from './PlayerPositionPitch';
 import { api } from '../api';
-import { computePlayerStats, computePlayerEventStats, formatPct, lastN, playerPositionHistory } from '../lib/stats';
+import { computePlayerStats, computePlayerEventStats, formatPct, playerPositionHistory, sortMatchesDesc } from '../lib/stats';
 import { filaDeJugador, filasSinCruzar, maxPorEjeJugadores, radarGroupForPosicion, valorDe } from '../lib/playerRadar';
 import {
   analyzeIndividuales,
@@ -15,7 +15,6 @@ import {
 } from '../lib/csvAnalysis';
 import { glossaryFor } from '../lib/csvGlossary';
 
-const VENTANA = 10;
 const COLOR_JUGADOR = '#1e3a8a';
 const COLOR_COMPARAR = '#f97316';
 
@@ -32,7 +31,7 @@ export function PlayerProfileModal({
 }) {
   const [compararConId, setCompararConId] = useState('');
 
-  const matches = useMemo(() => lastN(rival.matches, VENTANA), [rival.matches]);
+  const matches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
   const stats = useMemo(() => computePlayerStats(player, matches), [player, matches]);
   const events = useMemo(() => computePlayerEventStats(player.id, matches), [player.id, matches]);
   const historialPosiciones = useMemo(() => playerPositionHistory(player.id, matches), [player.id, matches]);
@@ -152,7 +151,7 @@ export function PlayerProfileModal({
         )}
 
         <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Últimos {matches.length} partidos (app)</h4>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">{matches.length} partidos registrados (app)</h4>
           <div className="space-y-2">
             <PlayerStatsRow color={compararCon ? COLOR_JUGADOR : undefined} stats={stats} events={events} />
             {compararCon && statsComparar && eventsComparar && (

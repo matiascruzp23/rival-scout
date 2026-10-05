@@ -5,11 +5,11 @@ import { api } from '../api';
 import type { Match, MatchEventType, Player, Substitution } from '../types';
 import {
   gameStateAtMinute,
-  lastN,
   combosPrediccion,
   topSistemasResultantesByState,
   cambioTrasTarjeta,
   sustitutosHistoricosDe,
+  sortMatchesDesc,
   type GameState,
   type ComboPrediccion,
   type Counted,
@@ -32,8 +32,6 @@ const ESTADO_STYLE: Record<GameState, string> = {
   Perdiendo: 'text-red-700',
 };
 
-const N_PARTIDOS_HISTORIAL = 10;
-
 export default function EnVivoPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const isViewer = useIsViewer();
@@ -42,11 +40,8 @@ export default function EnVivoPage() {
 
   // Base histórica para las predicciones: todo MENOS el partido en vivo (no
   // tendría sentido predecir en base a sus propios datos, todavía
-  // incompletos), ventaneado igual que el resto de la app.
-  const historial = useMemo(
-    () => lastN(rival.matches.filter((m) => !m.enVivo), N_PARTIDOS_HISTORIAL),
-    [rival.matches]
-  );
+  // incompletos). Se usan todos los partidos registrados.
+  const historial = useMemo(() => sortMatchesDesc(rival.matches.filter((m) => !m.enVivo)), [rival.matches]);
 
   if (!liveMatch) {
     return <SetupPartidoEnVivo rivalId={rival.id} isViewer={isViewer} onCreated={reload} />;
@@ -887,7 +882,7 @@ function PrediccionesPanel({
     <section className="card p-3 bg-emerald-50/40 border-emerald-200">
       <h2 className="font-semibold text-slate-900 mb-1">Predicciones — estado actual: {estado}</h2>
       <p className="text-xs text-slate-500 mb-3">
-        Basadas en los últimos {N_PARTIDOS_HISTORIAL} partidos analizados de este rival, filtrando por lo que suele
+        Basadas en todos los partidos registrados de este rival, filtrando por lo que suele
         pasar cuando va {estado.toLowerCase()}.
       </p>
 

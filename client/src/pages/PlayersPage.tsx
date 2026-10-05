@@ -1,3 +1,4 @@
+import { MatchWindowSelector } from '../components/MatchWindowSelector';
 import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
@@ -8,7 +9,7 @@ import { PlayerBadges } from '../components/PlayerBadges';
 import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { PositionSelect } from '../components/PositionSelect';
 import { ImportPlayersModal } from '../components/ImportPlayersModal';
-import { computeAllPlayerStats, computePlayerEventStats, formatPct, lastN, type PlayerStats } from '../lib/stats';
+import { computeAllPlayerStats, computePlayerEventStats, formatPct, matchesInWindow, type MatchWindow, type PlayerStats } from '../lib/stats';
 import { positionOrderIndex } from '../lib/positions';
 import { useIsViewer } from '../lib/authContext';
 import { exportPlantelKeynote } from '../lib/plantelExport';
@@ -17,7 +18,7 @@ type SortKey = 'nombre' | 'posicion' | 'partidosJugados' | 'titularidades' | 'mi
 
 export default function PlayersPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
-  const [window, setWindowSize] = useState<3 | 5 | 10>(10);
+  const [window, setWindowSize] = useState<MatchWindow>('todos');
   const [search, setSearch] = useState('');
   const [onlySub21, setOnlySub21] = useState(false);
   const [onlySub19, setOnlySub19] = useState(false);
@@ -49,7 +50,7 @@ export default function PlayersPage() {
     }
   };
 
-  const matchesWindow = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
+  const matchesWindow = useMemo(() => matchesInWindow(rival.matches, window), [rival.matches, window]);
   const stats = useMemo(() => computeAllPlayerStats(rival.players, matchesWindow), [rival.players, matchesWindow]);
 
   const filtered = useMemo(() => {
@@ -141,19 +142,8 @@ export default function PlayersPage() {
           <input type="checkbox" checked={onlyEnSeleccion} onChange={(e) => setOnlyEnSeleccion(e.target.checked)} /> En
           selección
         </label>
-        <div className="ml-auto flex items-center gap-1 text-sm">
-          <span className="text-slate-500 mr-1">Participación en últimos:</span>
-          {[3, 5, 10].map((n) => (
-            <button
-              key={n}
-              onClick={() => setWindowSize(n as 3 | 5 | 10)}
-              className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
-                window === n ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
-              }`}
-            >
-              {n}
-            </button>
-          ))}
+        <div className="ml-auto">
+          <MatchWindowSelector value={window} onChange={setWindowSize} total={rival.matches.length} label="Participación en:" />
         </div>
       </div>
 

@@ -22,7 +22,6 @@ import {
   findReglaTorneo,
   formatPct,
   golesAgregados,
-  lastN,
   minutoPromedioSustituciones,
   positionRotation,
   recordGEP,
@@ -115,8 +114,9 @@ export default function InformePage() {
     return list;
   }, [rival.graficoPersonalizado]);
 
-  const matches = useMemo(() => lastN(rival.matches, 10), [rival.matches]);
-  const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
+  // Todas las estadísticas usan todos los partidos registrados del rival;
+  // solo la tabla de resultados muestra los 10 más recientes.
+  const matches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
 
   const sistemas = useMemo(() => balancePorSistema(matches), [matches]);
   const goles = useMemo(() => golesAgregados(matches), [matches]);
@@ -249,7 +249,7 @@ export default function InformePage() {
       </div>
 
       <section className="informe-section card p-4 mb-6">
-        <h3 className="font-semibold text-slate-800 mb-3">Últimos {matches.length} resultados</h3>
+        <h3 className="font-semibold text-slate-800 mb-3">Últimos {Math.min(matches.length, 10)} resultados</h3>
         <table>
           <thead>
             <tr>
@@ -262,7 +262,7 @@ export default function InformePage() {
             </tr>
           </thead>
           <tbody>
-            {allMatches.slice(0, 10).map((m) => (
+            {matches.slice(0, 10).map((m) => (
               <tr key={m.id} className={outcomeRowClass(m)}>
                 <td className="whitespace-nowrap">{m.fecha}</td>
                 <td>{m.oponente || '—'}</td>
@@ -277,7 +277,7 @@ export default function InformePage() {
                 </td>
               </tr>
             ))}
-            {allMatches.length === 0 && (
+            {matches.length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center text-slate-400 py-4">
                   Sin partidos registrados.
@@ -491,12 +491,12 @@ export default function InformePage() {
 
       <section className="informe-section informe-page mb-6">
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-          {allMatches.map((m) => (
+          {matches.map((m) => (
             <div key={m.id} className="informe-section">
               <MatchReportCard match={m} players={rival.players} />
             </div>
           ))}
-          {allMatches.length === 0 && <p className="text-sm text-slate-400">No hay partidos registrados.</p>}
+          {matches.length === 0 && <p className="text-sm text-slate-400">No hay partidos registrados.</p>}
         </div>
       </section>
 
@@ -610,7 +610,7 @@ export default function InformePage() {
           {matchesWithCsv} de {matches.length} partidos con CSV cargado.
         </p>
         {matchesWithCsv === 0 ? (
-          <p className="text-sm text-slate-400">Sin CSV cargados en esta ventana.</p>
+          <p className="text-sm text-slate-400">Sin CSV cargados.</p>
         ) : (
           // Una fase completa por vez (no las 3 en columnas paralelas): así,
           // si una fase se extiende a la página siguiente, no se mezcla con
@@ -989,7 +989,7 @@ function Portada({
         {gep.jugados > 0 && (
           <p className="text-sm text-slate-700 mt-4">
             Récord: <span className="font-semibold">{gep.ganados}G-{gep.empatados}E-{gep.perdidos}P</span> en los
-            últimos {gep.jugados} partidos · Rendimiento:{' '}
+            {gep.jugados} partidos registrados · Rendimiento:{' '}
             <span className="font-semibold">{gep.rendimiento}%</span>
           </p>
         )}

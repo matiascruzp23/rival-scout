@@ -12,6 +12,14 @@ export function lastN(matches: Match[], n: number): Match[] {
   return sortMatchesDesc(matches).slice(0, n);
 }
 
+// Cuántos partidos considerar en las vistas con filtro: por defecto todos
+// los registrados del rival, o solo los N más recientes.
+export type MatchWindow = 'todos' | 3 | 5 | 10;
+
+export function matchesInWindow(matches: Match[], window: MatchWindow): Match[] {
+  return window === 'todos' ? sortMatchesDesc(matches) : lastN(matches, window);
+}
+
 export interface RecordGEP {
   jugados: number;
   ganados: number;
@@ -704,9 +712,7 @@ export function checkReglaTorneo(
 // con este cupo (ver el caso real que motivó esto: un Sub-21 que es titular
 // fijo en la liga le ganaba en minutos a uno que arrancó las últimas 2
 // fechas de Copa Chile, solo por jugar mucho más en un torneo aparte). Se
-// usa TODO el historial del rival, no la ventana de 10 partidos mixtos,
-// porque los partidos de una competencia puntual (ej. una copa) pueden caer
-// fuera de esa ventana general si se juega con poca frecuencia.
+// usa TODO el historial del rival filtrado por esa competencia.
 function scoreTitularidadCompetencia(playerId: string, matchesDesc: Match[], competencia: string): number {
   const relevantes = matchesDesc.filter((m) => m.competencia?.trim().toLowerCase() === competencia.trim().toLowerCase());
   const n = relevantes.length;
@@ -980,7 +986,7 @@ export function estimateNextXI(
   regla: TorneoRegla | null = null,
   competenciaProxima?: string
 ): XIEstimate {
-  const recent = lastN(matches, 10);
+  const recent = sortMatchesDesc(matches);
   const excluidosPorBaja = players.filter((p) => p.baja);
   const excluidosPorSeleccion = players.filter((p) => p.enSeleccion && !p.baja);
 

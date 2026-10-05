@@ -1,3 +1,4 @@
+import { MatchWindowSelector } from '../components/MatchWindowSelector';
 import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
@@ -5,7 +6,8 @@ import {
   checkReglaTorneo,
   estimateNextXI,
   findReglaTorneo,
-  lastN,
+  matchesInWindow,
+  type MatchWindow,
   mostCommonLineup,
   positionRotation,
   recentPlayers,
@@ -22,10 +24,10 @@ import type { Match, Player } from '../types';
 
 export default function LineupsPage() {
   const { rival } = useOutletContext<RivalContext>();
-  const [window, setWindowSize] = useState<3 | 5 | 10>(10);
+  const [window, setWindowSize] = useState<MatchWindow>('todos');
   const players = playerMap(rival.players);
 
-  const matches = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
+  const matches = useMemo(() => matchesInWindow(rival.matches, window), [rival.matches, window]);
   const allMatches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
   const common = useMemo(() => mostCommonLineup(matches), [matches]);
   const commonTokens: PitchToken[] = useMemo(() => {
@@ -72,20 +74,7 @@ export default function LineupsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900">XI y Rotaciones</h2>
-        <div className="flex items-center gap-1 text-sm">
-          <span className="text-slate-500 mr-1">Ventana:</span>
-          {[3, 5, 10].map((n) => (
-            <button
-              key={n}
-              onClick={() => setWindowSize(n as 3 | 5 | 10)}
-              className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
-                window === n ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
-              }`}
-            >
-              últimos {n}
-            </button>
-          ))}
-        </div>
+        <MatchWindowSelector value={window} onChange={setWindowSize} total={rival.matches.length} label="Partidos:" />
       </div>
 
       <section className="card p-4">
@@ -100,7 +89,7 @@ export default function LineupsPage() {
         ) : estimate.picks.length > 0 ? (
           <>
             <p className="text-xs text-slate-500 mb-2">
-              Ningún XI se repitió idéntico en esta ventana; esto es una estimación según quién más ha participado en
+              Ningún XI se repitió idéntico en los partidos seleccionados; esto es una estimación según quién más ha participado en
               cada una de las 11 posiciones.
             </p>
             <Pitch tokens={estimateTokens} height={320} />
@@ -120,7 +109,7 @@ export default function LineupsPage() {
             <ReglaTorneoBanner check={reglaCheck} />
           </>
         ) : (
-          <p className="text-sm text-slate-400">Sin datos suficientes en esta ventana.</p>
+          <p className="text-sm text-slate-400">Sin datos suficientes en los partidos seleccionados.</p>
         )}
       </section>
 
@@ -128,7 +117,7 @@ export default function LineupsPage() {
         <h3 className="font-semibold text-slate-800 mb-1">Posiciones con mayor rotación</h3>
         <p className="text-xs text-slate-500 mb-3">Dónde el rival rota más entre partidos, y quién se reparte cada puesto.</p>
         {rotation.length === 0 ? (
-          <p className="text-sm text-slate-400">Sin datos de XI en esta ventana.</p>
+          <p className="text-sm text-slate-400">Sin datos de XI en los partidos seleccionados.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {rotation.map((r) => (

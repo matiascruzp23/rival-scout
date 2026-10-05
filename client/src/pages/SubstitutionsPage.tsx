@@ -1,9 +1,11 @@
+import { MatchWindowSelector } from '../components/MatchWindowSelector';
 import { useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import {
   cambiosTacticos,
-  lastN,
+  matchesInWindow,
+  type MatchWindow,
   minutoPromedioCambiosTacticos,
   minutoPromedioPorEstado,
   minutoPromedioPrimerCambio,
@@ -23,9 +25,9 @@ import { playerMap, playerName } from '../lib/lookup';
 
 export default function SubstitutionsPage() {
   const { rival } = useOutletContext<RivalContext>();
-  const [window, setWindowSize] = useState<3 | 5 | 10>(10);
+  const [window, setWindowSize] = useState<MatchWindow>('todos');
   const players = playerMap(rival.players);
-  const matches = useMemo(() => lastN(rival.matches, window), [rival.matches, window]);
+  const matches = useMemo(() => matchesInWindow(rival.matches, window), [rival.matches, window]);
 
   const entrantes = useMemo(() => topEntrantesConMinuto(matches), [matches]);
   const salientes = useMemo(() => topSalientesConMinuto(matches), [matches]);
@@ -45,20 +47,7 @@ export default function SubstitutionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900">Sustituciones consolidadas</h2>
-        <div className="flex items-center gap-1 text-sm">
-          <span className="text-slate-500 mr-1">Ventana:</span>
-          {[3, 5, 10].map((n) => (
-            <button
-              key={n}
-              onClick={() => setWindowSize(n as 3 | 5 | 10)}
-              className={`px-2.5 py-1 rounded-md border text-xs font-medium ${
-                window === n ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white border-slate-300 text-slate-600'
-              }`}
-            >
-              últimos {n}
-            </button>
-          ))}
-        </div>
+        <MatchWindowSelector value={window} onChange={setWindowSize} total={rival.matches.length} label="Partidos:" />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -148,7 +137,7 @@ export default function SubstitutionsPage() {
       <section className="card p-4">
         <h3 className="font-semibold text-slate-800 mb-3">Sustituciones que más veces generaron un cambio táctico</h3>
         {combosTacticos.length === 0 ? (
-          <p className="text-sm text-slate-400">No hay sustituciones marcadas con cambio táctico en esta ventana.</p>
+          <p className="text-sm text-slate-400">No hay sustituciones marcadas con cambio táctico en los partidos seleccionados.</p>
         ) : (
           <table>
             <thead>
@@ -226,7 +215,7 @@ function RankedList({
     <section className="card p-4">
       <h3 className="font-semibold text-slate-800 mb-3">{title}</h3>
       {rows.length === 0 ? (
-        <p className="text-sm text-slate-400">{empty || 'Sin datos en esta ventana.'}</p>
+        <p className="text-sm text-slate-400">{empty || 'Sin datos en los partidos seleccionados.'}</p>
       ) : (
         <ul className="space-y-1.5">
           {rows.map((r, i) => (
