@@ -228,7 +228,9 @@ export default function InformePage() {
 
       <PartidosConsiderados matches={matches} canEdit={!isViewer} />
 
-      <div className="mb-6">
+      {/* El plantel siempre en una página propia y entera: con la síntesis y
+          los partidos considerados arriba ya no cabe en la misma hoja. */}
+      <div className="informe-section informe-page mb-6">
         <PlantelView
           players={rival.players}
           sistemaPrincipal={rival.sistemaPrincipal || ''}
