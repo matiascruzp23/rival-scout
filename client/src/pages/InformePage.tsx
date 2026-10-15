@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
-import type { LeagueStatsImport, ProximoPartido } from '../types';
+import { NIVELES_OPONENTE, type LeagueStatsImport, type Match, type ProximoPartido } from '../types';
 import { RadarChart, RadarLegend } from '../components/RadarChart';
 import {
   CODIGO_PROMEDIO,
@@ -226,6 +226,8 @@ export default function InformePage() {
 
       <ClavesSintesis rival={rival} matches={matches} canEdit={!isViewer} onSaved={reload} />
 
+      <PartidosConsiderados matches={matches} canEdit={!isViewer} />
+
       <div className="mb-6">
         <PlantelView
           players={rival.players}
@@ -246,6 +248,8 @@ export default function InformePage() {
               <th>Competencia</th>
               <th>Resultado</th>
               <th>Sistema</th>
+              <th>Nivel op.</th>
+              <th title="Partido con CSV de Sportscode cargado">CSV</th>
             </tr>
           </thead>
           <tbody>
@@ -262,6 +266,8 @@ export default function InformePage() {
                   {m.sistema || '—'}
                   {m.sistemaOponente ? ` vs ${m.sistemaOponente}` : ''}
                 </td>
+                <td>{m.nivelOponente || '—'}</td>
+                <td>{m.csv ? '✓' : ''}</td>
               </tr>
             ))}
             {matches.length === 0 && (
@@ -1284,5 +1290,54 @@ function RadarPresetCard({
         />
       </div>
     </div>
+  );
+}
+
+// De qué partidos salen los datos de Sportscode (y por lo tanto el dato de
+// cada clave): cuántos, local/visita y el nivel del oponente, con un aviso
+// cuando la muestra es chica o de un solo contexto.
+function PartidosConsiderados({ matches, canEdit }: { matches: Match[]; canEdit: boolean }) {
+  const conCsv = matches.filter((m) => m.csv);
+  if (conCsv.length === 0) return null;
+  const contar = <T extends string>(valores: T[]) => {
+    const map = new Map<T, number>();
+    for (const v of valores) map.set(v, (map.get(v) || 0) + 1);
+    return map;
+  };
+  const condiciones = contar(conCsv.map((m) => m.condicion));
+  const niveles = contar(conCsv.map((m) => m.nivelOponente || 'Sin clasificar'));
+  const partes = (['Local', 'Visitante'] as const)
+    .filter((c) => condiciones.get(c))
+    .map((c) => `${condiciones.get(c)} ${c === 'Local' ? 'de local' : 'de visita'}`);
+  const partesNivel = [...NIVELES_OPONENTE, 'Sin clasificar' as const]
+    .filter((n) => niveles.get(n))
+    .map((n) => (n === 'Sin clasificar' ? `${niveles.get(n)} sin clasificar` : `${niveles.get(n)} vs ${n.toLowerCase()}`));
+
+  const avisos: string[] = [];
+  if (conCsv.length < 3) avisos.push('Menos de 3 partidos: difícil separar lo estable de lo circunstancial.');
+  if (conCsv.length >= 2 && condiciones.size === 1)
+    avisos.push(`Todos ${conCsv[0].condicion === 'Local' ? 'de local' : 'de visita'}: falta ver al rival en el otro contexto.`);
+  const nivelesClasificados = NIVELES_OPONENTE.filter((n) => niveles.get(n));
+  if (conCsv.length >= 2 && nivelesClasificados.length === 1 && !niveles.get('Sin clasificar'))
+    avisos.push(`Todos contra rivales de nivel ${nivelesClasificados[0].toLowerCase()}.`);
+
+  return (
+    <section className="informe-section card p-4 mb-6">
+      <h3 className="font-semibold text-slate-800 mb-1">Partidos considerados</h3>
+      <p className="text-sm text-slate-600">
+        Los datos de Sportscode salen de {conCsv.length} de {matches.length} partidos: {partes.join(', ')} ·{' '}
+        {partesNivel.join(', ')}.
+      </p>
+      {avisos.map((a) => (
+        <p key={a} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 mt-2">
+          {a}
+        </p>
+      ))}
+      {canEdit && niveles.get('Sin clasificar') && (
+        <p className="no-print text-[11px] text-slate-400 mt-2">
+          El nivel del oponente se clasifica en la ficha de cada partido ("Editar datos").
+        </p>
+      )}
+    </section>
   );
 }

@@ -112,6 +112,9 @@ export interface MatchCsv {
   excludedCategories: string[];
 }
 
+export const NIVELES_OPONENTE = ['Superior', 'Similar', 'Inferior'] as const;
+export type NivelOponente = (typeof NIVELES_OPONENTE)[number];
+
 export interface Match {
   id: string;
   rivalId: string;
@@ -124,6 +127,9 @@ export interface Match {
   // Sistema/formación del oponente (Match.oponente) en este partido puntual,
   // no del rival analizado. Cargado a mano, igual que `sistema`.
   sistemaOponente?: string;
+  // Nivel del oponente respecto del rival analizado, para saber en qué
+  // contexto se observó cada partido. null/undefined = sin clasificar.
+  nivelOponente?: NivelOponente | null;
   duracionMinutos: number;
   competencia: string;
   jornada: string;

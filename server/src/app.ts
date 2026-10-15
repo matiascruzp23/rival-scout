@@ -250,6 +250,7 @@ function toMatch(row: any, children: MatchChildren): Match {
     golesContra: row.goles_contra,
     sistema: row.sistema || '',
     sistemaOponente: row.sistema_oponente || '',
+    nivelOponente: row.nivel_oponente || null,
     duracionMinutos: row.duracion_minutos,
     competencia: row.competencia || '',
     jornada: row.jornada || '',
@@ -822,6 +823,7 @@ app.put('/api/matches/:id', async (req, res) => {
   if (b.golesContra !== undefined) patch.goles_contra = b.golesContra;
   if (b.sistema !== undefined) patch.sistema = b.sistema.trim();
   if (b.sistemaOponente !== undefined) patch.sistema_oponente = b.sistemaOponente.trim();
+  if (b.nivelOponente !== undefined) patch.nivel_oponente = b.nivelOponente || null;
   if (b.duracionMinutos !== undefined && b.duracionMinutos > 0) patch.duracion_minutos = b.duracionMinutos;
   if (b.competencia !== undefined) patch.competencia = b.competencia.trim();
   if (b.jornada !== undefined) patch.jornada = b.jornada.trim();

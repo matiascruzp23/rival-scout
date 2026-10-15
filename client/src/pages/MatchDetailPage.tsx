@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
-import type { Match, MatchBaja, Player } from '../types';
+import { NIVELES_OPONENTE, type Match, type MatchBaja, type NivelOponente, type Player } from '../types';
 import { MatchSquadBoard } from '../components/MatchSquadBoard';
 import { MatchTimelineEditor } from '../components/MatchTimelineEditor';
 import { SystemSelect } from '../components/SystemSelect';
@@ -20,6 +20,7 @@ const EDITABLE: (keyof Match)[] = [
   'golesContra',
   'sistema',
   'sistemaOponente',
+  'nivelOponente',
   'duracionMinutos',
   'competencia',
   'jornada',
@@ -243,6 +244,21 @@ export default function MatchDetailPage() {
                 >
                   <option value="Local">Local</option>
                   <option value="Visitante">Visitante</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Nivel del oponente</label>
+                <select
+                  className="input"
+                  value={match.nivelOponente || ''}
+                  onChange={(e) => setMatch({ ...match, nivelOponente: (e.target.value as NivelOponente) || null })}
+                >
+                  <option value="">Sin clasificar</option>
+                  {NIVELES_OPONENTE.map((n) => (
+                    <option key={n} value={n}>
+                      {n} al rival
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
