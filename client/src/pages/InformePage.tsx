@@ -224,7 +224,7 @@ export default function InformePage() {
 
       <Portada rival={rival} gep={recordGEP(matches)} onSaved={reload} />
 
-      <ClavesSintesis rival={rival} matches={matches} canEdit={!isViewer} onSaved={reload} />
+      <ClavesSintesis rival={rival} matches={matches} jugadores={rival.players} canEdit={!isViewer} onSaved={reload} />
 
       <PartidosConsiderados matches={matches} canEdit={!isViewer} />
 

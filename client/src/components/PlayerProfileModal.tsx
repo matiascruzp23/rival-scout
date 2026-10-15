@@ -137,6 +137,13 @@ export function PlayerProfileModal({
           )}
         </div>
 
+        {player.conductaClave && (
+          <p className="text-sm text-slate-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2 -mt-2">
+            <span className="font-semibold text-emerald-700">Conducta clave: </span>
+            {player.conductaClave}
+          </p>
+        )}
+
         {compararCon && (
           <div className="flex items-center gap-4 text-sm text-slate-700 -mt-2">
             <span className="flex items-center gap-1.5">

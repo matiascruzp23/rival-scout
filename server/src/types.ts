@@ -18,6 +18,9 @@ export interface Player {
   duda: boolean;
   enSeleccion: boolean;
   notas?: string;
+  // Conducta observable que lo hace un jugador clave del rival (no un
+  // adjetivo); aparece en la síntesis del Informe.
+  conductaClave?: string;
   wyscoutNombre?: string;
   createdAt: string;
   updatedAt: string;

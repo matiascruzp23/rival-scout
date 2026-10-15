@@ -65,6 +65,7 @@ function toPlayer(row: any): Player {
     duda: row.duda,
     enSeleccion: row.en_seleccion,
     notas: row.notas || '',
+    conductaClave: row.conducta_clave || undefined,
     wyscoutNombre: row.wyscout_nombre || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -89,6 +90,8 @@ function playerInsertRow(id: string, rivalId: string, b: Partial<Player>) {
     duda: !!b.duda,
     en_seleccion: !!b.enSeleccion,
     notas: b.notas || '',
+    // Solo si viene: la importación desde planilla no lo trae.
+    ...(b.conductaClave?.trim() ? { conducta_clave: b.conductaClave.trim() } : {}),
     created_at: now(),
     updated_at: now(),
   };
@@ -738,6 +741,7 @@ app.put('/api/players/:id', async (req, res) => {
   if (b.duda !== undefined) patch.duda = !!b.duda;
   if (b.enSeleccion !== undefined) patch.en_seleccion = !!b.enSeleccion;
   if (b.notas !== undefined) patch.notas = b.notas;
+  if (b.conductaClave !== undefined) patch.conducta_clave = b.conductaClave?.trim() || null;
   if (b.wyscoutNombre !== undefined) patch.wyscout_nombre = b.wyscoutNombre?.trim() || null;
 
   const { data, error } = await supabase.from('players').update(patch).eq('id', req.params.id).select().single();

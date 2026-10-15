@@ -30,7 +30,11 @@ técnico de Universidad de Chile. Por cada rival permite:
   diagramas, resolución manual de registros ambiguos).
 - **Gráficos y estadísticas**: radares comparativos contra la liga (LDP),
   con datos de una planilla de SharePoint.
-- **Informe**: informe imprimible / exportable a PDF (A4 apaisado).
+- **Informe**: informe imprimible / exportable a PDF (A4 apaisado). Abre con
+  la síntesis de **claves del rival** (lectura del analista por bloque del
+  video, con el dato de Sportscode recalculado en vivo) y los partidos
+  considerados. Es complementario al video de análisis: los bloques siguen
+  su orden (salida → circ. baja/media/alta → presión fija/alta/media/baja).
 
 Además: calendario de rivales, reglas de torneo (p. ej. minutos Sub-21),
 rivales privados compartidos con usuarios específicos, y roles

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api } from '../api';
 import { datoDeEtiqueta, etiquetasDeBloque } from '../lib/csvAnalysis';
-import { BLOQUES_VIDEO, type BloqueVideo, type ClaveRival, type Match, type Rival } from '../types';
+import { BLOQUES_VIDEO, type BloqueVideo, type ClaveRival, type Match, type Player, type Rival } from '../types';
 import { Modal } from './Modal';
 
 const TIPO_CLASS: Record<ClaveRival['tipo'], string> = {
@@ -159,15 +159,20 @@ export function ClaveModal({
 export function ClavesSintesis({
   rival,
   matches,
+  jugadores,
   canEdit,
   onSaved,
 }: {
   rival: Rival;
   matches: Match[];
+  // Jugadores del rival con conducta clave cargada en su ficha.
+  jugadores: Player[];
   canEdit: boolean;
   onSaved: () => void;
 }) {
   const claves = rival.claves ?? [];
+  const jugadoresClave = jugadores.filter((p) => p.conductaClave?.trim());
+  const vacio = claves.length === 0 && jugadoresClave.length === 0;
   const [editando, setEditando] = useState<Partial<ClaveRival> | null>(null);
 
   const porBloque = BLOQUES_VIDEO.map((bloque) => ({
@@ -184,10 +189,10 @@ export function ClavesSintesis({
     onSaved();
   };
 
-  if (claves.length === 0 && !canEdit) return null;
+  if (vacio && !canEdit) return null;
 
   return (
-    <section className={`informe-section card p-4 mb-6 ${claves.length === 0 ? 'no-print' : ''}`}>
+    <section className={`informe-section card p-4 mb-6 ${vacio ? 'no-print' : ''}`}>
       <div className="flex items-center justify-between mb-1">
         <h3 className="font-semibold text-slate-800">Claves del rival</h3>
         {canEdit && (
@@ -198,9 +203,9 @@ export function ClavesSintesis({
       </div>
       <p className="text-xs text-slate-500 mb-3">Lectura del analista, en el orden del video.</p>
 
-      {claves.length === 0 ? (
+      {vacio ? (
         <p className="text-sm text-slate-400">
-          Todavía no hay claves. Se pueden agregar acá o desde cada etiqueta en Análisis.
+          Todavía no hay claves. Se pueden agregar acá, desde cada etiqueta en Análisis o como conducta clave en la ficha de un jugador.
         </p>
       ) : (
         <div className="space-y-3">
@@ -239,6 +244,22 @@ export function ClavesSintesis({
               </ul>
             </div>
           ))}
+          {jugadoresClave.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-1">Jugadores clave</p>
+              <ul className="space-y-1">
+                {jugadoresClave.map((p) => (
+                  <li key={p.id} className="text-sm text-slate-800">
+                    <span className="font-medium">
+                      {p.dorsal != null && `${p.dorsal}. `}
+                      {p.nombre}
+                    </span>
+                    {p.posicion && <span className="text-slate-400"> ({p.posicion})</span>}: {p.conductaClave}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

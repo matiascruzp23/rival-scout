@@ -364,6 +364,7 @@ function PlayerFormModal({
   const [duda, setDuda] = useState(player?.duda || false);
   const [enSeleccion, setEnSeleccion] = useState(player?.enSeleccion || false);
   const [notas, setNotas] = useState(player?.notas || '');
+  const [conductaClave, setConductaClave] = useState(player?.conductaClave || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -385,6 +386,7 @@ function PlayerFormModal({
         duda,
         enSeleccion,
         notas,
+        conductaClave: conductaClave.trim(),
       };
       if (player) await api.players.update(player.id, data);
       else await api.players.create(rivalId, data);
@@ -472,6 +474,17 @@ function PlayerFormModal({
         <div>
           <label className="label">Notas (opcional)</label>
           <textarea className="input" rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} />
+        </div>
+        <div>
+          <label className="label">Conducta clave (opcional)</label>
+          <textarea
+            className="input"
+            rows={2}
+            value={conductaClave}
+            onChange={(e) => setConductaClave(e.target.value)}
+            placeholder="Qué hace que lo vuelve clave, p. ej.: ataca la espalda del lateral en cada recuperación."
+          />
+          <p className="text-[11px] text-slate-400 mt-0.5">Si se completa, aparece en la síntesis del Informe.</p>
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
