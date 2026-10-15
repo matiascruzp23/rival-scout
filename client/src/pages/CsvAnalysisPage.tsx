@@ -7,6 +7,7 @@ import { useIsViewer } from '../lib/authContext';
 import {
   analyzeIndividuales,
   analyzePhase,
+  bloqueVideoDe,
   construccionSituacionCombos,
   DEFENSIVE_CATEGORIES,
   estructuraCambiaPorEstado,
@@ -32,6 +33,8 @@ import {
 import { matchesInWindow, type MatchWindow, topSistemasFormacion } from '../lib/stats';
 import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
 import { situationDiagramFor } from '../components/SituationDiagrams';
+import { ClaveModal } from '../components/ClavesRival';
+import type { BloqueVideo, ClaveRival } from '../types';
 
 const TABS = ['Fase ofensiva', 'Presión rival', 'Espacios y vulnerabilidades', 'Individuales'] as const;
 type Tab = (typeof TABS)[number];
@@ -47,6 +50,13 @@ export default function CsvAnalysisPage() {
   const isViewer = useIsViewer();
   const [window, setWindowSize] = useState<MatchWindow>('todos');
   const [tab, setTab] = useState<Tab>('Fase ofensiva');
+  const [nuevaClave, setNuevaClave] = useState<Partial<ClaveRival> | null>(null);
+  // Crear una clave desde una etiqueta: llega con su bloque y etiqueta ya
+  // elegidos (solo editores).
+  const claves = {
+    existentes: rival.claves ?? [],
+    onCrear: isViewer ? undefined : (bloque: BloqueVideo, etiqueta: string) => setNuevaClave({ bloque, etiqueta }),
+  };
   const matches = useMemo(() => matchesInWindow(rival.matches, window), [rival.matches, window]);
   const withCsv = matchesWithCsvCount(matches);
   // Sistema con el que se dibuja el 11 de fondo de los diagramas de
@@ -120,6 +130,7 @@ export default function CsvAnalysisPage() {
 
           {tab === 'Fase ofensiva' && (
             <PhaseView
+              claves={claves}
               data={ofensiva}
               estructuraTitle="Estructura de circulación"
               estructuraAfterIndex={1}
@@ -131,6 +142,7 @@ export default function CsvAnalysisPage() {
           )}
           {tab === 'Presión rival' && (
             <PhaseView
+              claves={claves}
               data={presionEstructura}
               estructuraTitle="Dibujo táctico en presión"
               evolucionTitle="Evolución de la presión según el resultado"
@@ -140,6 +152,7 @@ export default function CsvAnalysisPage() {
           )}
           {tab === 'Espacios y vulnerabilidades' && (
             <PhaseView
+              claves={claves}
               data={vulnerabilidades}
               showEvolucion={false}
               situacionDiagram={(tag) => situationDiagramFor(tag, sistemaDominante)}
@@ -155,8 +168,23 @@ export default function CsvAnalysisPage() {
           )}
         </>
       )}
+
+      {nuevaClave && (
+        <ClaveModal
+          rival={rival}
+          matches={rival.matches}
+          inicial={nuevaClave}
+          onClose={() => setNuevaClave(null)}
+          onSaved={reload}
+        />
+      )}
     </div>
   );
+}
+
+interface ClavesProps {
+  existentes: ClaveRival[];
+  onCrear?: (bloque: BloqueVideo, etiqueta: string) => void;
 }
 
 function PhaseView({
@@ -169,7 +197,9 @@ function PhaseView({
   estructuraSituacionCombos,
   situacionDiagram,
   situacionDiagramCount = 1,
+  claves,
 }: {
+  claves: ClavesProps;
   data: PhaseAnalysis;
   estructuraTitle?: string;
   // En cuántos bloques de "situaciones" hay que entrar antes de mostrar la
@@ -252,7 +282,13 @@ function PhaseView({
                   <h3 className="font-semibold text-slate-800">{bloque.titulo}</h3>
                   <span className="text-slate-400 text-sm">{bloque.registros} registros</span>
                 </div>
-                <TagCardGrid tags={bloque.tags} registros={bloque.registros} partidosConCsv={data.partidosConCsv} />
+                <TagCardGrid
+                  tags={bloque.tags}
+                  registros={bloque.registros}
+                  partidosConCsv={data.partidosConCsv}
+                  bloque={bloqueVideoDe(bloque.titulo)}
+                  claves={claves}
+                />
                 {diagramEls.length > 0 && (
                   <div className={`mt-3 grid gap-3 ${diagramEls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {diagramEls.map((el, i) => (
@@ -492,10 +528,14 @@ function TagCardGrid({
   tags,
   registros,
   partidosConCsv,
+  bloque,
+  claves,
 }: {
   tags: TagCount[];
   registros: number;
   partidosConCsv: number;
+  bloque: BloqueVideo | null;
+  claves: ClavesProps;
 }) {
   if (tags.length === 0) return <p className="text-sm text-slate-400">Sin registros.</p>;
   return (
@@ -517,6 +557,18 @@ function TagCardGrid({
               >
                 Puntual
               </span>
+            )}
+            {bloque && claves.existentes.some((c) => c.bloque === bloque && c.etiqueta === t.tag) && (
+              <span className="badge ml-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200">Clave</span>
+            )}
+            {bloque && claves.onCrear && (
+              <button
+                className="ml-1.5 text-emerald-700 hover:underline"
+                onClick={() => claves.onCrear!(bloque, t.tag)}
+                title="Escribir una clave del rival a partir de esta etiqueta"
+              >
+                + Clave
+              </button>
             )}
           </p>
           {t.descripcion && <p className="text-xs text-slate-500 mt-1">{t.descripcion}</p>}

@@ -1,4 +1,4 @@
-import type { Match } from '../types';
+import type { BloqueVideo, Match } from '../types';
 import { glossaryFor, splitTags } from './csvGlossary';
 
 export const OFFENSIVE_CATEGORIES = ['SALIDAS', 'CIRCULACION BAJA', 'CIRCULACION MEDIA', 'CIRCULACION ALTA'];
@@ -658,4 +658,68 @@ export function analyzeIndividuales(
   const rows = collectCsvRows(matches, categorias);
   const { registrosConRival, combos, pendientes } = rivalSituacionCombos(rows, situacionColumnas);
   return { titulo, registrosConRival, combos, pendientes };
+}
+
+// Bloque del video al que corresponde cada bloque de situaciones (la salida
+// del video se lee con la "Distancia de salida" de Sportscode).
+export function bloqueVideoDe(tituloGrupo: string): BloqueVideo | null {
+  if (tituloGrupo === 'Distancia de salida') return 'Salida';
+  return (BLOQUE_GRUPOS.find((b) => b.grupo.titulo === tituloGrupo)?.grupo.titulo as BloqueVideo) ?? null;
+}
+
+const BLOQUE_GRUPOS: { grupo: SituacionGroup; categorias: string[] }[] = [
+  ...OFENSIVA_GROUPS.map((grupo) => ({ grupo, categorias: OFFENSIVE_CATEGORIES })),
+  ...PRESION_FIJA_GROUPS.map((grupo) => ({ grupo, categorias: DEFENSIVE_CATEGORIES })),
+  ...VULNERABILIDADES_GROUPS.map((grupo) => ({ grupo, categorias: DEFENSIVE_CATEGORIES })),
+];
+
+function grupoDeBloque(bloque: BloqueVideo) {
+  const titulo = bloque === 'Salida' ? 'Distancia de salida' : bloque;
+  return BLOQUE_GRUPOS.find((b) => b.grupo.titulo === titulo) ?? null;
+}
+
+export interface FrecuenciaEtiqueta {
+  tag: string;
+  count: number;
+  partidos: number;
+}
+
+// Todas las etiquetas de un bloque del video con su frecuencia (sin el tope
+// de MAX_TAGS ni el filtro de repetidas del análisis), para elegir a cuál
+// se liga una clave y mostrar su dato siempre actualizado con los CSV.
+export function etiquetasDeBloque(
+  matches: Match[],
+  bloque: BloqueVideo
+): { registros: number; partidosConCsv: number; etiquetas: FrecuenciaEtiqueta[] } {
+  const partidosConCsv = matchesWithCsvCount(matches);
+  const g = grupoDeBloque(bloque);
+  if (!g) return { registros: 0, partidosConCsv, etiquetas: [] };
+  const rows = collectCsvRows(matches, g.grupo.categorias ?? g.categorias);
+  const counts = new Map<string, { count: number; partidos: Set<string> }>();
+  let registros = 0;
+  for (const r of rows) {
+    const tags = tagsDeFila(r.row, g.grupo.columnas);
+    if (tags.size === 0) continue;
+    registros += 1;
+    for (const tag of tags) {
+      if (!counts.has(tag)) counts.set(tag, { count: 0, partidos: new Set() });
+      const c = counts.get(tag)!;
+      c.count += 1;
+      c.partidos.add(r.matchId);
+    }
+  }
+  const etiquetas = Array.from(counts.entries())
+    .map(([tag, c]) => ({ tag, count: c.count, partidos: c.partidos.size }))
+    .sort((a, b) => b.count - a.count);
+  return { registros, partidosConCsv, etiquetas };
+}
+
+// "Juego directo: 7 de 11 registros · en 4 de 7 partidos", o null si la
+// etiqueta ya no aparece en los CSV considerados.
+export function datoDeEtiqueta(matches: Match[], bloque: BloqueVideo, etiqueta: string): string | null {
+  const { registros, partidosConCsv, etiquetas } = etiquetasDeBloque(matches, bloque);
+  const e = etiquetas.find((x) => x.tag === etiqueta);
+  if (!e) return null;
+  const puntual = e.partidos === 1 && partidosConCsv > 1 ? ' (puntual)' : '';
+  return `${e.tag}: ${e.count} de ${registros} registros · en ${e.partidos} de ${partidosConCsv} partidos${puntual}`;
 }

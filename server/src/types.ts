@@ -142,6 +142,33 @@ export interface TorneoRegla {
   exencionMinutosPorSeleccionado?: number | null;
 }
 
+// Bloques del video de análisis del rival, en su orden. "General" agrupa
+// lo que no corresponde a un bloque puntual (p. ej. contexto o un jugador).
+export const BLOQUES_VIDEO = [
+  'Salida',
+  'Circulación baja',
+  'Circulación media',
+  'Circulación alta',
+  'Presión fija',
+  'Presión alta',
+  'Presión media',
+  'Presión baja',
+  'General',
+] as const;
+export type BloqueVideo = (typeof BLOQUES_VIDEO)[number];
+
+// Lectura del analista sobre el rival (lo que en la charla se dice de
+// palabra), ligada a un bloque del video y opcionalmente a una etiqueta de
+// Sportscode para mostrar su frecuencia actualizada.
+export interface ClaveRival {
+  id: string;
+  bloque: BloqueVideo;
+  tipo: 'Fortaleza' | 'Debilidad';
+  texto: string;
+  propuesta?: string;
+  etiqueta?: string;
+}
+
 export interface Rival {
   id: string;
   nombre: string;
@@ -176,6 +203,7 @@ export interface Rival {
   // Gráficos y estadísticas, guardadas para poder mostrar ese mismo radar
   // en el Informe.
   graficoPersonalizado?: string[];
+  claves?: ClaveRival[];
   // Id (auth.users) de quien creó este rival — quien lo crea siempre puede
   // verlo, incluso si después se restringe con visibleUserIds.
   createdBy?: string;

@@ -54,6 +54,7 @@ import { playerMap, playerName } from '../lib/lookup';
 import { PlantelView } from '../components/PlantelView';
 import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { useIsViewer } from '../lib/authContext';
+import { ClavesSintesis } from '../components/ClavesRival';
 import { UserSharePicker } from '../components/UserSharePicker';
 import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
 import { Pitch, type PitchToken } from '../components/Pitch';
@@ -75,6 +76,7 @@ const EMPTY_PROXIMO: ProximoPartido = { competicion: '', instancia: '', fecha: '
 
 export default function InformePage() {
   const { rival, reload } = useOutletContext<RivalContext>();
+  const isViewer = useIsViewer();
   const players = playerMap(rival.players);
   const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
   const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;
@@ -169,7 +171,6 @@ export default function InformePage() {
     .filter((s) => s.events.amarillas > 0 || s.events.rojas > 0)
     .sort((a, b) => b.events.rojas - a.events.rojas || b.events.amarillas - a.events.amarillas);
 
-  const bajas = rival.players.filter((p) => p.baja);
   const matchesWithCsv = matchesWithCsvCount(matches);
   const ofensiva = useMemo(
     () =>
@@ -222,6 +223,8 @@ export default function InformePage() {
       </div>
 
       <Portada rival={rival} gep={recordGEP(matches)} onSaved={reload} />
+
+      <ClavesSintesis rival={rival} matches={matches} canEdit={!isViewer} onSaved={reload} />
 
       <div className="mb-6">
         <PlantelView
@@ -666,14 +669,6 @@ export default function InformePage() {
         </section>
       )}
 
-      <section className="informe-section card p-4">
-        <h3 className="font-semibold text-slate-800 mb-3">Notas finales</h3>
-        <p className="text-sm text-slate-600">
-          {bajas.length > 0
-            ? `Jugadores actualmente de baja: ${bajas.map((p) => p.nombre).join(', ')}.`
-            : 'No hay jugadores marcados como baja actualmente.'}
-        </p>
-      </section>
 
       {perfilJugador && (
         <PlayerProfileModal player={perfilJugador} rival={rival} onClose={() => setPerfilJugadorId(null)} onSaved={reload} />
@@ -1097,7 +1092,14 @@ function PhaseSummaryCard({
         <h4 className="font-semibold text-slate-800">{title}</h4>
         <span className="text-slate-400 text-sm">{data.totalRegistros} registros</span>
       </div>
-      {resumen && <p className="text-sm text-slate-700 leading-snug mb-2">{resumen}</p>}
+      {resumen && (
+        <p className="text-sm text-slate-700 leading-snug mb-2">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mr-1.5">
+            Lo que muestran los datos
+          </span>
+          {resumen}
+        </p>
+      )}
       {showEstructura && data.estructura.length > 1 && (
         <p className="text-[11px] text-slate-400 mb-2">
           {data.estructura

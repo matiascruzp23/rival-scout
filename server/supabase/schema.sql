@@ -43,6 +43,9 @@ create table if not exists rivals (
   -- radar en el Informe (si no, la selección se pierde al salir de la
   -- pestaña, es solo estado local del componente).
   grafico_personalizado text[],
+  -- Claves del rival escritas por el analista (fortalezas/debilidades por
+  -- bloque del video), ver ClaveRival en server/src/types.ts.
+  claves jsonb not null default '[]',
   -- Id (auth.users) de quien creó este rival — siempre puede verlo, incluso
   -- si después se restringe con visible_user_ids.
   created_by text,
@@ -84,6 +87,9 @@ create table if not exists players (
   duda boolean not null default false,
   en_seleccion boolean not null default false,
   notas text,
+  -- Conducta observable que lo hace un jugador clave del rival (no un
+  -- adjetivo): aparece en la síntesis del Informe.
+  conducta_clave text,
   -- Nombre exacto (columna "Jugador") con el que este jugador se cruza en la
   -- planilla individual importada, elegido a mano cuando el cruce automático
   -- por nombre no lo encontró. null = se sigue cruzando automático.
@@ -106,6 +112,10 @@ create table if not exists matches (
   duracion_minutos integer not null default 90,
   competencia text,
   jornada text,
+  -- Nivel del oponente en ese partido respecto del rival analizado
+  -- ('Superior' | 'Similar' | 'Inferior'), para el contexto de los partidos
+  -- considerados en el Informe.
+  nivel_oponente text,
   notas text,
   nota_tactica text,
   -- Partido en curso de carga en vivo (ver "En Vivo"): mientras es true, se
@@ -226,3 +236,9 @@ alter table match_banca enable row level security;
 alter table match_bajas enable row level security;
 alter table individual_stats_import enable row level security;
 alter table league_stats_import enable row level security;
+
+-- Migración (oct 2026): claves del rival, nivel del oponente y conducta
+-- clave de jugadores. Idempotente, se puede volver a pegar sin problema.
+alter table rivals add column if not exists claves jsonb not null default '[]';
+alter table matches add column if not exists nivel_oponente text;
+alter table players add column if not exists conducta_clave text;
