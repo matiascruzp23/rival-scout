@@ -42,6 +42,9 @@ import {
   estructuraCambiaPorEstado,
   matchesWithCsvCount,
   OFFENSIVE_CATEGORIES,
+  OFENSIVA_GROUPS,
+  PRESION_FIJA_GROUPS,
+  VULNERABILIDADES_GROUPS,
   type ConstruccionSituacionCombo,
   type IndividualesBloque,
   type PhaseAnalysis,
@@ -169,21 +172,7 @@ export default function InformePage() {
   const matchesWithCsv = matchesWithCsvCount(matches);
   const ofensiva = useMemo(
     () =>
-      analyzePhase(matches, OFFENSIVE_CATEGORIES, [
-        { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true, soporte: true },
-        {
-          titulo: 'Circulación media',
-          columnas: ['Situaciones de circulacion'],
-          categorias: ['CIRCULACION MEDIA'],
-          soloRepetidos: true,
-        },
-        {
-          titulo: 'Circulación alta',
-          columnas: ['Situaciones de circulacion'],
-          categorias: ['CIRCULACION ALTA'],
-          soloRepetidos: true,
-        },
-      ]),
+      analyzePhase(matches, OFFENSIVE_CATEGORIES, OFENSIVA_GROUPS),
     [matches]
   );
   const construccionSituacion = useMemo(
@@ -192,18 +181,12 @@ export default function InformePage() {
   );
   const presionEstructura = useMemo(
     () =>
-      analyzePhase(matches, DEFENSIVE_CATEGORIES, [
-        { titulo: 'Presión de salida', columnas: ['Tipos de presion en salida'] },
-      ]),
+      analyzePhase(matches, DEFENSIVE_CATEGORIES, PRESION_FIJA_GROUPS),
     [matches]
   );
   const vulnerabilidades = useMemo(
     () =>
-      analyzePhase(matches, DEFENSIVE_CATEGORIES, [
-        { titulo: 'Presión alta', columnas: ['Situaciones de presion'], categorias: ['PRESION ALTA'], soloRepetidos: true },
-        { titulo: 'Presión media', columnas: ['Situaciones de presion'], categorias: ['PRESION MEDIA'], soloRepetidos: true },
-        { titulo: 'Presión baja', columnas: ['Situaciones de presion'], categorias: ['PRESION BAJA'], soloRepetidos: true },
-      ]),
+      analyzePhase(matches, DEFENSIVE_CATEGORIES, VULNERABILIDADES_GROUPS),
     [matches]
   );
   const circulacionesIndividuales = useMemo(
@@ -626,6 +609,7 @@ export default function InformePage() {
               estructuraDiagram={(valor) => <BuildUpShapeDiagram valor={valor} />}
               estructuraSituacionCombos={construccionSituacion}
               situacionDiagram={(tag) => situationDiagramFor(tag, sistemas[0]?.item ?? null)}
+              situacionNarradoCount={3}
             />
             <PhaseSummaryCard
               title="Presión rival"

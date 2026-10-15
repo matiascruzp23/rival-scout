@@ -415,6 +415,25 @@ export interface SituacionGroup {
   soporte?: boolean;
 }
 
+// Bloques de situaciones por fase, en el mismo orden que el video de
+// análisis del rival (salida → circ. baja → circ. media → circ. alta →
+// presión fija → presión alta → media → baja). Compartidos entre Análisis e
+// Informe para que ambos muestren lo mismo.
+export const OFENSIVA_GROUPS: SituacionGroup[] = [
+  { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true, soporte: true },
+  { titulo: 'Circulación baja', columnas: ['Situaciones de circulacion'], categorias: ['CIRCULACION BAJA'], soloRepetidos: true },
+  { titulo: 'Circulación media', columnas: ['Situaciones de circulacion'], categorias: ['CIRCULACION MEDIA'], soloRepetidos: true },
+  { titulo: 'Circulación alta', columnas: ['Situaciones de circulacion'], categorias: ['CIRCULACION ALTA'], soloRepetidos: true },
+];
+export const PRESION_FIJA_GROUPS: SituacionGroup[] = [
+  { titulo: 'Presión fija', columnas: ['Tipos de presion en salida'] },
+];
+export const VULNERABILIDADES_GROUPS: SituacionGroup[] = [
+  { titulo: 'Presión alta', columnas: ['Situaciones de presion'], categorias: ['PRESION ALTA'], soloRepetidos: true },
+  { titulo: 'Presión media', columnas: ['Situaciones de presion'], categorias: ['PRESION MEDIA'], soloRepetidos: true },
+  { titulo: 'Presión baja', columnas: ['Situaciones de presion'], categorias: ['PRESION BAJA'], soloRepetidos: true },
+];
+
 export interface SituacionBloque {
   titulo: string;
   registros: number;
