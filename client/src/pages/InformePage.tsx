@@ -42,6 +42,7 @@ import {
   estructuraCambiaPorEstado,
   matchesWithCsvCount,
   OFFENSIVE_CATEGORIES,
+  esPuntual,
   OFENSIVA_GROUPS,
   PRESION_FIJA_GROUPS,
   VULNERABILIDADES_GROUPS,
@@ -1018,16 +1019,20 @@ function construirResumen(data: PhaseAnalysis, showEstructura: boolean, maxBloqu
   // media y alta, o presión alta/media/baja): los bloques de apoyo como
   // "Distancia de salida" (soporte: true) quedan afuera del párrafo aunque
   // se muestren igual en la tarjeta, sea cual sea su posición ahí.
+  let estadoMencionado = false;
   for (const bloque of data.situaciones.filter((b) => !b.soporte).slice(0, maxBloques)) {
     if (!bloque || bloque.tags.length === 0) continue;
     const top = bloque.tags
       .slice(0, 2)
-      .map((t) => `${t.tag} (${t.pct}%)`)
+      .map((t) => `${t.tag} (${t.count} de ${bloque.registros} registros${esPuntual(t, data.partidosConCsv) ? ', en un solo partido' : ''})`)
       .join(' y ');
     let frase = `En ${bloque.titulo.toLowerCase()} se repiten sobre todo ${top}`;
-    if (data.porEstado.length > 0) {
+    // El desglose por resultado es de toda la fase, no de cada bloque: se
+    // menciona una sola vez para no repetir la misma frase en cada bloque.
+    if (data.porEstado.length > 0 && !estadoMencionado) {
       const distinto = data.porEstado.find((r) => r.situacionesTop[0] && r.situacionesTop[0].tag !== bloque.tags[0].tag);
       if (distinto) {
+        estadoMencionado = true;
         frase += `, aunque ${distinto.estado.toLowerCase()} lo más habitual pasa a ser "${distinto.situacionesTop[0].tag}" (${distinto.situacionesTop[0].pct}%)`;
       }
     }
@@ -1145,7 +1150,11 @@ function PhaseSummaryCard({
                   {bloque.tags.slice(0, 5).map((t) => (
                     <li key={t.tag}>
                       <div>
-                        {t.tag} ({t.count})
+                        {t.tag}{' '}
+                        <span className="text-slate-400">
+                          {t.count}/{bloque.registros} · {t.partidos}/{data.partidosConCsv} partidos
+                        </span>
+                        {esPuntual(t, data.partidosConCsv) && <span className="text-amber-700"> · puntual</span>}
                       </div>
                       {t.porEstado && t.porEstado.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-0.5 mb-1">

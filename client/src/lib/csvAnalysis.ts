@@ -158,6 +158,9 @@ export interface TagCount {
   tag: string;
   count: number;
   pct: number;
+  // En cuántos partidos distintos aparece: con un solo partido es algo
+  // puntual, no un patrón del rival (aunque se haya marcado varias veces).
+  partidos: number;
   descripcion?: string;
   // Desglose de este tag por resultado parcial (columna RESULTADO del CSV),
   // solo cuando el bloque lo pide (SituacionGroup.desglosePorEstado) — no
@@ -210,6 +213,7 @@ function tagBreakdown(
   opts: { soloRepetidos?: boolean; desglosePorEstado?: boolean } = {}
 ): { registros: number; tags: TagCount[]; combos: ComboCount[] } {
   const counts = new Map<string, number>();
+  const partidosPorTag = new Map<string, Set<string>>();
   const countsPorEstado = new Map<string, Map<GameStateLabel, number>>();
   let total = 0;
   let registros = 0;
@@ -221,6 +225,8 @@ function tagBreakdown(
       tieneValor = true;
       for (const tag of splitTags(v)) {
         counts.set(tag, (counts.get(tag) || 0) + 1);
+        if (!partidosPorTag.has(tag)) partidosPorTag.set(tag, new Set());
+        partidosPorTag.get(tag)!.add(r.matchId);
         total += 1;
         if (opts.desglosePorEstado) {
           const estado = r.row['RESULTADO'] as GameStateLabel;
@@ -239,6 +245,7 @@ function tagBreakdown(
       tag,
       count,
       pct: total > 0 ? Math.round((count / total) * 100) : 0,
+      partidos: partidosPorTag.get(tag)?.size || 0,
       descripcion: glossaryFor(tag),
       porEstado: opts.desglosePorEstado
         ? GAME_STATES.map((estado) => ({ estado, count: countsPorEstado.get(tag)?.get(estado) || 0 })).filter(
@@ -447,6 +454,9 @@ export interface SituacionBloque {
 
 export interface PhaseAnalysis {
   totalRegistros: number;
+  // Partidos con CSV considerados: el total contra el que se lee en cuántos
+  // partidos aparece cada etiqueta (TagCount.partidos).
+  partidosConCsv: number;
   estructuraColumna: string | null;
   estructura: StructureBar[];
   situaciones: SituacionBloque[];
@@ -465,6 +475,7 @@ export function analyzePhase(matches: Match[], categorias: string[], situacionGr
   const todasLasColumnas = situacionGroups.flatMap((g) => g.columnas);
   return {
     totalRegistros: rows.length,
+    partidosConCsv: matchesWithCsvCount(matches),
     estructuraColumna,
     estructura: structureBreakdown(rows, estructuraColumna),
     situaciones: situacionGroups.map((g) => {
@@ -481,6 +492,18 @@ export function analyzePhase(matches: Match[], categorias: string[], situacionGr
 
 export function matchesWithCsvCount(matches: Match[]): number {
   return matches.filter((m) => !!m.csv).length;
+}
+
+// Visto en un solo partido habiendo más de uno observado: no alcanza para
+// afirmarlo como característica del rival.
+export function esPuntual(tag: TagCount, partidosConCsv: number): boolean {
+  return tag.partidos === 1 && partidosConCsv > 1;
+}
+
+// "9 de 11 registros · en 3 de 4 partidos": frecuencia con su total, que es
+// lo que el video no muestra (el video muestra que pasa, esto cuánto se repite).
+export function frecuenciaConTotal(tag: TagCount, registros: number, partidosConCsv: number): string {
+  return `${tag.count} de ${registros} registros · en ${tag.partidos} de ${partidosConCsv} partidos`;
 }
 
 // Jugador(es) rival marcados en la fila (columna "Rivales" del CSV, no

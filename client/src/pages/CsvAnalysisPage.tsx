@@ -10,6 +10,7 @@ import {
   construccionSituacionCombos,
   DEFENSIVE_CATEGORIES,
   estructuraCambiaPorEstado,
+  esPuntual,
   fraseCambios,
   CAMBIO_MIN_PUNTOS,
   CAMBIO_MIN_RELATIVO,
@@ -251,7 +252,7 @@ function PhaseView({
                   <h3 className="font-semibold text-slate-800">{bloque.titulo}</h3>
                   <span className="text-slate-400 text-sm">{bloque.registros} registros</span>
                 </div>
-                <TagCardGrid tags={bloque.tags} />
+                <TagCardGrid tags={bloque.tags} registros={bloque.registros} partidosConCsv={data.partidosConCsv} />
                 {diagramEls.length > 0 && (
                   <div className={`mt-3 grid gap-3 ${diagramEls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                     {diagramEls.map((el, i) => (
@@ -487,7 +488,15 @@ function StructureBarList({ bars }: { bars: StructureBar[] }) {
   );
 }
 
-function TagCardGrid({ tags }: { tags: TagCount[] }) {
+function TagCardGrid({
+  tags,
+  registros,
+  partidosConCsv,
+}: {
+  tags: TagCount[];
+  registros: number;
+  partidosConCsv: number;
+}) {
   if (tags.length === 0) return <p className="text-sm text-slate-400">Sin registros.</p>;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -496,9 +505,20 @@ function TagCardGrid({ tags }: { tags: TagCount[] }) {
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-medium text-slate-800">{t.tag}</span>
             <span className="badge bg-slate-100 text-slate-600 whitespace-nowrap">
-              {t.count} {t.count === 1 ? 'vez' : 'veces'}
+              {t.count} de {registros}
             </span>
           </div>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            En {t.partidos} de {partidosConCsv} partidos
+            {esPuntual(t, partidosConCsv) && (
+              <span
+                className="badge ml-1.5 bg-amber-50 text-amber-700 border border-amber-200"
+                title="Se vio en un solo partido: todavía no alcanza para afirmarlo como patrón del rival."
+              >
+                Puntual
+              </span>
+            )}
+          </p>
           {t.descripcion && <p className="text-xs text-slate-500 mt-1">{t.descripcion}</p>}
           {t.porEstado && t.porEstado.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
