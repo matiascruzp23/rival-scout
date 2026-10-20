@@ -34,6 +34,7 @@ const GLOSSARY: Record<string, string> = {
   'Persiguen movimiento': 'La línea se desordena siguiendo un desmarque rival, dejando espacio libre.',
   'Salta 7': 'El extremo derecho (posición 7) salta a presionar la salida rival.',
   'Salta 11': 'El extremo izquierdo (posición 11) salta a presionar la salida rival.',
+  'Salta Wing (7-11)': 'Un extremo (posición 7 u 11) salta a presionar la salida rival; fusiona Salta 7 y Salta 11.',
   'Salta 10': 'El mediapunta (posición 10) salta a presionar la salida rival.',
   'Salta interno': 'El volante interior (posición 8) salta a presionar la salida rival.',
   'Orienta 9': 'El delantero centro orienta su carrera de presión para tapar un lado o línea de pase, en vez de ir directo al balón.',

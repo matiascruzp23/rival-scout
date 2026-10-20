@@ -419,6 +419,15 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'ball', x: shift('11', -18, -4).x, y: shift('11', -18, -4).y },
     { kind: 'move', from: POS['11'], to: shift('11', -14, -4), dashed: false },
   ],
+  // Fusión de Salta 7 y Salta 11 (ver FUSION_SITUACIONES en csvAnalysis):
+  // se dibujan los dos extremos saltando.
+  'Salta Wing (7-11)': [
+    { kind: 'rival', x: shift('7', -14, 4).x, y: shift('7', -14, 4).y },
+    { kind: 'ball', x: shift('7', -18, 4).x, y: shift('7', -18, 4).y },
+    { kind: 'move', from: POS['7'], to: shift('7', -14, 4), dashed: false },
+    { kind: 'rival', x: shift('11', -14, -4).x, y: shift('11', -14, -4).y },
+    { kind: 'move', from: POS['11'], to: shift('11', -14, -4), dashed: false },
+  ],
   'Salta 10': [
     { kind: 'rival', x: shift('10', -14, 0).x, y: shift('10', -14, 0).y },
     { kind: 'ball', x: shift('10', -18, 0).x, y: shift('10', -18, 0).y },

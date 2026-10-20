@@ -168,6 +168,22 @@ export interface TagCount {
   porEstado?: { estado: GameStateLabel; count: number }[];
 }
 
+// Para el análisis de espacios y vulnerabilidades, el salto del extremo
+// derecho (7) y del izquierdo (11) se leen como un mismo concepto: lo que
+// interesa es que el extremo salta, no por qué lado. Una fila con ambos
+// cuenta una sola vez. No aplica a "Individuales", donde el jugador y la
+// situación puntual marcada sí importan (y las resoluciones guardan la
+// etiqueta original).
+const SALTA_WING_LABEL = 'Salta Wing (7-11)';
+const FUSION_SITUACIONES: Record<string, string> = {
+  'Salta 7': SALTA_WING_LABEL,
+  'Salta 11': SALTA_WING_LABEL,
+};
+
+function situacionTags(value: string): string[] {
+  return Array.from(new Set(splitTags(value).map((t) => FUSION_SITUACIONES[t] ?? t)));
+}
+
 // Cuántas etiquetas distintas mostrar como máximo por bloque: el objetivo es
 // resaltar los patrones más relevantes, no listar cada valor que aparezca
 // una sola vez en el CSV.
@@ -190,7 +206,7 @@ function comboBreakdown(rows: TaggedRow[], columnas: string[]): ComboCount[] {
     for (const col of columnas) {
       const v = r.row[col];
       if (!v) continue;
-      for (const tag of splitTags(v)) tagsEnFila.add(tag);
+      for (const tag of situacionTags(v)) tagsEnFila.add(tag);
     }
     const tags = Array.from(tagsEnFila).sort();
     for (let i = 0; i < tags.length; i++) {
@@ -223,7 +239,7 @@ function tagBreakdown(
       const v = r.row[col];
       if (!v) continue;
       tieneValor = true;
-      for (const tag of splitTags(v)) {
+      for (const tag of situacionTags(v)) {
         counts.set(tag, (counts.get(tag) || 0) + 1);
         if (!partidosPorTag.has(tag)) partidosPorTag.set(tag, new Set());
         partidosPorTag.get(tag)!.add(r.matchId);
@@ -305,7 +321,7 @@ function tagsDeFila(row: Record<string, string>, columnas: string[]): Set<string
   for (const col of columnas) {
     const v = row[col];
     if (!v) continue;
-    for (const tag of splitTags(v)) tags.add(tag);
+    for (const tag of situacionTags(v)) tags.add(tag);
   }
   return tags;
 }
