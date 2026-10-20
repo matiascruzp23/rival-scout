@@ -53,9 +53,23 @@ function shift(num: string, dx: number, dy: number): Spot {
 // al 4-4-2 genérico — una imprecisión menor y aceptable.
 const POS_TO_NUM = new Map<Spot, string>(Object.entries(POS).map(([num, spot]) => [spot, num]));
 
+// A diferencia de shift(), un punto creado con rel() se mueve junto con su
+// número cuando el fondo se recalcula para otro sistema: queda siempre a la
+// misma distancia del jugador real, no del 4-4-2 genérico.
+const REL_SPOTS = new Map<Spot, { num: string; dx: number; dy: number }>();
+
+function rel(num: string, dx: number, dy: number): Spot {
+  const spot = shift(num, dx, dy);
+  REL_SPOTS.set(spot, { num, dx, dy });
+  return spot;
+}
+
 function resolveSpot(spot: Spot, overrides: Record<string, Spot>): Spot {
   const num = POS_TO_NUM.get(spot);
-  return num && overrides[num] ? overrides[num] : spot;
+  if (num) return overrides[num] ?? spot;
+  const r = REL_SPOTS.get(spot);
+  if (r && overrides[r.num]) return { x: overrides[r.num].x + r.dx, y: overrides[r.num].y + r.dy };
+  return spot;
 }
 
 // Las 4 posiciones de la línea de fondo (arquero aparte) son las mismas
@@ -222,13 +236,14 @@ const BALL_RADIUS = 2.8;
 type SceneElement =
   | { kind: 'line'; x: number }
   | { kind: 'zone'; x: number; y: number; w: number; h: number }
-  | { kind: 'rival'; x: number; y: number; label?: string }
+  // "at": alternativa a x/y con un punto de rel(), que sigue al número real.
+  | { kind: 'rival'; x: number; y: number; label?: string; at?: Spot }
   // "fromBall": la flecha representa el viaje del balón (un pase/centro) y
   // "from" coincide con un elemento 'ball' de la misma escena, así que
   // arranca tocando el balón en vez de la ficha del jugador que lo tenía.
   | { kind: 'move'; from: Spot; to: Spot; dashed?: boolean; curve?: number; fromBall?: boolean }
   | { kind: 'link'; a: Spot; b: Spot }
-  | { kind: 'ball'; x: number; y: number }
+  | { kind: 'ball'; x: number; y: number; at?: Spot }
   | { kind: 'override'; num: string; x: number; y: number };
 
 function renderElement(el: SceneElement, key: number, overrides: Record<string, Spot>): ReactNode {
@@ -248,8 +263,10 @@ function renderElement(el: SceneElement, key: number, overrides: Record<string, 
       );
     case 'zone':
       return <Zone key={key} x={el.x} y={el.y} width={el.w} height={el.h} viewW={VIEW_W} viewH={VIEW_H} />;
-    case 'rival':
-      return <Token key={key} x={el.x} y={el.y} viewW={VIEW_W} viewH={VIEW_H} label={el.label} rival />;
+    case 'rival': {
+      const p = el.at ? resolveSpot(el.at, overrides) : el;
+      return <Token key={key} x={p.x} y={p.y} viewW={VIEW_W} viewH={VIEW_H} label={el.label} rival />;
+    }
     case 'move': {
       const from = resolveSpot(el.from, overrides);
       const to = resolveSpot(el.to, overrides);
@@ -283,12 +300,14 @@ function renderElement(el: SceneElement, key: number, overrides: Record<string, 
         />
       );
     }
-    case 'ball':
+    case 'ball': {
+      const p = el.at ? resolveSpot(el.at, overrides) : el;
       return (
-        <text key={key} x={(el.x / 100) * VIEW_W} y={(el.y / 100) * VIEW_H} textAnchor="middle" fontSize={5.2}>
+        <text key={key} x={(p.x / 100) * VIEW_W} y={(p.y / 100) * VIEW_H} textAnchor="middle" fontSize={5.2}>
           ⚽
         </text>
       );
+    }
     default:
       return null;
   }
@@ -420,14 +439,20 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'move', from: POS['11'], to: shift('11', -14, -4), dashed: false },
   ],
   // Fusión de Salta 7 y Salta 11 (ver FUSION_SITUACIONES en csvAnalysis):
-  // se dibujan los dos extremos saltando.
-  'Salta Wing (7-11)': [
-    { kind: 'rival', x: shift('7', -14, 4).x, y: shift('7', -14, 4).y },
-    { kind: 'ball', x: shift('7', -18, 4).x, y: shift('7', -18, 4).y },
-    { kind: 'move', from: POS['7'], to: shift('7', -14, 4), dashed: false },
-    { kind: 'rival', x: shift('11', -14, -4).x, y: shift('11', -14, -4).y },
-    { kind: 'move', from: POS['11'], to: shift('11', -14, -4), dashed: false },
-  ],
+  // los dos extremos saltan hacia adelante y en diagonal hacia adentro. Con
+  // rel() los rivales quedan delante de donde está cada extremo en el
+  // sistema real, no del 4-4-2 genérico.
+  'Salta Wing (7-11)': (() => {
+    const rival7 = rel('7', -7, 19);
+    const rival11 = rel('11', -7, -19);
+    return [
+      { kind: 'rival', x: rival7.x, y: rival7.y, at: rival7 },
+      { kind: 'ball', x: 0, y: 0, at: rel('7', -3, 23) },
+      { kind: 'move', from: POS['7'], to: rival7, dashed: false },
+      { kind: 'rival', x: rival11.x, y: rival11.y, at: rival11 },
+      { kind: 'move', from: POS['11'], to: rival11, dashed: false },
+    ] satisfies SceneElement[];
+  })(),
   'Salta 10': [
     { kind: 'rival', x: shift('10', -14, 0).x, y: shift('10', -14, 0).y },
     { kind: 'ball', x: shift('10', -18, 0).x, y: shift('10', -18, 0).y },
