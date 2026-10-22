@@ -144,18 +144,47 @@ function formationOverridesFor(sistema: string | null | undefined): Record<strin
     const retrasados = [...restantes].sort((a, b) => a.y - b.y);
     if (retrasados[0]) overrides['6'] = retrasados[0];
     if (retrasados[1]) overrides['8'] = retrasados[1];
-  } else {
-    // Sin un par de delanteros claro (ej. 4-3-3, un solo 9 real): se
-    // mantiene el criterio de siempre — el más adelantado de los 4
-    // restantes hace de 9/10 y los otros 2 de 6/8.
-    const byDepth = [...restantes].sort((a, b) => a.x - b.x); // x chico = más adelantado
-    const delanteros = byDepth.slice(0, 2).sort((a, b) => a.y - b.y);
-    const retrasados = byDepth.slice(2).sort((a, b) => a.y - b.y);
-    if (delanteros[0]) overrides['9'] = delanteros[0];
-    if (delanteros[1]) overrides['10'] = delanteros[1];
-    if (retrasados[0]) overrides['6'] = retrasados[0];
-    if (retrasados[1]) overrides['8'] = retrasados[1];
+    return overrides;
   }
+
+  // Un solo delantero (4-3-3, 4-1-4-1, 4-2-3-1): el 9 es siempre el
+  // centrodelantero, nunca un interior aunque esté casi a su altura. Los 3
+  // del medio se reparten por rol: con volante central (4-3-3 / 4-1-4-1) el
+  // 6 es el volante y 8/10 los interiores (8 por derecha, 10 por
+  // izquierda); con mediapunta (4-2-3-1) el 10 es el mediapunta y 6/8 el
+  // doble pivote.
+  const spotDe = (label: string) => {
+    const i = entries4o6.findIndex((e) => e.posicion === label);
+    return i >= 0 && restantes.includes(spots[i]) ? spots[i] : null;
+  };
+  const centrodelantero = spotDe('Delantero centro');
+  const volante = spotDe('Volante central');
+  const mediapunta = spotDe('Mediapunta');
+  if (centrodelantero && restantes.length === 4 && (volante || mediapunta)) {
+    overrides['9'] = centrodelantero;
+    const fijo = (volante ?? mediapunta)!;
+    const pareja = restantes.filter((s) => s !== centrodelantero && s !== fijo).sort((a, b) => a.y - b.y);
+    if (volante) {
+      overrides['6'] = volante;
+      overrides['8'] = pareja[0];
+      overrides['10'] = pareja[1];
+    } else {
+      overrides['10'] = fijo;
+      overrides['6'] = pareja[0];
+      overrides['8'] = pareja[1];
+    }
+    return overrides;
+  }
+
+  // Cualquier otro caso: el criterio genérico de siempre — los 2 más
+  // adelantados de los 4 restantes hacen de 9/10 y los otros 2 de 6/8.
+  const byDepth = [...restantes].sort((a, b) => a.x - b.x); // x chico = más adelantado
+  const delanteros = byDepth.slice(0, 2).sort((a, b) => a.y - b.y);
+  const retrasados = byDepth.slice(2).sort((a, b) => a.y - b.y);
+  if (delanteros[0]) overrides['9'] = delanteros[0];
+  if (delanteros[1]) overrides['10'] = delanteros[1];
+  if (retrasados[0]) overrides['6'] = retrasados[0];
+  if (retrasados[1]) overrides['8'] = retrasados[1];
 
   return overrides;
 }
