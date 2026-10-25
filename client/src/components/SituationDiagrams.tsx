@@ -428,13 +428,19 @@ const SITUATION_SCENES: Record<string, SceneElement[]> = {
     { kind: 'move', from: shift('7', -3, 2), to: { x: 14, y: 40 }, dashed: false, curve: -10, fromBall: true },
   ],
   'Volante a banda': [{ kind: 'move', from: POS['7'], to: { x: 30, y: 15 }, dashed: true }],
-  // El 10 ya juega de mediapunta entre líneas (entre el 9 y el doble
-  // pivote), dentro del cuadrado; el 9 queda solo y centrado arriba.
-  'Mediapunta en cuadrado': [
-    { kind: 'override', num: '9', x: 20, y: 48 },
-    { kind: 'override', num: '10', x: 33, y: 48 },
-    { kind: 'zone', x: 26.5, y: 37, w: 13, h: 22 },
-  ],
+  // El 10 juega de mediapunta entre líneas, cargado ligeramente a la
+  // izquierda (y grande = izquierda), dentro del cuadrado, y recibe un pase
+  // vertical del volante central (6); el 9 queda solo y centrado arriba.
+  'Mediapunta en cuadrado': (() => {
+    const balon6 = rel('6', -4, 0);
+    return [
+      { kind: 'override', num: '9', x: 20, y: 48 },
+      { kind: 'override', num: '10', x: 33, y: 62 },
+      { kind: 'zone', x: 26.5, y: 51, w: 13, h: 22 },
+      { kind: 'ball', x: balon6.x, y: balon6.y, at: balon6 },
+      { kind: 'move', from: balon6, to: POS['10'], dashed: false, fromBall: true },
+    ] satisfies SceneElement[];
+  })(),
 
   // --- Situaciones de presión (vulnerabilidades) ---
   // Un rival con el balón cerca del pivote propio le da un pase directo al
