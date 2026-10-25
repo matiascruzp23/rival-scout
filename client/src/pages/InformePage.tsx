@@ -63,6 +63,7 @@ import { situationDiagramFor } from '../components/SituationDiagrams';
 import { RotationCard } from '../components/RotationCard';
 import { MatchReportCard, outcomeRowClass, outcomeTextClass } from '../components/MatchReportCard';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
+import { XIManualControls, resolveXIMostrado } from '../components/XIManual';
 import type { GameStateLabel } from '../lib/csvAnalysis';
 import {
   defaultCoordsFor,
@@ -157,9 +158,10 @@ export default function InformePage() {
     symmetrizeBackThree(tokens);
     return tokens;
   }, [xiEstimate]);
+  const xi = useMemo(() => resolveXIMostrado(rival, xiEstimate, xiPitchTokens), [rival, xiEstimate, xiPitchTokens]);
   const reglaCheck = useMemo(
-    () => checkReglaTorneo(xiEstimate.picks, reglaAplicable, rival.players),
-    [xiEstimate, reglaAplicable, rival.players]
+    () => checkReglaTorneo(xi.picks, reglaAplicable, rival.players),
+    [xi, reglaAplicable, rival.players]
   );
 
   const eventStats = useMemo(
@@ -392,11 +394,12 @@ export default function InformePage() {
 
       <section className="informe-section informe-page card p-4 mb-6">
         <h3 className="font-semibold text-slate-800 mb-3">XI estimado para el próximo partido</h3>
-        {xiEstimate.picks.length === 0 ? (
+        <XIManualControls rival={rival} xi={xi} estimadoTokens={xiPitchTokens} editable={!isViewer} onChanged={reload} />
+        {xi.picks.length === 0 ? (
           <p className="text-sm text-slate-400">Sin datos suficientes.</p>
         ) : (
           <>
-            <Pitch tokens={xiPitchTokens} height={560} />
+            <Pitch tokens={xi.tokens} height={560} />
             {xiEstimate.excluidosPorBaja.length > 0 && (
               <p className="text-xs text-red-600 mt-2">
                 De baja: {xiEstimate.excluidosPorBaja.map((p) => p.nombre).join(', ')}.
@@ -412,7 +415,7 @@ export default function InformePage() {
                 No citados al último partido: {xiEstimate.excluidosPorNoCitado.map((p) => p.nombre).join(', ')}.
               </p>
             )}
-            {xiEstimate.picks.some((p) => p.reemplazadoPorRegla) && (
+            {!xi.manual && xiEstimate.picks.some((p) => p.reemplazadoPorRegla) && (
               <p className="text-xs text-slate-500 mt-2">
                 Ajustado por la regla de {reglaAplicable?.torneo}:{' '}
                 {xiEstimate.picks

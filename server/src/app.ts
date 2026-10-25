@@ -139,6 +139,7 @@ function toRival(row: any, reglasTorneo: TorneoRegla[]): Rival {
     codigoLdp: row.codigo_ldp || undefined,
     graficoPersonalizado: row.grafico_personalizado?.length ? row.grafico_personalizado : undefined,
     claves: Array.isArray(row.claves) ? row.claves : [],
+    xiManual: Array.isArray(row.xi_manual) && row.xi_manual.length ? row.xi_manual : undefined,
     createdBy: row.created_by || undefined,
     visibleUserIds: row.visible_user_ids ?? undefined,
     createdAt: row.created_at,
@@ -503,6 +504,19 @@ app.put('/api/rivals/:id', async (req, res) => {
   if (b.notaXI !== undefined) patch.nota_xi = b.notaXI || null;
   if (b.codigoLdp !== undefined) patch.codigo_ldp = b.codigoLdp?.trim() || null;
   if (Array.isArray(b.claves)) patch.claves = b.claves;
+  // null o [] vuelve al XI estimado automáticamente.
+  if (b.xiManual !== undefined) {
+    const entries = Array.isArray(b.xiManual)
+      ? b.xiManual
+          .filter((e) => e && typeof e.playerId === 'string' && e.playerId)
+          .map((e) => ({
+            playerId: e.playerId,
+            posicion: typeof e.posicion === 'string' ? e.posicion : '',
+            ...(typeof e.x === 'number' && typeof e.y === 'number' ? { x: e.x, y: e.y } : {}),
+          }))
+      : [];
+    patch.xi_manual = entries.length ? entries : null;
+  }
   if (b.graficoPersonalizado !== undefined) patch.grafico_personalizado = b.graficoPersonalizado?.length ? b.graficoPersonalizado : null;
   // Array vacío ([]) es un valor válido distinto de "sin restringir": deja
   // el rival visible solo para su creador. Solo `null` lo vuelve a hacer

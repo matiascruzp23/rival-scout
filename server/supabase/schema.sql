@@ -242,3 +242,8 @@ alter table league_stats_import enable row level security;
 alter table rivals add column if not exists claves jsonb not null default '[]';
 alter table matches add column if not exists nivel_oponente text;
 alter table players add column if not exists conducta_clave text;
+
+-- Migración (oct 2026): XI estimado ajustado a mano por el analista
+-- (lista de {playerId, posicion, x, y}). null = usar el XI estimado
+-- automáticamente. Idempotente.
+alter table rivals add column if not exists xi_manual jsonb;

@@ -22,6 +22,7 @@ export function LineupEditor({
   previousLineup,
   onChange,
   readOnly = false,
+  showSystemHint = true,
 }: {
   players: Player[];
   lineup: LineupEntry[];
@@ -29,6 +30,9 @@ export function LineupEditor({
   previousLineup?: { fecha: string; oponente: string; lineup: LineupEntry[] } | null;
   onChange: (lineup: LineupEntry[]) => void;
   readOnly?: boolean;
+  // Fuera de un partido (ej. el XI estimado ajustado a mano) no hay "datos
+  // generales" donde elegir sistema, así que el aviso no aplica.
+  showSystemHint?: boolean;
 }) {
   const [view, setView] = useState<'lista' | 'campograma'>('lista');
   const usedIds = new Set(lineup.map((l) => l.playerId));
@@ -224,7 +228,7 @@ export function LineupEditor({
         </div>
       </div>
 
-      {!system && (
+      {!system && showSystemHint && (
         <p className="text-xs text-slate-400 mb-2">
           Elige un sistema/formación en los datos generales del partido para que las posiciones a rellenar se repartan
           automáticamente.

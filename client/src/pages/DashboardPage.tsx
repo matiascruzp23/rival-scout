@@ -30,6 +30,7 @@ import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
 import type { TorneoRegla } from '../types';
 import { api } from '../api';
 import { useIsViewer } from '../lib/authContext';
+import { XIManualControls, resolveXIMostrado } from '../components/XIManual';
 
 export default function DashboardPage() {
   const { rival, reload } = useOutletContext<RivalContext>();
@@ -78,9 +79,10 @@ export default function DashboardPage() {
     symmetrizeBackThree(tokens);
     return tokens;
   }, [xiEstimate]);
+  const xi = useMemo(() => resolveXIMostrado(rival, xiEstimate, xiPitchTokens), [rival, xiEstimate, xiPitchTokens]);
   const reglaCheck = useMemo(
-    () => checkReglaTorneo(xiEstimate.picks, reglaAplicable, rival.players),
-    [xiEstimate, reglaAplicable, rival.players]
+    () => checkReglaTorneo(xi.picks, reglaAplicable, rival.players),
+    [xi, reglaAplicable, rival.players]
   );
 
   const [reglasDraft, setReglasDraft] = useState<TorneoRegla[]>(rival.reglasTorneo || []);
@@ -253,16 +255,24 @@ export default function DashboardPage() {
             <h3 className="font-semibold text-slate-800">XI estimado para el próximo partido</h3>
           </div>
           <p className="text-xs text-slate-500 mb-3">
-            Según minutos jugados (los partidos más recientes pesan más) y posición habitual; excluye a los jugadores
-            marcados como baja.
+            {xi.manual
+              ? 'Ajustado a mano por el analista en vez del estimado automático.'
+              : 'Según minutos jugados (los partidos más recientes pesan más) y posición habitual; excluye a los jugadores marcados como baja.'}
           </p>
-          {xiEstimate.picks.length === 0 ? (
+          <XIManualControls
+            rival={rival}
+            xi={xi}
+            estimadoTokens={xiPitchTokens}
+            editable={!isViewer}
+            onChanged={reload}
+          />
+          {xi.picks.length === 0 ? (
             <p className="text-sm text-slate-400">Aún no hay suficientes datos de XI para estimarlo.</p>
           ) : (
             <>
-              <Pitch tokens={xiPitchTokens} height={260} />
+              <Pitch tokens={xi.tokens} height={260} />
               <div className="grid grid-cols-2 gap-x-4 text-sm mt-3">
-                {xiEstimate.picks.map((pick) => (
+                {xi.picks.map((pick) => (
                   <div key={pick.player.id} className="flex justify-between border-b border-slate-100 py-0.5">
                     <span>
                       {pick.player.nombre}
@@ -274,7 +284,7 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-              {xiEstimate.sinCobertura.length > 0 && (
+              {!xi.manual && xiEstimate.sinCobertura.length > 0 && (
                 <p className="text-xs text-amber-700 mt-2">
                   Sin candidato disponible en: {xiEstimate.sinCobertura.join(', ')}.
                 </p>

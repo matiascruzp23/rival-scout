@@ -260,6 +260,10 @@ export interface Rival {
   // en el Informe.
   graficoPersonalizado?: string[];
   claves?: ClaveRival[];
+  // XI del próximo partido ajustado a mano cuando el analista no está de
+  // acuerdo con el estimado automático (estimateNextXI). Sin definir = usar
+  // el estimado; null/[] en un PUT lo borra.
+  xiManual?: LineupEntry[] | null;
   // Id (auth.users) de quien creó este rival — siempre puede verlo, incluso
   // si después se restringe con visibleUserIds.
   createdBy?: string;
