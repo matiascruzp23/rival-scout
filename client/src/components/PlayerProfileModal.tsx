@@ -6,7 +6,14 @@ import { PlayerBadges } from './PlayerBadges';
 import { PlayerPositionPitch, type PlayerPositionSeries } from './PlayerPositionPitch';
 import { api } from '../api';
 import { computePlayerStats, computePlayerEventStats, formatPct, playerPositionHistory, sortMatchesDesc } from '../lib/stats';
-import { filaDeJugador, filasSinCruzar, maxPorEjeJugadores, radarGroupForPosicion, valorDe } from '../lib/playerRadar';
+import {
+  filaDeJugador,
+  filasSinCruzar,
+  maxPorEjeJugadores,
+  PLAYER_RADAR_GROUPS,
+  radarGroupForPosicion,
+  valorDe,
+} from '../lib/playerRadar';
 import {
   analyzeIndividuales,
   DEFENSIVE_CATEGORIES,
@@ -30,6 +37,9 @@ export function PlayerProfileModal({
   onSaved: () => void;
 }) {
   const [compararConId, setCompararConId] = useState('');
+  // Set de métricas del radar elegido a mano — solo aplica al comparar con
+  // un jugador de otro grupo de posición; vacío = el del jugador de la ficha.
+  const [radarKeyElegido, setRadarKeyElegido] = useState('');
 
   const matches = useMemo(() => sortMatchesDesc(rival.matches), [rival.matches]);
   const stats = useMemo(() => computePlayerStats(player, matches), [player, matches]);
@@ -37,20 +47,29 @@ export function PlayerProfileModal({
   const historialPosiciones = useMemo(() => playerPositionHistory(player.id, matches), [player.id, matches]);
 
   const fila = rival.individualStats ? filaDeJugador(rival.individualStats, player) : null;
-  const grupo = radarGroupForPosicion(player.posicion);
+  const grupoJugador = radarGroupForPosicion(player.posicion);
+
+  // Primero los del mismo grupo de posición (la comparación natural) y
+  // después el resto del plantel, para poder cruzar posiciones distintas.
+  const { companerosMismoGrupo, companerosOtroGrupo } = useMemo(() => {
+    const otros = rival.players.filter((p) => p.id !== player.id);
+    const mismo = (p: Player) => !!grupoJugador && radarGroupForPosicion(p.posicion)?.key === grupoJugador.key;
+    return {
+      companerosMismoGrupo: otros.filter(mismo),
+      companerosOtroGrupo: otros.filter((p) => !mismo(p)),
+    };
+  }, [grupoJugador, rival.players, player.id]);
+  const compararCon = rival.players.find((p) => p.id === compararConId && p.id !== player.id) || null;
+  const comparaOtraPosicion = !!compararCon && !companerosMismoGrupo.includes(compararCon);
+
+  const grupoComparar = compararCon ? radarGroupForPosicion(compararCon.posicion) : null;
+  const grupo = comparaOtraPosicion
+    ? PLAYER_RADAR_GROUPS.find((g) => g.key === radarKeyElegido) || grupoJugador || grupoComparar
+    : grupoJugador;
   const maxPorEje = useMemo(
     () => (grupo && rival.individualStats ? maxPorEjeJugadores(rival.individualStats, grupo.ejes) : []),
     [grupo, rival.individualStats]
   );
-
-  const companerosMismoGrupo = useMemo(
-    () =>
-      grupo
-        ? rival.players.filter((p) => p.id !== player.id && radarGroupForPosicion(p.posicion)?.key === grupo.key)
-        : [],
-    [grupo, rival.players, player.id]
-  );
-  const compararCon = companerosMismoGrupo.find((p) => p.id === compararConId) || null;
   const statsComparar = useMemo(
     () => (compararCon ? computePlayerStats(compararCon, matches) : null),
     [compararCon, matches]
@@ -117,14 +136,17 @@ export function PlayerProfileModal({
             </span>
             <PlayerBadges player={player} size="md" />
           </div>
-          {companerosMismoGrupo.length > 0 && (
+          {companerosMismoGrupo.length + companerosOtroGrupo.length > 0 && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-500">Comparar con:</label>
               <select
                 className="input text-sm py-1"
-                style={{ width: 200 }}
+                style={{ width: 220 }}
                 value={compararConId}
-                onChange={(e) => setCompararConId(e.target.value)}
+                onChange={(e) => {
+                  setCompararConId(e.target.value);
+                  setRadarKeyElegido('');
+                }}
               >
                 <option value="">Sin comparar</option>
                 {companerosMismoGrupo.map((p) => (
@@ -132,6 +154,16 @@ export function PlayerProfileModal({
                     {p.nombre}
                   </option>
                 ))}
+                {companerosOtroGrupo.length > 0 && (
+                  <optgroup label="Otras posiciones">
+                    {companerosOtroGrupo.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre}
+                        {p.posicion ? ` (${p.posicion})` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
           )}
@@ -176,7 +208,26 @@ export function PlayerProfileModal({
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Planilla individual</h4>
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase">Planilla individual</h4>
+              {comparaOtraPosicion && rival.individualStats && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-500">Métricas de:</label>
+                  <select
+                    className="input text-sm py-1"
+                    style={{ width: 210 }}
+                    value={grupo?.key ?? ''}
+                    onChange={(e) => setRadarKeyElegido(e.target.value)}
+                  >
+                    {PLAYER_RADAR_GROUPS.map((g) => (
+                      <option key={g.key} value={g.key}>
+                        {g.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
             {!rival.individualStats ? (
               <p className="text-sm text-slate-400">
                 Todavía no se importó una planilla individual para este rival (pestaña "Gráficos y estadísticas").
