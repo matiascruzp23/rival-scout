@@ -3,8 +3,8 @@ import type { LineupEntry, Match, MatchBaja, MatchEvent, MatchEventType, MotivoB
 import { Markings, VIEW_H, VIEW_W } from './Pitch';
 import { PositionSelect } from './PositionSelect';
 import { SystemSelect } from './SystemSelect';
-import { defaultCoordsFor, groupColor, positionAbbr, positionDef, symmetrizeBackThree, symmetrizeDoublePivote, symmetrizeForwardPair } from '../lib/positions';
-import { formationSlots } from '../lib/formations';
+import { defaultCoordsFor, groupColor, positionAbbr, positionDef } from '../lib/positions';
+import { formationSlots, remapLineupToSystem, templateLineup } from '../lib/formations';
 import { onFieldBefore, withDefaults } from '../lib/pitchLayout';
 import { shortName } from '../lib/lookup';
 import { BallIcon, CardIcon } from './MatchIcons';
@@ -111,16 +111,38 @@ export function MatchSquadBoard({
     if (confirmar && lineup.some((l) => l.playerId) && !window.confirm(`Esto reemplaza el XI actual por las posiciones del sistema ${sistema}. ¿Continuar?`)) {
       return;
     }
-    const placed: { posicion: string; x: number; y: number }[] = [];
-    const next: LineupEntry[] = template.map((posicion) => {
-      const { x, y } = defaultCoordsFor(posicion, placed);
-      placed.push({ posicion, x, y });
-      return { playerId: '', posicion, x, y };
-    });
-    symmetrizeForwardPair(next);
-    symmetrizeDoublePivote(next);
-    symmetrizeBackThree(next);
-    onChange({ lineup: next });
+    const next = templateLineup(sistema);
+    if (next) onChange({ lineup: next });
+  };
+
+  // Cambiar el sistema con el XI ya cargado reubica a los mismos jugadores en
+  // los puestos del nuevo sistema, sin perder goles, tarjetas ni cambios. Las
+  // sustituciones anteriores a un cambio táctico de sistema heredan el puesto
+  // nuevo de quien sale (y de quien entra, si tomó el mismo puesto).
+  const changeSistema = (nuevo: string) => {
+    const remap = lineup.length > 0 ? remapLineupToSystem(lineup, nuevo) : null;
+    if (!remap) {
+      onChange({ sistema: nuevo });
+      return;
+    }
+    const puestos = new Map(remap.cambios);
+    let vigente = true;
+    const subs = [...substitutions]
+      .sort((a, b) => a.minuto - b.minuto)
+      .map((s) => {
+        if (!vigente) return s;
+        const c = puestos.get(s.jugadorSaleId);
+        let next = s;
+        if (c && s.posicionSale === c.antes) {
+          const posicionEntra = s.posicionEntra === c.antes ? c.despues : s.posicionEntra;
+          next = { ...s, posicionSale: c.despues, posicionEntra };
+          if (s.jugadorEntraId) puestos.set(s.jugadorEntraId, { antes: s.posicionEntra, despues: posicionEntra });
+        }
+        if (s.sistemaResultante) vigente = false;
+        return next;
+      });
+    const orden = new Map(subs.map((s) => [s.id, s]));
+    onChange({ sistema: nuevo, lineup: remap.lineup, substitutions: substitutions.map((s) => orden.get(s.id) ?? s) });
   };
 
   // Partido sin XI: al elegir sistema se reparten solos los puestos.
@@ -585,7 +607,7 @@ export function MatchSquadBoard({
           )}
           <label className="flex items-center gap-1.5 text-xs text-slate-500">
             Sistema
-            <SystemSelect className="input w-28 py-1 text-xs" value={sistema} onChange={(v) => onChange({ sistema: v })} />
+            <SystemSelect className="input w-28 py-1 text-xs" value={sistema} onChange={changeSistema} />
           </label>
         </div>
       </div>

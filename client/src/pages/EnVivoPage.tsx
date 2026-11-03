@@ -15,6 +15,7 @@ import {
   type Counted,
 } from '../lib/stats';
 import { onFieldBefore } from '../lib/pitchLayout';
+import { remapLineupToSystem } from '../lib/formations';
 import { analyzePhase, OFFENSIVE_CATEGORIES, DEFENSIVE_CATEGORIES, type EstadoResumen } from '../lib/csvAnalysis';
 import { LineupEditor } from '../components/LineupEditor';
 import { BancaEditor } from '../components/BancaEditor';
@@ -372,6 +373,13 @@ function PartidoEnVivo({
     }
   };
 
+  // Con el XI ya cargado, cambiar el sistema reubica a los mismos jugadores
+  // en los puestos del nuevo sistema en vez de obligar a rearmarlo.
+  const cambiarSistema = (sistema: string) => {
+    const remap = localMatch.lineup.length > 0 ? remapLineupToSystem(localMatch.lineup, sistema) : null;
+    setLocalMatch({ ...localMatch, sistema, ...(remap ? { lineup: remap.lineup } : {}) });
+  };
+
   if (!started) {
     return (
       <div className="space-y-6 pb-16">
@@ -379,7 +387,7 @@ function PartidoEnVivo({
           <h2 className="font-semibold text-slate-900 mb-3">XI inicial y convocatoria</h2>
           <div className="mb-4 max-w-xs">
             <label className="label">Sistema / formación</label>
-            <SystemSelect value={localMatch.sistema} onChange={(v) => setLocalMatch({ ...localMatch, sistema: v })} />
+            <SystemSelect value={localMatch.sistema} onChange={cambiarSistema} />
           </div>
           <div className="space-y-4">
             <LineupEditor
@@ -496,7 +504,7 @@ function PartidoEnVivo({
               <h3 className="font-semibold text-slate-900 mb-2">XI y convocatoria</h3>
               <div className="mb-3 max-w-xs">
                 <label className="label">Sistema / formación</label>
-                <SystemSelect value={localMatch.sistema} onChange={(v) => setLocalMatch({ ...localMatch, sistema: v })} />
+                <SystemSelect value={localMatch.sistema} onChange={cambiarSistema} />
               </div>
               <LineupEditor
                 players={players}
