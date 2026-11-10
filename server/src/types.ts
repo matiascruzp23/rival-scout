@@ -169,6 +169,15 @@ export type BloqueVideo = (typeof BLOQUES_VIDEO)[number];
 // Lectura del analista sobre el rival (lo que en la charla se dice de
 // palabra), ligada a un bloque del video y opcionalmente a una etiqueta de
 // Sportscode para mostrar su frecuencia actualizada.
+// Captura de un momento del video para el Informe, guardada en Supabase
+// Storage (bucket "capturas") para que la vea cualquier usuario.
+export interface CapturaMomento {
+  url: string;
+  path: string;
+  // true = se muestra entera ("Ver completa"); si no, rellena la página.
+  completa?: boolean;
+}
+
 export interface ClaveRival {
   id: string;
   bloque: BloqueVideo;
@@ -213,6 +222,7 @@ export interface Rival {
   // en el Informe.
   graficoPersonalizado?: string[];
   claves?: ClaveRival[];
+  capturas?: Partial<Record<BloqueVideo, CapturaMomento>>;
   // XI del próximo partido ajustado a mano cuando el analista no está de
   // acuerdo con el estimado automático (estimateNextXI). Sin definir = usar
   // el estimado; null/[] en un PUT lo borra.

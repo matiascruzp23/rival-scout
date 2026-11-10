@@ -6,7 +6,10 @@ import { requireAuth } from './auth.js';
 import { parseCsv, isExcludedCategory } from './csv.js';
 import { parsePlayerImportFile, type ImportedPlayerRow } from './playerImport.js';
 import { parseLeagueStatsFile } from './leagueStats.js';
+import { BLOQUES_VIDEO } from './types.js';
 import type {
+  BloqueVideo,
+  CapturaMomento,
   Player,
   Match,
   Rival,
@@ -42,6 +45,41 @@ const escudoUpload = multer({
     else cb(new Error('Formato de imagen no admitido (usa PNG, JPG, WEBP o GIF)'));
   },
 });
+
+// Capturas de cada momento del video para el Informe. El cliente ya las
+// manda comprimidas (JPEG ~1920 px, unos cientos de KB); el tope es solo
+// por si llega una sin comprimir.
+const CAPTURAS_BUCKET = 'capturas';
+const capturaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ESCUDO_MIME_EXT[file.mimetype]) cb(null, true);
+    else cb(new Error('Formato de imagen no admitido (usa PNG, JPG o WEBP)'));
+  },
+});
+
+// El bucket se crea solo la primera vez (público, como el de escudos: las
+// URLs llevan el id del rival y una marca de tiempo, no son adivinables).
+let capturasBucketListo = false;
+async function ensureCapturasBucket() {
+  if (capturasBucketListo) return;
+  const { data } = await supabase.storage.getBucket(CAPTURAS_BUCKET);
+  if (!data) {
+    const { error } = await supabase.storage.createBucket(CAPTURAS_BUCKET, { public: true });
+    if (error && !/already exists/i.test(error.message)) throw error;
+  }
+  capturasBucketListo = true;
+}
+
+async function removeCapturas(rivalId: string, paths?: string[]) {
+  const toRemove =
+    paths ??
+    ((await supabase.storage.from(CAPTURAS_BUCKET).list(rivalId, { limit: 1000 })).data || []).map(
+      (f) => `${rivalId}/${f.name}`
+    );
+  if (toRemove.length > 0) await supabase.storage.from(CAPTURAS_BUCKET).remove(toRemove);
+}
 
 const now = () => new Date().toISOString();
 
@@ -139,6 +177,7 @@ function toRival(row: any, reglasTorneo: TorneoRegla[]): Rival {
     codigoLdp: row.codigo_ldp || undefined,
     graficoPersonalizado: row.grafico_personalizado?.length ? row.grafico_personalizado : undefined,
     claves: Array.isArray(row.claves) ? row.claves : [],
+    capturas: row.capturas && typeof row.capturas === 'object' ? row.capturas : {},
     xiManual: Array.isArray(row.xi_manual) && row.xi_manual.length ? row.xi_manual : undefined,
     createdBy: row.created_by || undefined,
     visibleUserIds: row.visible_user_ids ?? undefined,
@@ -604,6 +643,95 @@ app.delete('/api/rivals/:id/escudo', async (req, res) => {
   res.json(toRival(updated, reglas));
 });
 
+// ---------- Capturas del Informe (una por momento del video) ----------
+
+async function rivalParaCaptura(req: express.Request, res: express.Response) {
+  const bloque = req.params.bloque as BloqueVideo;
+  if (!BLOQUES_VIDEO.includes(bloque) || bloque === 'General') {
+    res.status(400).json({ error: 'Momento no válido' });
+    return null;
+  }
+  const { data: rivalRow } = await supabase
+    .from('rivals')
+    .select('id, created_by, visible_user_ids, capturas')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (!rivalRow || !puedeVerRival(rivalRow, req.user!)) {
+    res.status(404).json({ error: 'Rival no encontrado' });
+    return null;
+  }
+  const capturas = (rivalRow.capturas || {}) as Partial<Record<BloqueVideo, CapturaMomento>>;
+  return { rivalRow, bloque, capturas };
+}
+
+async function guardarCapturas(rivalId: string, capturas: Partial<Record<BloqueVideo, CapturaMomento>>) {
+  const { data: updated, error } = await supabase
+    .from('rivals')
+    .update({ capturas, updated_at: now() })
+    .eq('id', rivalId)
+    .select()
+    .single();
+  if (error) throw error;
+  return toRival(updated, await getReglas(rivalId));
+}
+
+const slugBloque = (b: string) =>
+  b
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+
+app.post('/api/rivals/:id/capturas/:bloque', capturaUpload.single('file'), async (req, res) => {
+  const ctx = await rivalParaCaptura(req, res);
+  if (!ctx) return;
+  if (!req.file) return res.status(400).json({ error: 'Imagen requerida' });
+  try {
+    await ensureCapturasBucket();
+    const ext = ESCUDO_MIME_EXT[req.file.mimetype];
+    const path = `${ctx.rivalRow.id}/${slugBloque(ctx.bloque)}-${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from(CAPTURAS_BUCKET)
+      .upload(path, req.file.buffer, { contentType: req.file.mimetype });
+    if (uploadError) return res.status(500).json({ error: uploadError.message });
+    // Una sola imagen por momento: la anterior se borra para no acumular.
+    const anterior = ctx.capturas[ctx.bloque];
+    if (anterior?.path) await removeCapturas(ctx.rivalRow.id, [anterior.path]);
+    const { data: pub } = supabase.storage.from(CAPTURAS_BUCKET).getPublicUrl(path);
+    const capturas = { ...ctx.capturas, [ctx.bloque]: { url: pub.publicUrl, path } };
+    res.json(await guardarCapturas(ctx.rivalRow.id, capturas));
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message });
+  }
+});
+
+app.patch('/api/rivals/:id/capturas/:bloque', async (req, res) => {
+  const ctx = await rivalParaCaptura(req, res);
+  if (!ctx) return;
+  const actual = ctx.capturas[ctx.bloque];
+  if (!actual) return res.status(404).json({ error: 'Ese momento no tiene captura' });
+  try {
+    const capturas = { ...ctx.capturas, [ctx.bloque]: { ...actual, completa: !!req.body?.completa } };
+    res.json(await guardarCapturas(ctx.rivalRow.id, capturas));
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message });
+  }
+});
+
+app.delete('/api/rivals/:id/capturas/:bloque', async (req, res) => {
+  const ctx = await rivalParaCaptura(req, res);
+  if (!ctx) return;
+  try {
+    const actual = ctx.capturas[ctx.bloque];
+    if (actual?.path) await removeCapturas(ctx.rivalRow.id, [actual.path]);
+    const capturas = { ...ctx.capturas };
+    delete capturas[ctx.bloque];
+    res.json(await guardarCapturas(ctx.rivalRow.id, capturas));
+  } catch (e) {
+    res.status(500).json({ error: (e as Error).message });
+  }
+});
+
 app.delete('/api/rivals/:id', async (req, res) => {
   const { data: existing } = await supabase
     .from('rivals')
@@ -612,6 +740,7 @@ app.delete('/api/rivals/:id', async (req, res) => {
     .maybeSingle();
   if (!existing || !puedeVerRival(existing, req.user!)) return res.status(404).json({ error: 'Rival no encontrado' });
   await removeExistingEscudo(req.params.id);
+  await removeCapturas(req.params.id).catch(() => undefined);
   const { error } = await supabase.from('rivals').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.status(204).end();

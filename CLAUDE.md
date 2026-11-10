@@ -35,6 +35,9 @@ técnico de Universidad de Chile. Por cada rival permite:
   video, con el dato de Sportscode recalculado en vivo) y los partidos
   considerados. Es complementario al video de análisis: los bloques siguen
   su orden (salida → circ. baja/media/alta → presión fija/alta/media/baja).
+  Cada momento tiene una página con una captura a pantalla completa; las
+  capturas se comprimen en el navegador (JPEG 1920 px) y se guardan en el
+  bucket `capturas` de Storage (lo crea el servidor) y en `rivals.capturas`.
 
 Además: calendario de rivales, reglas de torneo (p. ej. minutos Sub-21),
 rivales privados compartidos con usuarios específicos, y roles

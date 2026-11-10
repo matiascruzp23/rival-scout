@@ -77,7 +77,7 @@ const EMPTY_PROXIMO: ProximoPartido = { competicion: '', instancia: '', fecha: '
 export default function InformePage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const isViewer = useIsViewer();
-  const capturas = useCapturas();
+  const capturas = useCapturas(rival, !isViewer, reload);
   const players = playerMap(rival.players);
   const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
   const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;

@@ -46,6 +46,9 @@ create table if not exists rivals (
   -- Claves del rival escritas por el analista (fortalezas/debilidades por
   -- bloque del video), ver ClaveRival en server/src/types.ts.
   claves jsonb not null default '[]',
+  -- Capturas del Informe por momento del video ({ bloque: { url, path,
+  -- completa } }); las imágenes viven en el bucket "capturas" de Storage.
+  capturas jsonb not null default '{}',
   -- Id (auth.users) de quien creó este rival — siempre puede verlo, incluso
   -- si después se restringe con visible_user_ids.
   created_by text,
@@ -247,3 +250,6 @@ alter table players add column if not exists conducta_clave text;
 -- (lista de {playerId, posicion, x, y}). null = usar el XI estimado
 -- automáticamente. Idempotente.
 alter table rivals add column if not exists xi_manual jsonb;
+
+-- Migración (nov 2026): capturas del Informe guardadas en Storage.
+alter table rivals add column if not exists capturas jsonb not null default '{}';

@@ -54,6 +54,18 @@ export const api = {
       return request<Rival>(`/rivals/${id}/escudo`, { method: 'POST', body: form });
     },
     removeEscudo: (id: string) => request<Rival>(`/rivals/${id}/escudo`, { method: 'DELETE' }),
+    uploadCaptura: (id: string, bloque: string, file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      return request<Rival>(`/rivals/${id}/capturas/${encodeURIComponent(bloque)}`, { method: 'POST', body: form });
+    },
+    setCapturaCompleta: (id: string, bloque: string, completa: boolean) =>
+      request<Rival>(`/rivals/${id}/capturas/${encodeURIComponent(bloque)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ completa }),
+      }),
+    removeCaptura: (id: string, bloque: string) =>
+      request<Rival>(`/rivals/${id}/capturas/${encodeURIComponent(bloque)}`, { method: 'DELETE' }),
   },
   players: {
     list: (rivalId: string) => request<Player[]>(`/rivals/${rivalId}/players`),

@@ -4,6 +4,8 @@ import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } fr
 import { situationDiagramFor } from './SituationDiagrams';
 import { TIPO_CLASS, guardarClaves } from './ClavesRival';
 import { templateLineup } from '../lib/formations';
+import { comprimirCaptura } from '../lib/imagen';
+import { api } from '../api';
 import { positionAbbr } from '../lib/positions';
 import { shortName } from '../lib/lookup';
 import {
@@ -299,35 +301,91 @@ function guardarCampoClave(rival: Rival, clave: ClaveRival, campo: 'texto' | 'pr
 
 const MOMENTOS = BLOQUES_VIDEO.filter((b): b is Exclude<BloqueVideo, 'General'> => b !== 'General');
 
-// Capturas de cada momento del video: se eligen o pegan solo para exportar
-// (quedan en memoria del navegador, no se suben a la app). Por defecto la
-// imagen rellena todo su recuadro (puede recortar los bordes); "ver
-// completa" la muestra entera aunque queden franjas a los costados.
+// Capturas de cada momento del video, guardadas en Supabase Storage para
+// que las vea cualquier usuario. Se comprimen en el navegador antes de
+// subirlas (ver lib/imagen.ts). Mientras sube, se muestra la imagen local.
+// Por defecto la imagen rellena toda la página (puede recortar los bordes);
+// "ver completa" la muestra entera aunque queden franjas a los costados.
 export interface Capturas {
   imagenes: Partial<Record<BloqueVideo, string>>;
   completa: Partial<Record<BloqueVideo, boolean>>;
+  subiendo: Partial<Record<BloqueVideo, boolean>>;
+  canEdit: boolean;
   setImagen: (bloque: BloqueVideo, file: File | null) => void;
   toggleCompleta: (bloque: BloqueVideo) => void;
 }
 
-export function useCapturas(): Capturas {
-  const [imagenes, setImagenes] = useState<Partial<Record<BloqueVideo, string>>>({});
-  const [completa, setCompleta] = useState<Partial<Record<BloqueVideo, boolean>>>({});
+export function useCapturas(rival: Rival, canEdit: boolean, onSaved: () => void): Capturas {
+  const guardadas = rival.capturas ?? {};
+  // Vista previa local mientras se sube: se descarta cuando la captura
+  // guardada de ese momento cambia (ya llegó la nueva desde el servidor).
+  const [locales, setLocales] = useState<Partial<Record<BloqueVideo, { url: string; antes?: string }>>>({});
+  const [subiendo, setSubiendo] = useState<Partial<Record<BloqueVideo, boolean>>>({});
 
-  // Liberar las URLs de las imágenes al salir del Informe.
-  const imagenesRef = useRef(imagenes);
-  imagenesRef.current = imagenes;
-  useEffect(() => () => Object.values(imagenesRef.current).forEach((u) => u && URL.revokeObjectURL(u)), []);
+  useEffect(() => {
+    setLocales((prev) => {
+      let cambio = false;
+      const next = { ...prev };
+      for (const [b, l] of Object.entries(prev) as [BloqueVideo, { url: string; antes?: string }][]) {
+        if (guardadas[b]?.url !== l.antes) {
+          URL.revokeObjectURL(l.url);
+          delete next[b];
+          cambio = true;
+        }
+      }
+      return cambio ? next : prev;
+    });
+  }, [guardadas]);
+
+  const quitarLocal = (bloque: BloqueVideo) =>
+    setLocales((prev) => {
+      if (!prev[bloque]) return prev;
+      URL.revokeObjectURL(prev[bloque]!.url);
+      const next = { ...prev };
+      delete next[bloque];
+      return next;
+    });
+
+  const conAviso = async (bloque: BloqueVideo, accion: () => Promise<unknown>) => {
+    setSubiendo((p) => ({ ...p, [bloque]: true }));
+    try {
+      await accion();
+      onSaved();
+    } catch (e) {
+      quitarLocal(bloque);
+      window.alert(`No se pudo guardar la captura: ${(e as Error).message}`);
+    } finally {
+      setSubiendo((p) => ({ ...p, [bloque]: false }));
+    }
+  };
+
+  const imagenes: Partial<Record<BloqueVideo, string>> = {};
+  const completa: Partial<Record<BloqueVideo, boolean>> = {};
+  for (const b of BLOQUES_VIDEO) {
+    const url = locales[b]?.url ?? guardadas[b]?.url;
+    if (url) imagenes[b] = url;
+    if (guardadas[b]?.completa) completa[b] = true;
+  }
 
   return {
     imagenes,
     completa,
-    setImagen: (bloque, file) =>
-      setImagenes((prev) => {
-        if (prev[bloque]) URL.revokeObjectURL(prev[bloque]!);
-        return { ...prev, [bloque]: file ? URL.createObjectURL(file) : undefined };
-      }),
-    toggleCompleta: (bloque) => setCompleta((prev) => ({ ...prev, [bloque]: !prev[bloque] })),
+    subiendo,
+    canEdit,
+    setImagen: (bloque, file) => {
+      if (!canEdit) return;
+      if (!file) {
+        void conAviso(bloque, () => api.rivals.removeCaptura(rival.id, bloque));
+        return;
+      }
+      quitarLocal(bloque);
+      setLocales((prev) => ({ ...prev, [bloque]: { url: URL.createObjectURL(file), antes: guardadas[bloque]?.url } }));
+      void conAviso(bloque, async () => api.rivals.uploadCaptura(rival.id, bloque, await comprimirCaptura(file)));
+    },
+    toggleCompleta: (bloque) => {
+      if (!canEdit || !guardadas[bloque]) return;
+      void conAviso(bloque, () => api.rivals.setCapturaCompleta(rival.id, bloque, !guardadas[bloque]!.completa));
+    },
   };
 }
 
@@ -370,7 +428,10 @@ function MomentoSlide({ bloque, rival, matches, canEdit, onSaved, capturas }: Mo
   const guardarCampo = (clave: ClaveRival, campo: 'texto' | 'propuesta') =>
     guardarCampoClave(rival, clave, campo, onSaved);
 
+  const editable = capturas.canEdit;
+  const subiendo = !!capturas.subiendo[bloque];
   const onPaste = (e: React.ClipboardEvent) => {
+    if (!editable) return;
     const file = Array.from(e.clipboardData.files).find((f) => f.type.startsWith('image/'));
     if (file) {
       e.preventDefault();
@@ -379,6 +440,7 @@ function MomentoSlide({ bloque, rival, matches, canEdit, onSaved, capturas }: Mo
   };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    if (!editable) return;
     const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
     if (file) onImagen(file);
   };
@@ -394,7 +456,7 @@ function MomentoSlide({ bloque, rival, matches, canEdit, onSaved, capturas }: Mo
         </p>
       </div>
       <div
-        tabIndex={0}
+        tabIndex={editable ? 0 : undefined}
         onPaste={onPaste}
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
@@ -408,16 +470,23 @@ function MomentoSlide({ bloque, rival, matches, canEdit, onSaved, capturas }: Mo
             alt={`Captura ${bloque}`}
             className={`absolute inset-0 w-full h-full ${completa ? 'object-contain' : 'object-cover'}`}
           />
-        ) : (
+        ) : editable ? (
           <div className="no-print text-center text-sm text-slate-400 px-6">
-            <p>Captura a pantalla completa para el PDF: haz clic aquí y pégala (Cmd+V), arrástrala o</p>
+            <p>Captura a pantalla completa: haz clic aquí y pégala (Cmd+V), arrástrala o</p>
             <button className="btn-secondary text-xs mt-2" onClick={() => inputRef.current?.click()}>
               Elegir imagen
             </button>
-            <p className="text-[11px] mt-2">No se guarda en la app: se pierde al recargar el Informe.</p>
+            <p className="text-[11px] mt-2">Se guarda en la app (comprimida) y la ven todos los usuarios.</p>
           </div>
+        ) : (
+          <p className="no-print text-sm text-slate-400">Sin captura para este momento.</p>
         )}
-        {imagen && (
+        {subiendo && (
+          <span className="no-print absolute top-2 left-2 badge bg-white text-slate-600 border border-slate-200">
+            Guardando…
+          </span>
+        )}
+        {imagen && editable && (
           <div className="no-print absolute top-2 right-2 flex gap-1.5">
             <button className="btn-secondary text-xs py-1" onClick={() => capturas.toggleCompleta(bloque)}>
               {completa ? 'Rellenar página' : 'Ver completa'}
@@ -425,7 +494,10 @@ function MomentoSlide({ bloque, rival, matches, canEdit, onSaved, capturas }: Mo
             <button className="btn-secondary text-xs py-1" onClick={() => inputRef.current?.click()}>
               Cambiar
             </button>
-            <button className="btn-secondary text-xs py-1" onClick={() => onImagen(null)}>
+            <button
+              className="btn-secondary text-xs py-1"
+              onClick={() => window.confirm('¿Quitar esta captura? Se borra para todos los usuarios.') && onImagen(null)}
+            >
               Quitar
             </button>
           </div>
