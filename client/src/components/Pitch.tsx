@@ -131,3 +131,48 @@ export function Pitch({
     </svg>
   );
 }
+
+// Misma cancha pero apaisada (el equipo ataca hacia la derecha), solo de
+// lectura, para la "Alineación probable" del Informe. Recibe los tokens en
+// las coordenadas de la cancha vertical (x lateral, y profundidad) y los
+// gira: lo que en vertical está arriba (ataque) queda a la derecha.
+const H_VIEW_W = VIEW_H;
+const H_VIEW_H = VIEW_W;
+
+export function HorizontalPitch({ tokens }: { tokens: PitchToken[] }) {
+  return (
+    <svg
+      viewBox={`0 0 ${H_VIEW_W} ${H_VIEW_H}`}
+      style={{ width: '100%', height: 'auto', display: 'block', background: 'linear-gradient(90deg, #1f7a3d, #1a6b35)', borderRadius: 8 }}
+    >
+      <g transform={`translate(${H_VIEW_W}, 0) rotate(90)`}>
+        <Markings />
+      </g>
+      {tokens.map((t) => {
+        const color = groupColor(positionDef(t.posicion)?.group);
+        // Se comprime un poco hacia el centro para que los nombres del
+        // arquero y de los delanteros no queden cortados contra el borde.
+        const cx = ((8 + (100 - t.y) * 0.84) / 100) * H_VIEW_W;
+        const cy = ((6 + t.x * 0.88) / 100) * H_VIEW_H;
+        return (
+          <g key={t.key} transform={`translate(${cx}, ${cy})`}>
+            <circle r={3.6} fill={color} stroke="white" strokeWidth={0.45} />
+            <text textAnchor="middle" dy={1.2} fontSize={3.1} fontWeight={700} fill="white">
+              {t.player?.dorsal ?? ''}
+            </text>
+            <text
+              textAnchor="middle"
+              y={6.4}
+              fontSize={2.6}
+              fontWeight={600}
+              fill="white"
+              style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.55)', strokeWidth: 0.55 }}
+            >
+              {t.label ?? (t.player ? shortName(t.player.nombre) : '')}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}

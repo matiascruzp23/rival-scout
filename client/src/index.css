@@ -66,6 +66,28 @@ tr:hover td {
   .badge {
     @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold leading-none;
   }
+
+  /* Páginas del Informe con formato de diapositiva (A4 apaisado): en
+     pantalla mantienen la proporción del área imprimible (273 x 186 mm). */
+  .informe-slide {
+    @apply flex flex-col;
+    aspect-ratio: 273 / 186;
+  }
+
+  /* Texto que se puede corregir en pantalla antes de exportar (ver PdfText). */
+  .pdf-editable {
+    @apply rounded-sm outline-none cursor-text;
+  }
+  .pdf-editable:hover {
+    @apply bg-amber-50;
+  }
+  .pdf-editable:focus {
+    @apply bg-amber-50 ring-1 ring-amber-300;
+  }
+  .pdf-editable:empty::before {
+    content: attr(data-placeholder);
+    @apply text-slate-300 italic;
+  }
 }
 
 @media print {
@@ -132,5 +154,13 @@ tr:hover td {
   }
   .informe-title-page h3 {
     font-size: 40px;
+  }
+  .informe-slide {
+    aspect-ratio: auto;
+    height: 186mm;
+    overflow: hidden;
+  }
+  .pdf-editable:empty::before {
+    content: none;
   }
 }

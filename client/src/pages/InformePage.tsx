@@ -55,9 +55,10 @@ import { PlantelView } from '../components/PlantelView';
 import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { useIsViewer } from '../lib/authContext';
 import { ClavesSintesis } from '../components/ClavesRival';
+import { AlineacionProbableSlide, EstructuraTacticaSlide, MomentosSlides } from '../components/InformeSlides';
 import { UserSharePicker } from '../components/UserSharePicker';
 import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
-import { Pitch, type PitchToken } from '../components/Pitch';
+import { type PitchToken } from '../components/Pitch';
 import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
 import { situationDiagramFor } from '../components/SituationDiagrams';
 import { RotationCard } from '../components/RotationCard';
@@ -392,31 +393,35 @@ export default function InformePage() {
         )}
       </section>
 
-      <section className="informe-section informe-page card p-4 mb-6">
-        <h3 className="font-semibold text-slate-800 mb-3">XI estimado para el próximo partido</h3>
-        <XIManualControls rival={rival} xi={xi} estimadoTokens={xiPitchTokens} editable={!isViewer} onChanged={reload} />
-        {xi.picks.length === 0 ? (
-          <p className="text-sm text-slate-400">Sin datos suficientes.</p>
-        ) : (
+      <EstructuraTacticaSlide
+        sistemas={sistemas}
+        partidosConSistema={matches.filter((m) => m.sistema).length}
+        estructuraCirculacion={ofensiva.estructura}
+        dibujoPresion={presionEstructura.estructura}
+        cambiosSistema={sistemasResultantes}
+      />
+
+      <AlineacionProbableSlide
+        tokens={xi.picks.length > 0 ? xi.tokens : []}
+        picks={xi.picks}
+        rotation={rotation}
+        funciones={circulacionesIndividuales.combos}
+        revulsivos={topEntrantesConMinuto(matches)}
+        players={rival.players}
+        deBaja={xiEstimate.excluidosPorBaja}
+        enSeleccion={xiEstimate.excluidosPorSeleccion}
+        controles={
+          <XIManualControls rival={rival} xi={xi} estimadoTokens={xiPitchTokens} editable={!isViewer} onChanged={reload} />
+        }
+        notas={
           <>
-            <Pitch tokens={xi.tokens} height={560} />
-            {xiEstimate.excluidosPorBaja.length > 0 && (
-              <p className="text-xs text-red-600 mt-2">
-                De baja: {xiEstimate.excluidosPorBaja.map((p) => p.nombre).join(', ')}.
-              </p>
-            )}
-            {xiEstimate.excluidosPorSeleccion.length > 0 && (
-              <p className="text-xs text-red-600 mt-2">
-                En selección: {xiEstimate.excluidosPorSeleccion.map((p) => p.nombre).join(', ')}.
-              </p>
-            )}
             {xiEstimate.excluidosPorNoCitado.length > 0 && (
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-slate-500">
                 No citados al último partido: {xiEstimate.excluidosPorNoCitado.map((p) => p.nombre).join(', ')}.
               </p>
             )}
             {!xi.manual && xiEstimate.picks.some((p) => p.reemplazadoPorRegla) && (
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-slate-500">
                 Ajustado por la regla de {reglaAplicable?.torneo}:{' '}
                 {xiEstimate.picks
                   .filter((p) => p.reemplazadoPorRegla)
@@ -431,44 +436,14 @@ export default function InformePage() {
             )}
             <ReglaTorneoBanner check={reglaCheck} />
             {rival.notaXI && (
-              <p className="text-xs text-slate-600 mt-2 bg-slate-50 border border-slate-200 rounded-md px-2 py-1">
+              <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2 py-1">
                 <span className="font-semibold text-slate-500">Nota: </span>
                 {rival.notaXI}
               </p>
             )}
           </>
-        )}
-
-        <div className="mt-4 pt-4 border-t border-slate-100">
-          <h3 className="font-semibold text-slate-800 mb-3">Sistema más utilizado</h3>
-          {sistemas.length === 0 ? (
-            <p className="text-sm text-slate-400">Sin datos.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Sistema</th>
-                  <th>Partidos</th>
-                  <th>V-E-P</th>
-                  <th>Rendimiento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sistemas.map((s, i) => (
-                  <tr key={i}>
-                    <td>{s.item}</td>
-                    <td>{s.count}</td>
-                    <td>
-                      {s.ganados}-{s.empatados}-{s.perdidos}
-                    </td>
-                    <td>{s.rendimiento !== null ? `${s.rendimiento}%` : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
+        }
+      />
 
       <section className="informe-section mb-6">
         <h3 className="font-semibold text-slate-800 mb-3">Posiciones con mayor rotación</h3>
@@ -655,6 +630,8 @@ export default function InformePage() {
           </div>
         )}
       </section>
+
+      <MomentosSlides rival={rival} matches={matches} canEdit={!isViewer} onSaved={reload} />
 
       {leagueStats && rival.codigoLdp && (
         <section className="informe-section informe-page mb-6">

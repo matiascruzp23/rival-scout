@@ -4,7 +4,7 @@ import { datoDeEtiqueta, etiquetasDeBloque } from '../lib/csvAnalysis';
 import { BLOQUES_VIDEO, type BloqueVideo, type ClaveRival, type Match, type Player, type Rival } from '../types';
 import { Modal } from './Modal';
 
-const TIPO_CLASS: Record<ClaveRival['tipo'], string> = {
+export const TIPO_CLASS: Record<ClaveRival['tipo'], string> = {
   // Fortaleza del rival = amenaza para nosotros; debilidad = dónde se le
   // puede hacer daño.
   Fortaleza: 'bg-red-50 text-red-700 border border-red-200',
