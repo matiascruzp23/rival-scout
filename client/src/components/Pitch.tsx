@@ -139,7 +139,34 @@ export function Pitch({
 const H_VIEW_W = VIEW_H;
 const H_VIEW_H = VIEW_W;
 
+// Las coordenadas de la cancha vertical dejan al XI apretado en el centro
+// de la apaisada: el arquero va fijo cerca de su arco y el resto se estira
+// para que la línea más retrasada y la más adelantada (y las dos bandas)
+// ocupen casi toda la cancha, manteniendo las distancias relativas.
+const H_ARQUERO_X = 9;
+const H_X_MIN = 25;
+const H_X_MAX = 88;
+const H_Y_MIN = 9;
+const H_Y_MAX = 85;
+
+function horizontalLayout(tokens: PitchToken[]) {
+  const esArquero = (t: PitchToken) => positionDef(t.posicion)?.group === 'POR';
+  const campo = tokens.filter((t) => !esArquero(t));
+  const ys = campo.map((t) => t.y);
+  const xs = tokens.map((t) => t.x);
+  const [minY, maxY] = [Math.min(...ys), Math.max(...ys)];
+  const [minX, maxX] = [Math.min(...xs), Math.max(...xs)];
+  const escala = (v: number, a: number, b: number, desde: number, hasta: number) =>
+    Math.abs(b - a) < 1 ? (desde + hasta) / 2 : desde + ((v - a) / (b - a)) * (hasta - desde);
+  return (t: PitchToken) => ({
+    // y chico = más adelantado en la vertical -> más a la derecha acá.
+    hx: esArquero(t) ? H_ARQUERO_X : escala(t.y, maxY, minY, H_X_MIN, H_X_MAX),
+    hy: escala(t.x, minX, maxX, H_Y_MIN, H_Y_MAX),
+  });
+}
+
 export function HorizontalPitch({ tokens }: { tokens: PitchToken[] }) {
+  const layout = horizontalLayout(tokens);
   return (
     <svg
       viewBox={`0 0 ${H_VIEW_W} ${H_VIEW_H}`}
@@ -150,10 +177,9 @@ export function HorizontalPitch({ tokens }: { tokens: PitchToken[] }) {
       </g>
       {tokens.map((t) => {
         const color = groupColor(positionDef(t.posicion)?.group);
-        // Se comprime un poco hacia el centro para que los nombres del
-        // arquero y de los delanteros no queden cortados contra el borde.
-        const cx = ((8 + (100 - t.y) * 0.84) / 100) * H_VIEW_W;
-        const cy = ((6 + t.x * 0.88) / 100) * H_VIEW_H;
+        const { hx, hy } = layout(t);
+        const cx = (hx / 100) * H_VIEW_W;
+        const cy = (hy / 100) * H_VIEW_H;
         return (
           <g key={t.key} transform={`translate(${cx}, ${cy})`}>
             <circle r={3.6} fill={color} stroke="white" strokeWidth={0.45} />
