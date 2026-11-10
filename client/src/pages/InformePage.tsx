@@ -50,7 +50,13 @@ import { PlantelView } from '../components/PlantelView';
 import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { useIsViewer } from '../lib/authContext';
 import { ClavesSintesis } from '../components/ClavesRival';
-import { AlineacionProbableSlide, EstructuraTacticaSlide, MomentosSlides, SportscodeSlides } from '../components/InformeSlides';
+import {
+  AlineacionProbableSlide,
+  EstructuraTacticaSlide,
+  MomentosSlides,
+  SportscodeSlides,
+  useCapturas,
+} from '../components/InformeSlides';
 import { UserSharePicker } from '../components/UserSharePicker';
 import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
 import { type PitchToken } from '../components/Pitch';
@@ -71,6 +77,7 @@ const EMPTY_PROXIMO: ProximoPartido = { competicion: '', instancia: '', fecha: '
 export default function InformePage() {
   const { rival, reload } = useOutletContext<RivalContext>();
   const isViewer = useIsViewer();
+  const capturas = useCapturas();
   const players = playerMap(rival.players);
   const [perfilJugadorId, setPerfilJugadorId] = useState<string | null>(null);
   const perfilJugador = perfilJugadorId ? rival.players.find((p) => p.id === perfilJugadorId) || null : null;
@@ -566,10 +573,13 @@ export default function InformePage() {
       </div>
 
       {matchesWithCsv === 0 ? (
-        <section className="informe-section card p-4 mb-6">
-          <h3 className="font-semibold text-slate-800 mb-1">Datos analizados de Sportscode</h3>
-          <p className="text-sm text-slate-400">Sin CSV cargados.</p>
-        </section>
+        <>
+          <section className="informe-section card p-4 mb-6">
+            <h3 className="font-semibold text-slate-800 mb-1">Datos analizados de Sportscode</h3>
+            <p className="text-sm text-slate-400">Sin CSV cargados.</p>
+          </section>
+          <MomentosSlides rival={rival} matches={matches} canEdit={!isViewer} onSaved={reload} capturas={capturas} />
+        </>
       ) : (
         <>
           <SportscodeSlides
@@ -578,8 +588,10 @@ export default function InformePage() {
             vulnerabilidades={vulnerabilidades}
             sistemaDominante={sistemas[0]?.item ?? null}
             rival={rival}
+            matches={matches}
             canEdit={!isViewer}
             onSaved={reload}
+            capturas={capturas}
           />
           {(circulacionesIndividuales.combos.length > 0 ||
             presionesIndividuales.combos.length > 0 ||
@@ -595,8 +607,6 @@ export default function InformePage() {
           )}
         </>
       )}
-
-      <MomentosSlides rival={rival} matches={matches} canEdit={!isViewer} onSaved={reload} />
 
       {leagueStats && rival.codigoLdp && (
         <section className="informe-section informe-page mb-6">

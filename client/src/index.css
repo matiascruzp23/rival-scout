@@ -163,4 +163,9 @@ tr:hover td {
   .pdf-editable:empty::before {
     content: none;
   }
+  /* Recuadro de descripción de una captura sin claves ni texto: no se
+     imprime vacío encima de la imagen. */
+  .momento-desc:not(:has(.pdf-editable:not(:empty))) {
+    display: none;
+  }
 }

@@ -299,76 +299,73 @@ function guardarCampoClave(rival: Rival, clave: ClaveRival, campo: 'texto' | 'pr
 
 const MOMENTOS = BLOQUES_VIDEO.filter((b): b is Exclude<BloqueVideo, 'General'> => b !== 'General');
 
-// Una página por momento del video, con una captura que se elige o pega
-// solo para exportar (queda en memoria del navegador, no se sube a la app)
-// y las claves de ese bloque.
-export function MomentosSlides({
-  rival,
-  matches,
-  canEdit,
-  onSaved,
-}: {
-  rival: Rival;
-  matches: Match[];
-  canEdit: boolean;
-  onSaved: () => void;
-}) {
+// Capturas de cada momento del video: se eligen o pegan solo para exportar
+// (quedan en memoria del navegador, no se suben a la app). Por defecto la
+// imagen rellena todo su recuadro (puede recortar los bordes); "ver
+// completa" la muestra entera aunque queden franjas a los costados.
+export interface Capturas {
+  imagenes: Partial<Record<BloqueVideo, string>>;
+  completa: Partial<Record<BloqueVideo, boolean>>;
+  setImagen: (bloque: BloqueVideo, file: File | null) => void;
+  toggleCompleta: (bloque: BloqueVideo) => void;
+}
+
+export function useCapturas(): Capturas {
   const [imagenes, setImagenes] = useState<Partial<Record<BloqueVideo, string>>>({});
+  const [completa, setCompleta] = useState<Partial<Record<BloqueVideo, boolean>>>({});
 
   // Liberar las URLs de las imágenes al salir del Informe.
   const imagenesRef = useRef(imagenes);
   imagenesRef.current = imagenes;
   useEffect(() => () => Object.values(imagenesRef.current).forEach((u) => u && URL.revokeObjectURL(u)), []);
 
-  const setImagen = (bloque: BloqueVideo, file: File | null) => {
-    setImagenes((prev) => {
-      if (prev[bloque]) URL.revokeObjectURL(prev[bloque]!);
-      return { ...prev, [bloque]: file ? URL.createObjectURL(file) : undefined };
-    });
+  return {
+    imagenes,
+    completa,
+    setImagen: (bloque, file) =>
+      setImagenes((prev) => {
+        if (prev[bloque]) URL.revokeObjectURL(prev[bloque]!);
+        return { ...prev, [bloque]: file ? URL.createObjectURL(file) : undefined };
+      }),
+    toggleCompleta: (bloque) => setCompleta((prev) => ({ ...prev, [bloque]: !prev[bloque] })),
   };
+}
 
+interface MomentoProps {
+  rival: Rival;
+  matches: Match[];
+  canEdit: boolean;
+  onSaved: () => void;
+  capturas: Capturas;
+}
+
+// Todas las páginas de captura seguidas (cuando no hay CSV de Sportscode y
+// por lo tanto no hay páginas de diagramas entre las que intercalarlas).
+export function MomentosSlides(props: MomentoProps) {
   return (
     <>
       {MOMENTOS.map((bloque) => (
-        <MomentoSlide
-          key={bloque}
-          bloque={bloque}
-          rival={rival}
-          matches={matches}
-          canEdit={canEdit}
-          onSaved={onSaved}
-          imagen={imagenes[bloque]}
-          onImagen={(f) => setImagen(bloque, f)}
-        />
+        <MomentoSlide key={bloque} bloque={bloque} {...props} />
       ))}
     </>
   );
 }
 
-function MomentoSlide({
-  bloque,
-  rival,
-  matches,
-  canEdit,
-  onSaved,
-  imagen,
-  onImagen,
-}: {
-  bloque: BloqueVideo;
-  rival: Rival;
-  matches: Match[];
-  canEdit: boolean;
-  onSaved: () => void;
-  imagen?: string;
-  onImagen: (file: File | null) => void;
-}) {
+// Una página por momento del video con la distribución de la diapositiva de
+// captura a pantalla completa: franja arriba con fase · momento y el dato de
+// frecuencia, la captura ocupando todo el resto y un recuadro superpuesto
+// abajo a la izquierda con las claves de ese bloque.
+function MomentoSlide({ bloque, rival, matches, canEdit, onSaved, capturas }: MomentoProps & { bloque: BloqueVideo }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const imagen = capturas.imagenes[bloque];
+  const completa = !!capturas.completa[bloque];
+  const onImagen = (file: File | null) => capturas.setImagen(bloque, file);
   const claves = (rival.claves ?? []).filter((c) => c.bloque === bloque);
   const fase = bloque === 'Salida' || bloque.startsWith('Circulación') ? 'Fase ofensiva' : 'Fase defensiva';
   const frecuencia = claves
     .map((c) => (c.etiqueta ? datoDeEtiqueta(matches, c.bloque, c.etiqueta) : null))
     .filter(Boolean)
-    .join('\n');
+    .join(' · ');
 
   const guardarCampo = (clave: ClaveRival, campo: 'texto' | 'propuesta') =>
     guardarCampoClave(rival, clave, campo, onSaved);
@@ -387,65 +384,77 @@ function MomentoSlide({
   };
 
   return (
-    <SlideFrame titulo={bloque} subtitulo={fase}>
-      <div className="grid h-full gap-5" style={{ gridTemplateColumns: '60fr 40fr' }}>
-        <div className="flex flex-col gap-3 min-h-0">
-          <div
-            tabIndex={0}
-            onPaste={onPaste}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={onDrop}
-            className={`relative flex-1 min-h-0 rounded-md overflow-hidden flex items-center justify-center outline-none focus:ring-2 focus:ring-emerald-600 ${
-              imagen ? 'bg-slate-50' : 'border-2 border-dashed border-slate-200'
-            }`}
-          >
-            {imagen ? (
-              <img src={imagen} alt={`Captura ${bloque}`} className="max-w-full max-h-full object-contain" />
-            ) : (
-              <div className="no-print text-center text-sm text-slate-400 px-6">
-                <p>Captura para el PDF: haz clic aquí y pégala (Cmd+V), arrástrala o</p>
-                <button className="btn-secondary text-xs mt-2" onClick={() => inputRef.current?.click()}>
-                  Elegir imagen
-                </button>
-                <p className="text-[11px] mt-2">No se guarda en la app: se pierde al recargar el Informe.</p>
-              </div>
-            )}
-            {imagen && (
-              <div className="no-print absolute top-2 right-2 flex gap-1.5">
-                <button className="btn-secondary text-xs py-1" onClick={() => inputRef.current?.click()}>
-                  Cambiar
-                </button>
-                <button className="btn-secondary text-xs py-1" onClick={() => onImagen(null)}>
-                  Quitar
-                </button>
-              </div>
-            )}
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                onImagen(e.target.files?.[0] ?? null);
-                e.target.value = '';
-              }}
-            />
+    <section className="informe-section informe-page informe-slide card overflow-hidden mb-6">
+      <div className="flex-none bg-emerald-700 text-white text-center px-4 py-1.5">
+        <p className="text-sm font-bold uppercase tracking-wide">
+          {fase} · {bloque}
+        </p>
+        <p className="text-xs text-emerald-50">
+          <PdfText value={frecuencia} placeholder="Estructura / detalle" />
+        </p>
+      </div>
+      <div
+        tabIndex={0}
+        onPaste={onPaste}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+        className={`relative flex-1 min-h-0 flex items-center justify-center outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-600 ${
+          imagen ? 'bg-slate-800' : 'bg-slate-50'
+        }`}
+      >
+        {imagen ? (
+          <img
+            src={imagen}
+            alt={`Captura ${bloque}`}
+            className={`absolute inset-0 w-full h-full ${completa ? 'object-contain' : 'object-cover'}`}
+          />
+        ) : (
+          <div className="no-print text-center text-sm text-slate-400 px-6">
+            <p>Captura a pantalla completa para el PDF: haz clic aquí y pégala (Cmd+V), arrástrala o</p>
+            <button className="btn-secondary text-xs mt-2" onClick={() => inputRef.current?.click()}>
+              Elegir imagen
+            </button>
+            <p className="text-[11px] mt-2">No se guarda en la app: se pierde al recargar el Informe.</p>
           </div>
-          <div className="flex-none">
-            <InfoBox titulo="Frecuencia">
-              <PdfText value={frecuencia} placeholder="N° de veces observado / N° de partidos" />
-            </InfoBox>
+        )}
+        {imagen && (
+          <div className="no-print absolute top-2 right-2 flex gap-1.5">
+            <button className="btn-secondary text-xs py-1" onClick={() => capturas.toggleCompleta(bloque)}>
+              {completa ? 'Rellenar página' : 'Ver completa'}
+            </button>
+            <button className="btn-secondary text-xs py-1" onClick={() => inputRef.current?.click()}>
+              Cambiar
+            </button>
+            <button className="btn-secondary text-xs py-1" onClick={() => onImagen(null)}>
+              Quitar
+            </button>
           </div>
-        </div>
-        <div className="flex flex-col gap-3 min-h-0">
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            onImagen(e.target.files?.[0] ?? null);
+            e.target.value = '';
+          }}
+        />
+
+        <div className="momento-desc absolute left-4 bottom-4 max-w-[46%] bg-white rounded-md shadow-lg px-3 py-2 space-y-2">
+          {claves.length === 0 && (
+            <p className="text-sm text-slate-800 font-semibold">
+              <PdfText value="" placeholder="Descripción breve de la acción (qué, quién, dónde)" />
+            </p>
+          )}
           {claves.map((c) => (
-            <div key={c.id} className="border border-slate-200 rounded-md p-3">
-              <span className={`badge mb-1.5 ${TIPO_CLASS[c.tipo]}`}>{c.tipo}</span>
+            <div key={c.id}>
               <p className="text-sm text-slate-800 leading-snug">
+                <span className={`badge mr-1.5 align-middle ${TIPO_CLASS[c.tipo]}`}>{c.tipo}</span>
                 <PdfText value={c.texto} onSave={canEdit ? guardarCampo(c, 'texto') : undefined} />
               </p>
               {(c.propuesta || canEdit) && (
-                <p className={`text-sm text-slate-600 leading-snug mt-1.5 ${c.propuesta ? '' : 'no-print'}`}>
+                <p className={`text-xs text-slate-600 leading-snug mt-1 ${c.propuesta ? '' : 'no-print'}`}>
                   <span className="font-semibold text-emerald-700">Qué haríamos: </span>
                   <PdfText
                     value={c.propuesta ?? ''}
@@ -458,7 +467,7 @@ function MomentoSlide({
           ))}
         </div>
       </div>
-    </SlideFrame>
+    </section>
   );
 }
 
@@ -596,17 +605,22 @@ export function SportscodeSlides({
   vulnerabilidades,
   sistemaDominante,
   rival,
+  matches,
   canEdit,
   onSaved,
+  capturas,
 }: {
   ofensiva: PhaseAnalysis;
   presion: PhaseAnalysis;
   vulnerabilidades: PhaseAnalysis;
   sistemaDominante: string | null;
-  rival: Rival;
-  canEdit: boolean;
-  onSaved: () => void;
-}) {
+} & MomentoProps) {
+  // Las páginas de captura van intercaladas: cada una justo después de la
+  // página de diagramas de su momento.
+  const capturasDe = (...bloques: BloqueVideo[]) =>
+    bloques.map((b) => (
+      <MomentoSlide key={b} bloque={b} rival={rival} matches={matches} canEdit={canEdit} onSaved={onSaved} capturas={capturas} />
+    ));
   const n = ofensiva.partidosConCsv;
   const situacion = (tag: string) => situationDiagramFor(tag, sistemaDominante);
   // Circulación en cancha vertical: aprovecha mejor las columnas angostas.
@@ -671,6 +685,7 @@ export function SportscodeSlides({
           </div>
         </div>
       </SlideFrame>
+      {capturasDe('Salida', 'Circulación baja')}
 
       <SlideFrame titulo="Circulación media y alta">
         <div
@@ -693,6 +708,7 @@ export function SportscodeSlides({
           </InfoBox>
         </div>
       </SlideFrame>
+      {capturasDe('Circulación media', 'Circulación alta')}
 
       <SlideFrame titulo="Organización y presión">
         <div className="grid h-full gap-4" style={{ gridTemplateColumns: '30fr 28fr 42fr' }}>
@@ -723,6 +739,7 @@ export function SportscodeSlides({
           </div>
         </div>
       </SlideFrame>
+      {capturasDe('Presión fija')}
 
       <SlideFrame titulo="Espacios y vulnerabilidades">
         <div className="grid h-full gap-4 grid-cols-3">
@@ -738,6 +755,7 @@ export function SportscodeSlides({
           ))}
         </div>
       </SlideFrame>
+      {capturasDe('Presión alta', 'Presión media', 'Presión baja')}
     </>
   );
 }
