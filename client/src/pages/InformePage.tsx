@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { RivalContext } from './RivalLayout';
 import { api } from '../api';
@@ -37,35 +37,27 @@ import {
 import {
   analyzeIndividuales,
   analyzePhase,
-  construccionSituacionCombos,
   DEFENSIVE_CATEGORIES,
-  estructuraCambiaPorEstado,
   matchesWithCsvCount,
   OFFENSIVE_CATEGORIES,
-  esPuntual,
   OFENSIVA_GROUPS,
   PRESION_FIJA_GROUPS,
   VULNERABILIDADES_GROUPS,
-  type ConstruccionSituacionCombo,
   type IndividualesBloque,
-  type PhaseAnalysis,
 } from '../lib/csvAnalysis';
 import { playerMap, playerName } from '../lib/lookup';
 import { PlantelView } from '../components/PlantelView';
 import { PlayerProfileModal } from '../components/PlayerProfileModal';
 import { useIsViewer } from '../lib/authContext';
 import { ClavesSintesis } from '../components/ClavesRival';
-import { AlineacionProbableSlide, EstructuraTacticaSlide, MomentosSlides } from '../components/InformeSlides';
+import { AlineacionProbableSlide, EstructuraTacticaSlide, MomentosSlides, SportscodeSlides } from '../components/InformeSlides';
 import { UserSharePicker } from '../components/UserSharePicker';
 import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
 import { type PitchToken } from '../components/Pitch';
-import { BuildUpShapeDiagram, FormationLinesDiagram, PressingTriggerDiagram } from '../components/TacticalDiagram';
-import { situationDiagramFor } from '../components/SituationDiagrams';
 import { RotationCard } from '../components/RotationCard';
 import { MatchReportCard, outcomeRowClass, outcomeTextClass } from '../components/MatchReportCard';
 import { ReglaTorneoBanner } from '../components/ReglaTorneoBanner';
 import { XIManualControls, resolveXIMostrado } from '../components/XIManual';
-import type { GameStateLabel } from '../lib/csvAnalysis';
 import {
   defaultCoordsFor,
   positionOrderIndex,
@@ -178,10 +170,6 @@ export default function InformePage() {
   const ofensiva = useMemo(
     () =>
       analyzePhase(matches, OFFENSIVE_CATEGORIES, OFENSIVA_GROUPS),
-    [matches]
-  );
-  const construccionSituacion = useMemo(
-    () => construccionSituacionCombos(matches, OFFENSIVE_CATEGORIES, ['Situaciones de circulacion']),
     [matches]
   );
   const presionEstructura = useMemo(
@@ -577,59 +565,36 @@ export default function InformePage() {
         </section>
       </div>
 
-      <section className="informe-section mb-6">
-        <h3 className="font-semibold text-slate-800 mb-1">Datos analizados de Sportscode</h3>
-        <p className="text-xs text-slate-500 mb-3">
-          {matchesWithCsv} de {matches.length} partidos con CSV cargado.
-        </p>
-        {matchesWithCsv === 0 ? (
+      {matchesWithCsv === 0 ? (
+        <section className="informe-section card p-4 mb-6">
+          <h3 className="font-semibold text-slate-800 mb-1">Datos analizados de Sportscode</h3>
           <p className="text-sm text-slate-400">Sin CSV cargados.</p>
-        ) : (
-          // Una fase completa por vez (no las 3 en columnas paralelas): así,
-          // si una fase se extiende a la página siguiente, no se mezcla con
-          // el arranque de otra fase distinta ni se pierde de vista bajo qué
-          // título sigue ese contenido.
-          <div className="space-y-4">
-            <PhaseSummaryCard
-              title="Fase ofensiva"
-              data={ofensiva}
-              showEstructura
-              estructuraTitle="Estructura de circulación"
-              estructuraAfterIndex={1}
-              estructuraDiagram={(valor) => <BuildUpShapeDiagram valor={valor} />}
-              estructuraSituacionCombos={construccionSituacion}
-              situacionDiagram={(tag) => situationDiagramFor(tag, sistemas[0]?.item ?? null)}
-              situacionNarradoCount={3}
-            />
-            <PhaseSummaryCard
-              title="Presión rival"
-              data={presionEstructura}
-              showEstructura
-              estructuraTitle="Dibujo táctico en presión"
-              estructuraDiagram={(valor) => <FormationLinesDiagram valor={valor} />}
-              situacionDiagram={(tag) => <PressingTriggerDiagram tag={tag} />}
-            />
-            <PhaseSummaryCard
-              title="Espacios y vulnerabilidades"
-              data={vulnerabilidades}
-              situacionDiagram={(tag) => situationDiagramFor(tag, sistemas[0]?.item ?? null)}
-              situacionNarradoCount={3}
-            />
-            {(circulacionesIndividuales.combos.length > 0 ||
-              presionesIndividuales.combos.length > 0 ||
-              circulacionesIndividuales.pendientes.length > 0 ||
-              presionesIndividuales.pendientes.length > 0) && (
-              <div className="informe-section card p-4">
-                <h4 className="font-semibold text-slate-800 mb-3">Comportamientos individuales</h4>
-                <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                  <IndividualesInformeBlock data={circulacionesIndividuales} />
-                  <IndividualesInformeBlock data={presionesIndividuales} />
-                </div>
+        </section>
+      ) : (
+        <>
+          <SportscodeSlides
+            ofensiva={ofensiva}
+            presion={presionEstructura}
+            vulnerabilidades={vulnerabilidades}
+            sistemaDominante={sistemas[0]?.item ?? null}
+            rival={rival}
+            canEdit={!isViewer}
+            onSaved={reload}
+          />
+          {(circulacionesIndividuales.combos.length > 0 ||
+            presionesIndividuales.combos.length > 0 ||
+            circulacionesIndividuales.pendientes.length > 0 ||
+            presionesIndividuales.pendientes.length > 0) && (
+            <div className="informe-section card p-4 mb-6">
+              <h4 className="font-semibold text-slate-800 mb-3">Comportamientos individuales</h4>
+              <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                <IndividualesInformeBlock data={circulacionesIndividuales} />
+                <IndividualesInformeBlock data={presionesIndividuales} />
               </div>
-            )}
-          </div>
-        )}
-      </section>
+            </div>
+          )}
+        </>
+      )}
 
       <MomentosSlides rival={rival} matches={matches} canEdit={!isViewer} onSaved={reload} />
 
@@ -979,211 +944,6 @@ function Portada({
   );
 }
 
-// Arma un párrafo (no una oración suelta al final) que cuenta qué patrón
-// domina y, cuando corresponde, cómo cambia según el resultado parcial —
-// combina la estructura y la situación más repetidas en un mismo texto en
-// vez de dejar solo porcentajes sin explicar qué significan.
-function construirResumen(data: PhaseAnalysis, showEstructura: boolean, maxBloques = 2): string | null {
-  const frases: string[] = [];
-
-  if (showEstructura && data.estructura[0]) {
-    const principal = data.estructura[0];
-    let frase = `El patrón predominante es ${principal.valor} (${principal.pct}%)`;
-    if (data.porEstado.length > 0 && estructuraCambiaPorEstado(data.porEstado)) {
-      const distinto = data.porEstado.find((r) => r.estructuraTop && r.estructuraTop.valor !== principal.valor);
-      if (distinto?.estructuraTop) {
-        frase += `, aunque ${distinto.estado.toLowerCase()} predomina ${distinto.estructuraTop.valor} (${distinto.estructuraTop.pct}%)`;
-      }
-    }
-    frases.push(frase + '.');
-  }
-
-  // Cuántos bloques de situaciones entran al párrafo (p. ej. circulación
-  // media y alta, o presión alta/media/baja): los bloques de apoyo como
-  // "Distancia de salida" (soporte: true) quedan afuera del párrafo aunque
-  // se muestren igual en la tarjeta, sea cual sea su posición ahí.
-  let estadoMencionado = false;
-  for (const bloque of data.situaciones.filter((b) => !b.soporte).slice(0, maxBloques)) {
-    if (!bloque || bloque.tags.length === 0) continue;
-    const top = bloque.tags
-      .slice(0, 2)
-      .map((t) => `${t.tag} (${t.count} de ${bloque.registros} registros${esPuntual(t, data.partidosConCsv) ? ', en un solo partido' : ''})`)
-      .join(' y ');
-    let frase = `En ${bloque.titulo.toLowerCase()} se repiten sobre todo ${top}`;
-    // El desglose por resultado es de toda la fase, no de cada bloque: se
-    // menciona una sola vez para no repetir la misma frase en cada bloque.
-    if (data.porEstado.length > 0 && !estadoMencionado) {
-      const distinto = data.porEstado.find((r) => r.situacionesTop[0] && r.situacionesTop[0].tag !== bloque.tags[0].tag);
-      if (distinto) {
-        estadoMencionado = true;
-        frase += `, aunque ${distinto.estado.toLowerCase()} lo más habitual pasa a ser "${distinto.situacionesTop[0].tag}" (${distinto.situacionesTop[0].pct}%)`;
-      }
-    }
-    frases.push(frase + '.');
-  }
-
-  return frases.length > 0 ? frases.join(' ') : null;
-}
-
-// Mismos colores que las filas "Ganando/Empatando/Perdiendo" del resto de la
-// app, para el desglose por resultado dentro de cada tarjeta de tag.
-const ESTADO_BADGE_CLASS: Record<GameStateLabel, string> = {
-  Ganando: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  Empatando: 'border-amber-200 bg-amber-50 text-amber-700',
-  Perdiendo: 'border-red-200 bg-red-50 text-red-700',
-};
-
-function PhaseSummaryCard({
-  title,
-  data,
-  showEstructura = false,
-  estructuraTitle,
-  estructuraAfterIndex = 0,
-  estructuraDiagram,
-  estructuraSituacionCombos,
-  situacionDiagram,
-  situacionDiagramCount = 1,
-  situacionNarradoCount = 2,
-}: {
-  title: string;
-  data: PhaseAnalysis;
-  showEstructura?: boolean;
-  estructuraTitle?: string;
-  // En cuántos bloques de "situaciones" hay que entrar antes de mostrar el
-  // bloque de estructura (0 = primero, como antes).
-  estructuraAfterIndex?: number;
-  estructuraDiagram?: (valorTop: string) => ReactNode;
-  estructuraSituacionCombos?: ConstruccionSituacionCombo[];
-  situacionDiagram?: (tag: string) => ReactNode;
-  situacionDiagramCount?: number;
-  situacionNarradoCount?: number;
-}) {
-  if (data.totalRegistros === 0) {
-    return (
-      <div className="informe-section card p-4">
-        <h4 className="font-semibold text-slate-800 mb-2">{title}</h4>
-        <p className="text-sm text-slate-400">Sin registros.</p>
-      </div>
-    );
-  }
-  const estructuraTop = data.estructura[0];
-  const estructuraDiagramEl = showEstructura && estructuraDiagram && estructuraTop ? estructuraDiagram(estructuraTop.valor) : null;
-  const resumen = construirResumen(data, showEstructura, situacionNarradoCount);
-  // Compartido entre bloques: si un concepto ya se dibujó en uno anterior
-  // (p. ej. el mismo tag es el más repetido en presión media Y baja), los
-  // bloques siguientes lo saltan y muestran el siguiente más repetido en su
-  // lugar, en vez de repetir el mismo dibujo dos veces.
-  const usedDiagramTags = new Set<string>();
-  return (
-    <div className="informe-section card p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="font-semibold text-slate-800">{title}</h4>
-        <span className="text-slate-400 text-sm">{data.totalRegistros} registros</span>
-      </div>
-      {resumen && (
-        <p className="text-sm text-slate-700 leading-snug mb-2">
-          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mr-1.5">
-            Lo que muestran los datos
-          </span>
-          {resumen}
-        </p>
-      )}
-      {showEstructura && data.estructura.length > 1 && (
-        <p className="text-[11px] text-slate-400 mb-2">
-          {data.estructura
-            .slice(0, 3)
-            .map((b) => `${b.valor} (${b.pct}%)`)
-            .join(' · ')}
-        </p>
-      )}
-      {estructuraSituacionCombos && estructuraSituacionCombos.length > 0 && (
-        <p className="text-[11px] text-slate-500 mb-2">
-          Combinaciones frecuentes:{' '}
-          {estructuraSituacionCombos.map((c) => `${c.construccion} + ${c.situacion} (${c.count})`).join(' · ')}
-        </p>
-      )}
-      {/* La tarjeta ahora ocupa el ancho completo de la página (una fase a
-          la vez, no 3 en columnas), así que la estructura y cada bloque de
-          situaciones se acomodan lado a lado en vez de apilarse uno abajo
-          del otro, aprovechando ese ancho en vez de dejarlo vacío. */}
-      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        {estructuraAfterIndex === 0 && estructuraDiagramEl && (
-          <div>
-            {estructuraTitle && (
-              <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">{estructuraTitle}</p>
-            )}
-            <DiagramFigure caption={estructuraTop!.valor} el={estructuraDiagramEl} />
-          </div>
-        )}
-        {data.situaciones.map((bloque, i) => {
-          // Cada bloque intenta su propio diagrama (p. ej. circulación media
-          // Y alta, no solo el primero); bloques de apoyo como "Distancia de
-          // salida" simplemente no tienen escena definida y quedan sin dibujo.
-          const diagramEntries: { tag: string; el: ReactNode }[] = [];
-          if (situacionDiagram) {
-            for (const t of bloque.tags) {
-              if (diagramEntries.length >= situacionDiagramCount) break;
-              if (usedDiagramTags.has(t.tag)) continue;
-              const el = situacionDiagram(t.tag);
-              if (!el) continue;
-              diagramEntries.push({ tag: t.tag, el });
-              usedDiagramTags.add(t.tag);
-            }
-          }
-          return (
-            <Fragment key={bloque.titulo}>
-              <div>
-                {data.situaciones.length > 1 && (
-                  <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">{bloque.titulo}</p>
-                )}
-                <ul className="text-xs text-slate-600 space-y-1">
-                  {bloque.tags.slice(0, 5).map((t) => (
-                    <li key={t.tag}>
-                      <div>
-                        {t.tag}{' '}
-                        <span className="text-slate-400">
-                          {t.count}/{bloque.registros} · {t.partidos}/{data.partidosConCsv} partidos
-                        </span>
-                        {esPuntual(t, data.partidosConCsv) && <span className="text-amber-700"> · puntual</span>}
-                      </div>
-                      {t.porEstado && t.porEstado.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-0.5 mb-1">
-                          {t.porEstado.map((e) => (
-                            <span
-                              key={e.estado}
-                              className={`text-[10px] rounded-full px-1.5 py-0 border ${ESTADO_BADGE_CLASS[e.estado]}`}
-                            >
-                              {e.estado}: {e.count}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                  {bloque.tags.length === 0 && <li className="text-slate-400">Sin registros.</li>}
-                </ul>
-                {diagramEntries.map((d) => (
-                  <DiagramFigure key={d.tag} caption={d.tag} el={d.el} wide />
-                ))}
-              </div>
-              {estructuraAfterIndex === i + 1 && estructuraDiagramEl && (
-                <div>
-                  {estructuraTitle && (
-                    <p className="text-[10px] font-semibold text-slate-900 uppercase tracking-wide mb-0.5">
-                      {estructuraTitle}
-                    </p>
-                  )}
-                  <DiagramFigure caption={estructuraTop!.valor} el={estructuraDiagramEl} />
-                </div>
-              )}
-            </Fragment>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // Combinaciones jugador rival + situación (columna "Rivales" del CSV): solo
 // lectura acá, a diferencia de la pestaña Análisis, donde quien edita puede
 // resolver los registros ambiguos — el informe es un resumen, no el lugar
@@ -1209,19 +969,6 @@ function IndividualesInformeBlock({ data }: { data: IndividualesBloque }) {
           {data.pendientes.length === 1 ? '' : 's'} de resolver (ver pestaña Análisis).
         </p>
       )}
-    </div>
-  );
-}
-
-// Tamaño único para todos los diagramas del informe (antes cada uno tomaba
-// el ancho de su contenedor, quedando algunos enormes y otros diminutos) y
-// una leyenda con el nombre exacto del patrón, para que no quede ambiguo a
-// qué concepto corresponde cada dibujo.
-function DiagramFigure({ caption, el, wide = false }: { caption: string; el: ReactNode; wide?: boolean }) {
-  return (
-    <div className="mt-2" style={{ maxWidth: wide ? '95%' : '62%', marginLeft: 'auto', marginRight: 'auto' }}>
-      {el}
-      <p className="text-[10px] text-slate-500 text-center mt-1">{caption}</p>
     </div>
   );
 }
