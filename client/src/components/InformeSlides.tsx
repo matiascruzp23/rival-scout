@@ -477,6 +477,18 @@ function Figura({ el, caption }: { el: ReactNode | null; caption?: string }) {
   );
 }
 
+// Variante para diagramas verticales: el dibujo llena el alto que le queda
+// a la figura dentro de la columna (el ancho sale de su proporción).
+function FiguraAlta({ el, caption }: { el: ReactNode | null; caption?: string }) {
+  if (!el) return <div className="flex-1" />;
+  return (
+    <figure className="flex-1 min-h-0 flex flex-col items-center gap-1">
+      <div className="flex-1 min-h-0 w-full">{el}</div>
+      {caption && <figcaption className="text-xs font-semibold text-slate-600 text-center">{caption}</figcaption>}
+    </figure>
+  );
+}
+
 // Primer diagrama disponible entre las etiquetas más repetidas, sin repetir
 // uno ya dibujado en otra parte de la misma página.
 function primerDiagrama(
@@ -597,6 +609,8 @@ export function SportscodeSlides({
 }) {
   const n = ofensiva.partidosConCsv;
   const situacion = (tag: string) => situationDiagramFor(tag, sistemaDominante);
+  // Circulación en cancha vertical: aprovecha mejor las columnas angostas.
+  const situacionVertical = (tag: string) => situationDiagramFor(tag, sistemaDominante, { vertical: true });
   const lecturaProps = { rival, canEdit, onSaved };
 
   // --- Inicio y salida de balón
@@ -604,7 +618,7 @@ export function SportscodeSlides({
   const circBaja = bloqueDe(ofensiva, 'Circulación baja');
   const construccion = ofensiva.estructura[0];
   const usadosOf = new Set<string>();
-  const diagBaja = primerDiagrama(circBaja?.tags ?? [], situacion, usadosOf);
+  const diagBaja = primerDiagrama(circBaja?.tags ?? [], situacionVertical, usadosOf);
   const marcadorSalida = (distancia?.tags ?? [])
     .filter((t) => t.porEstado && t.porEstado.length > 0)
     .map((t) => `${t.tag}: ${t.porEstado!.map((e) => `${e.estado.toLowerCase()} ${e.count}`).join(' · ')}`)
@@ -613,8 +627,8 @@ export function SportscodeSlides({
   // --- Circulación media y alta
   const circMedia = bloqueDe(ofensiva, 'Circulación media');
   const circAlta = bloqueDe(ofensiva, 'Circulación alta');
-  const diagMedia = primerDiagrama(circMedia?.tags ?? [], situacion, usadosOf);
-  const diagAlta = primerDiagrama(circAlta?.tags ?? [], situacion, usadosOf);
+  const diagMedia = primerDiagrama(circMedia?.tags ?? [], situacionVertical, usadosOf);
+  const diagAlta = primerDiagrama(circAlta?.tags ?? [], situacionVertical, usadosOf);
 
   // --- Organización y presión
   const presionFija = bloqueDe(presion, 'Presión fija');
@@ -634,9 +648,9 @@ export function SportscodeSlides({
     <>
       <SlideFrame titulo="Inicio y salida de balón">
         <div className="grid h-full gap-4" style={{ gridTemplateColumns: '24fr 38fr 38fr' }}>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-h-0">
             <Figura el={construccion ? <BuildUpShapeDiagram valor={construccion.valor} /> : null} caption={construccion?.valor} />
-            <Figura el={diagBaja?.el ?? null} caption={diagBaja?.tag} />
+            <FiguraAlta el={diagBaja?.el ?? null} caption={diagBaja?.tag} />
           </div>
           <div className="flex flex-col gap-3">
             <InfoBox titulo="Distancia de salida">
@@ -659,13 +673,20 @@ export function SportscodeSlides({
       </SlideFrame>
 
       <SlideFrame titulo="Circulación media y alta">
-        <div className="grid h-full gap-4" style={{ gridTemplateColumns: '26fr 37fr 37fr', gridTemplateRows: '1fr 1fr' }}>
-          <Figura el={diagMedia?.el ?? null} caption={diagMedia?.tag} />
+        <div
+          className="grid h-full gap-4"
+          style={{ gridTemplateColumns: '20fr 40fr 40fr', gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)' }}
+        >
+          <div className="flex flex-col min-h-0">
+            <FiguraAlta el={diagMedia?.el ?? null} caption={diagMedia?.tag} />
+          </div>
           <ListaBox titulo="Circulación media" bloque={circMedia} partidosConCsv={n} />
           <InfoBox titulo="Lectura · Circulación media">
             <Lectura bloques={['Circulación media']} {...lecturaProps} />
           </InfoBox>
-          <Figura el={diagAlta?.el ?? null} caption={diagAlta?.tag} />
+          <div className="flex flex-col min-h-0">
+            <FiguraAlta el={diagAlta?.el ?? null} caption={diagAlta?.tag} />
+          </div>
           <ListaBox titulo="Circulación alta" bloque={circAlta} partidosConCsv={n} />
           <InfoBox titulo="Lectura · Circulación alta">
             <Lectura bloques={['Circulación alta']} {...lecturaProps} />

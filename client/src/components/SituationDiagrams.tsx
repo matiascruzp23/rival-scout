@@ -189,6 +189,52 @@ function formationOverridesFor(sistema: string | null | undefined): Record<strin
   return overrides;
 }
 
+// Orientación del dibujo: las escenas se definen en la cancha horizontal
+// (x = profundidad, 0 = arco rival; y = banda, 0 = lado derecho) y se pueden
+// dibujar también en vertical, atacando hacia arriba, transformando solo las
+// coordenadas (las fichas y sus números no se giran).
+interface Orient {
+  w: number;
+  h: number;
+  p: (s: Spot) => Spot;
+}
+const LANDSCAPE: Orient = { w: VIEW_W, h: VIEW_H, p: (s) => s };
+const PORTRAIT: Orient = { w: VIEW_H, h: VIEW_W, p: (s) => ({ x: 100 - s.y, y: s.x }) };
+
+// Cancha vertical (arco propio abajo) para las escenas en PORTRAIT. Se
+// dimensiona por alto: llena el alto disponible y el ancho sale de la
+// proporción.
+function PortraitPitch({ children }: { children: ReactNode }) {
+  const W = VIEW_H;
+  const H = VIEW_W;
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      style={{
+        display: 'block',
+        height: '100%',
+        width: 'auto',
+        maxWidth: '100%',
+        aspectRatio: `${W} / ${H}`,
+        margin: '0 auto',
+        background: 'linear-gradient(#1f7a3d, #1a6b35)',
+        borderRadius: 8,
+      }}
+    >
+      <g stroke={LINE} strokeWidth={0.4} fill="none">
+        <rect x={1} y={1} width={W - 2} height={H - 2} />
+        <line x1={1} y1={H / 2} x2={W - 1} y2={H / 2} />
+        <circle cx={W / 2} cy={H / 2} r={11} />
+        <rect x={W * 0.22} y={1} width={W * 0.56} height={22} />
+        <rect x={W * 0.36} y={1} width={W * 0.28} height={7} />
+        <rect x={W * 0.22} y={H - 22} width={W * 0.56} height={22} />
+        <rect x={W * 0.36} y={H - 7} width={W * 0.28} height={7} />
+      </g>
+      {children}
+    </svg>
+  );
+}
+
 function LandscapePitch({ children }: { children: ReactNode }) {
   return (
     <svg
@@ -236,12 +282,12 @@ function WideCloseUpPitch({ viewW, viewH, children }: { viewW: number; viewH: nu
   );
 }
 
-function OwnTeamBackdrop({ overrides }: { overrides?: Record<string, Spot> }) {
+function OwnTeamBackdrop({ overrides, o = LANDSCAPE }: { overrides?: Record<string, Spot>; o?: Orient }) {
   return (
     <>
       {Object.entries(POS).map(([num, p]) => {
-        const pos = overrides?.[num] ?? p;
-        return <Token key={num} x={pos.x} y={pos.y} viewW={VIEW_W} viewH={VIEW_H} label={num} gk={num === '1'} />;
+        const pos = o.p(overrides?.[num] ?? p);
+        return <Token key={num} x={pos.x} y={pos.y} viewW={o.w} viewH={o.h} label={num} gk={num === '1'} />;
       })}
     </>
   );
@@ -275,37 +321,53 @@ type SceneElement =
   | { kind: 'ball'; x: number; y: number; at?: Spot }
   | { kind: 'override'; num: string; x: number; y: number };
 
-function renderElement(el: SceneElement, key: number, overrides: Record<string, Spot>): ReactNode {
+function renderElement(el: SceneElement, key: number, overrides: Record<string, Spot>, o: Orient = LANDSCAPE): ReactNode {
   switch (el.kind) {
-    case 'line':
+    case 'line': {
+      const a = o.p({ x: el.x, y: 4 });
+      const b = o.p({ x: el.x, y: 96 });
       return (
         <line
           key={key}
-          x1={(el.x / 100) * VIEW_W}
-          y1={(4 / 100) * VIEW_H}
-          x2={(el.x / 100) * VIEW_W}
-          y2={(96 / 100) * VIEW_H}
+          x1={(a.x / 100) * o.w}
+          y1={(a.y / 100) * o.h}
+          x2={(b.x / 100) * o.w}
+          y2={(b.y / 100) * o.h}
           stroke={LINE}
           strokeWidth={0.45}
           strokeDasharray="1.6 1.4"
         />
       );
-    case 'zone':
-      return <Zone key={key} x={el.x} y={el.y} width={el.w} height={el.h} viewW={VIEW_W} viewH={VIEW_H} />;
+    }
+    case 'zone': {
+      const a = o.p({ x: el.x, y: el.y });
+      const b = o.p({ x: el.x + el.w, y: el.y + el.h });
+      return (
+        <Zone
+          key={key}
+          x={Math.min(a.x, b.x)}
+          y={Math.min(a.y, b.y)}
+          width={Math.abs(b.x - a.x)}
+          height={Math.abs(b.y - a.y)}
+          viewW={o.w}
+          viewH={o.h}
+        />
+      );
+    }
     case 'rival': {
-      const p = el.at ? resolveSpot(el.at, overrides) : el;
-      return <Token key={key} x={p.x} y={p.y} viewW={VIEW_W} viewH={VIEW_H} label={el.label} rival />;
+      const p = o.p(el.at ? resolveSpot(el.at, overrides) : el);
+      return <Token key={key} x={p.x} y={p.y} viewW={o.w} viewH={o.h} label={el.label} rival />;
     }
     case 'move': {
-      const from = resolveSpot(el.from, overrides);
-      const to = resolveSpot(el.to, overrides);
+      const from = o.p(resolveSpot(el.from, overrides));
+      const to = o.p(resolveSpot(el.to, overrides));
       return (
         <MoveArrow
           key={key}
           from={from}
           to={to}
-          viewW={VIEW_W}
-          viewH={VIEW_H}
+          viewW={o.w}
+          viewH={o.h}
           dashed={el.dashed}
           curve={el.curve}
           fromRadius={el.fromBall ? BALL_RADIUS : PLAYER_RADIUS}
@@ -314,15 +376,15 @@ function renderElement(el: SceneElement, key: number, overrides: Record<string, 
       );
     }
     case 'link': {
-      const a = resolveSpot(el.a, overrides);
-      const b = resolveSpot(el.b, overrides);
+      const a = o.p(resolveSpot(el.a, overrides));
+      const b = o.p(resolveSpot(el.b, overrides));
       return (
         <line
           key={key}
-          x1={(a.x / 100) * VIEW_W}
-          y1={(a.y / 100) * VIEW_H}
-          x2={(b.x / 100) * VIEW_W}
-          y2={(b.y / 100) * VIEW_H}
+          x1={(a.x / 100) * o.w}
+          y1={(a.y / 100) * o.h}
+          x2={(b.x / 100) * o.w}
+          y2={(b.y / 100) * o.h}
           stroke="white"
           strokeOpacity={0.7}
           strokeWidth={0.5}
@@ -330,9 +392,9 @@ function renderElement(el: SceneElement, key: number, overrides: Record<string, 
       );
     }
     case 'ball': {
-      const p = el.at ? resolveSpot(el.at, overrides) : el;
+      const p = o.p(el.at ? resolveSpot(el.at, overrides) : el);
       return (
-        <text key={key} x={(p.x / 100) * VIEW_W} y={(p.y / 100) * VIEW_H} textAnchor="middle" fontSize={5.2}>
+        <text key={key} x={(p.x / 100) * o.w} y={(p.y / 100) * o.h} textAnchor="middle" fontSize={5.2}>
           ⚽
         </text>
       );
@@ -645,7 +707,13 @@ function NoEmparejanEnAreaDiagram(): ReactNode {
   );
 }
 
-export function situationDiagramFor(tag: string, sistema?: string | null): ReactNode | null {
+// `vertical`: misma escena en cancha vertical (atacando hacia arriba), para
+// columnas angostas y altas como las del Informe.
+export function situationDiagramFor(
+  tag: string,
+  sistema?: string | null,
+  { vertical = false }: { vertical?: boolean } = {}
+): ReactNode | null {
   const trimmed = tag.trim();
   if (trimmed === 'No emparejan en area') return <NoEmparejanEnAreaDiagram />;
   const scene = SITUATION_SCENES[trimmed];
@@ -657,10 +725,12 @@ export function situationDiagramFor(tag: string, sistema?: string | null): React
   for (const el of scene) {
     if (el.kind === 'override') overrides[el.num] = { x: el.x, y: el.y };
   }
-  return (
-    <LandscapePitch>
-      <OwnTeamBackdrop overrides={overrides} />
-      {scene.filter((el) => el.kind !== 'override').map((el, i) => renderElement(el, i, overrides))}
-    </LandscapePitch>
+  const o = vertical ? PORTRAIT : LANDSCAPE;
+  const contenido = (
+    <>
+      <OwnTeamBackdrop overrides={overrides} o={o} />
+      {scene.filter((el) => el.kind !== 'override').map((el, i) => renderElement(el, i, overrides, o))}
+    </>
   );
+  return vertical ? <PortraitPitch>{contenido}</PortraitPitch> : <LandscapePitch>{contenido}</LandscapePitch>;
 }
