@@ -444,7 +444,9 @@ export interface SituacionGroup {
 // Informe para que ambos muestren lo mismo.
 export const OFENSIVA_GROUPS: SituacionGroup[] = [
   { titulo: 'Distancia de salida', columnas: ['Distancia de salida'], desglosePorEstado: true, soporte: true },
-  { titulo: 'Circulación baja', columnas: ['Situaciones de circulacion'], categorias: ['CIRCULACION BAJA'], soloRepetidos: true },
+  // Las situaciones de circulación marcadas en filas de SALIDAS se suman a
+  // circulación baja (mismo sector de la cancha); no tienen bloque propio.
+  { titulo: 'Circulación baja', columnas: ['Situaciones de circulacion'], categorias: ['SALIDAS', 'CIRCULACION BAJA'], soloRepetidos: true },
   { titulo: 'Circulación media', columnas: ['Situaciones de circulacion'], categorias: ['CIRCULACION MEDIA'], soloRepetidos: true },
   { titulo: 'Circulación alta', columnas: ['Situaciones de circulacion'], categorias: ['CIRCULACION ALTA'], soloRepetidos: true },
 ];
