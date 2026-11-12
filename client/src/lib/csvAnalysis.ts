@@ -454,7 +454,9 @@ export const PRESION_FIJA_GROUPS: SituacionGroup[] = [
   { titulo: 'Presión fija', columnas: ['Tipos de presion en salida'] },
 ];
 export const VULNERABILIDADES_GROUPS: SituacionGroup[] = [
-  { titulo: 'Presión alta', columnas: ['Situaciones de presion'], categorias: ['PRESION ALTA'], soloRepetidos: true },
+  // Igual que SALIDAS con circulación baja: las situaciones de presión
+  // marcadas en filas de PRESION FIJA (si las hay) se suman a presión alta.
+  { titulo: 'Presión alta', columnas: ['Situaciones de presion'], categorias: ['PRESION FIJA', 'PRESION ALTA'], soloRepetidos: true },
   { titulo: 'Presión media', columnas: ['Situaciones de presion'], categorias: ['PRESION MEDIA'], soloRepetidos: true },
   { titulo: 'Presión baja', columnas: ['Situaciones de presion'], categorias: ['PRESION BAJA'], soloRepetidos: true },
 ];
