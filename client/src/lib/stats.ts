@@ -645,11 +645,13 @@ const DURACION_PARTIDO_ESTANDAR = 90;
 // tiene jugadores convocados a una selección nacional
 // (regla.exencionMinutosPorSeleccionado por cada uno) — la exención se
 // descuenta de los minutos, antes de derivar el mínimo de titulares, no de
-// la cantidad de titulares directamente. Solo cuentan los seleccionados
-// disponibles (no de baja).
+// la cantidad de titulares directamente. Cuenta todo jugador marcado en
+// selección, aunque además esté marcado como baja: estar convocado es
+// justamente lo que da derecho a la exención, y es habitual marcarlo
+// también como baja para el partido.
 function minSub21Efectivo(regla: TorneoRegla, players: Player[]): number | null {
   if (regla.minMinutosSub21 == null) return null;
-  const seleccionados = players.filter((p) => p.enSeleccion && !p.baja).length;
+  const seleccionados = players.filter((p) => p.enSeleccion).length;
   const exencionMinutos = (regla.exencionMinutosPorSeleccionado || 0) * seleccionados;
   const minutosExigidos = Math.max(0, regla.minMinutosSub21 - exencionMinutos);
   return Math.ceil(minutosExigidos / DURACION_PARTIDO_ESTANDAR);
