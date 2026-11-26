@@ -976,8 +976,9 @@ function convocatoriaCargada(match: Match): boolean {
 // recientemente, dando más peso a los partidos más recientes que a los
 // antiguos, y excluye a quienes están marcados como baja ahora mismo, están
 // convocados a una selección nacional (no van a estar disponibles para el
-// club) o no fueron citados al partido más reciente (salvo que haya sido por
-// una suspensión, que ya se debería haber cumplido para el próximo partido).
+// club) o no fueron citados al partido más reciente de esa misma competencia
+// (salvo que haya sido por una suspensión, que ya se debería haber cumplido
+// para el próximo partido).
 // Si una posición queda sin nadie que la juegue habitualmente entre los
 // citados recientes, se completa con el mejor candidato disponible que haya
 // jugado ahí alguna vez (aunque no sea citado ni su posición principal)
@@ -992,7 +993,16 @@ export function estimateNextXI(
   const excluidosPorBaja = players.filter((p) => p.baja);
   const excluidosPorSeleccion = players.filter((p) => p.enSeleccion && !p.baja);
 
-  const ultimoConvocatoria = recent.find(convocatoriaCargada);
+  // La convocatoria que define quién "no fue citado" es la del último
+  // partido de la MISMA competencia que se viene, no la del último partido a
+  // secas: muchos equipos rotan entre torneos (ej. plantel alternativo en
+  // Copa Chile), y tomar esa convocatoria para un partido de liga dejaba
+  // afuera a todos los titulares habituales de liga. Si todavía no hay
+  // partidos cargados de esa competencia, se usa el último partido.
+  const mismaCompetencia = (m: Match) =>
+    !!competenciaProxima && m.competencia?.trim().toLowerCase() === competenciaProxima.trim().toLowerCase();
+  const ultimoConvocatoria =
+    recent.find((m) => convocatoriaCargada(m) && mismaCompetencia(m)) || recent.find(convocatoriaCargada);
   const excluidosPorNoCitado: Player[] = [];
   const noCitadoIds = new Set<string>();
   if (ultimoConvocatoria) {
