@@ -83,16 +83,29 @@ function nombrePropio(s: string): string {
     .replace(/(^|[\s.\-'])(\p{L})/gu, (_m, sep: string, l: string) => sep + l.toUpperCase());
 }
 
-function leerFlags(flags: string): { lado: LadoCorner | ''; perfil: PerfilCorner | '' } {
-  let lado: LadoCorner | '' = '';
-  let perfil: PerfilCorner | '' = '';
+// Lee lado y perfil de Flags. Si viene marcado más de un valor del mismo
+// grupo (ej. "Abierto, Cerrado"), ese dato queda vacío y se avisa como
+// contradictorio en vez de quedarse con el último.
+function leerFlags(flags: string): {
+  lado: LadoCorner | '';
+  perfil: PerfilCorner | '';
+  ladoDoble: boolean;
+  perfilDoble: boolean;
+} {
+  const lados = new Set<LadoCorner>();
+  const perfiles = new Set<PerfilCorner>();
   for (const parte of flags.split(',').map(norm)) {
-    if (parte === 'izquierda') lado = 'Izquierda';
-    else if (parte === 'derecha') lado = 'Derecha';
-    else if (parte === 'abierto') perfil = 'Abierto';
-    else if (parte === 'cerrado') perfil = 'Cerrado';
+    if (parte === 'izquierda') lados.add('Izquierda');
+    else if (parte === 'derecha') lados.add('Derecha');
+    else if (parte === 'abierto') perfiles.add('Abierto');
+    else if (parte === 'cerrado') perfiles.add('Cerrado');
   }
-  return { lado, perfil };
+  return {
+    lado: lados.size === 1 ? [...lados][0] : '',
+    perfil: perfiles.size === 1 ? [...perfiles][0] : '',
+    ladoDoble: lados.size > 1,
+    perfilDoble: perfiles.size > 1,
+  };
 }
 
 export function extraerCorners(text: string, nombreArchivo: string): BalonParadoArchivo {
@@ -102,7 +115,8 @@ export function extraerCorners(text: string, nombreArchivo: string): BalonParado
     .filter((r) => norm(r['Row'] || '') === 'detenidas a favor' && norm(r['Acciones a balon parado'] || '') === 'corner')
     .map((r): CornerBP => {
       const zonaRaw = (r['Notes'] || '').trim().toUpperCase();
-      const { lado, perfil } = leerFlags(r['Flags'] || '');
+      const flags = (r['Flags'] || '').trim();
+      const { lado, perfil, ladoDoble, perfilDoble } = leerFlags(flags);
       return {
         inicio: Number(r['Start time']) || 0,
         pateador: r['Ungrouped'] ? nombrePropio(r['Ungrouped']) : '',
@@ -110,6 +124,10 @@ export function extraerCorners(text: string, nombreArchivo: string): BalonParado
         zonaOriginal: zonaRaw && !CODIGOS.has(zonaRaw) ? zonaRaw : undefined,
         lado,
         perfil,
+        // Flags tal cual, solo cuando no se pudo leer lado o perfil (para el aviso).
+        flagsOriginal: !lado || !perfil ? flags : undefined,
+        ladoDoble: ladoDoble || undefined,
+        perfilDoble: perfilDoble || undefined,
         resultado: r['RESULTADO'] || '',
       };
     })
@@ -133,15 +151,18 @@ export function minuto(seg: number): string {
 
 // Córners a los que les falta algún dato, para avisar que se completen en
 // Sportscode y se vuelva a cargar el CSV.
-export function cornersIncompletos(corners: CornerConPartido[]): { corner: CornerConPartido; faltan: string[] }[] {
+export function cornersIncompletos(
+  corners: CornerConPartido[],
+): { corner: CornerConPartido; faltan: string[]; nota?: string }[] {
   return corners
     .map((c) => {
       const faltan: string[] = [];
       if (!c.zona) faltan.push(c.zonaOriginal ? `zona (código "${c.zonaOriginal}" no reconocido)` : 'zona');
-      if (!c.lado) faltan.push('lado');
-      if (!c.perfil) faltan.push('perfil');
+      if (!c.lado) faltan.push(c.ladoDoble ? 'lado (tiene Izquierda y Derecha a la vez)' : 'lado');
+      if (!c.perfil) faltan.push(c.perfilDoble ? 'perfil (tiene Abierto y Cerrado a la vez)' : 'perfil');
       if (!c.pateador) faltan.push('pateador');
-      return { corner: c, faltan };
+      const nota = (!c.lado || !c.perfil) && c.flagsOriginal ? `Flags dice "${c.flagsOriginal}"` : undefined;
+      return { corner: c, faltan, nota };
     })
     .filter((x) => x.faltan.length > 0);
 }

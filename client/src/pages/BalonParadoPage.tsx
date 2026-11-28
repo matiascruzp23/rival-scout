@@ -155,11 +155,12 @@ export default function BalonParadoPage() {
               CSV.
             </p>
             <ul className="list-disc pl-5 space-y-0.5">
-              {incompletos.map(({ corner, faltan }, i) => (
+              {incompletos.map(({ corner, faltan, nota }, i) => (
                 <li key={i}>
                   {corner.partido} · {minuto(corner.inicio)}
                   {corner.pateador ? ` · ${corner.pateador}` : ""}: falta{" "}
                   {faltan.join(", ")}
+                  {nota && <span className="text-amber-700/80"> ({nota})</span>}
                 </li>
               ))}
             </ul>

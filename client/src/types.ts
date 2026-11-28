@@ -338,6 +338,11 @@ export interface CornerBP {
   zona: ZonaCorner | '';
   // Lo que venía en Notes cuando no es un código reconocido.
   zonaOriginal?: string;
+  // Flags tal cual cuando no se pudo leer lado o perfil, y si alguno venía
+  // con los dos valores marcados a la vez.
+  flagsOriginal?: string;
+  ladoDoble?: boolean;
+  perfilDoble?: boolean;
   lado: LadoCorner | '';
   perfil: PerfilCorner | '';
   resultado: string;
