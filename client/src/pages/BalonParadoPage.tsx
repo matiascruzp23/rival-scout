@@ -17,6 +17,7 @@ import {
   minuto,
   nombreZona,
   pateadores as listaPateadores,
+  piesPateadores,
   todosLosCorners,
 } from "../lib/balonParado";
 
@@ -69,6 +70,8 @@ export default function BalonParadoPage() {
 
   const corners = useMemo(() => todosLosCorners(data), [data]);
   const incompletos = useMemo(() => cornersIncompletos(corners), [corners]);
+  // Pie de cada pateador con todos sus córners (no solo los del filtro).
+  const pies = useMemo(() => piesPateadores(corners, rival.players), [corners, rival.players]);
   const listaPat = useMemo(() => listaPateadores(corners), [corners]);
   const filtrados = useMemo(
     () => filtrarCorners(corners, { lado, perfil, pateador }),
@@ -131,7 +134,7 @@ export default function BalonParadoPage() {
 
   const tituloVista =
     [
-      pateador || null,
+      pateador ? (pies.get(pateador)?.pie ? `${pateador} (${pies.get(pateador)!.pie!.toLowerCase()})` : pateador) : null,
       lado ? `desde la ${lado.toLowerCase()}` : null,
       perfil ? perfil.toLowerCase() : null,
     ]
@@ -141,7 +144,7 @@ export default function BalonParadoPage() {
   return (
     <>
       <div className="print-only">
-        <BalonParadoInforme data={data} rivalNombre={rival.nombre} />
+        <BalonParadoInforme data={data} rivalNombre={rival.nombre} players={rival.players} />
       </div>
       <div className="space-y-6 no-print">
         {incompletos.length > 0 && (
@@ -226,6 +229,7 @@ export default function BalonParadoPage() {
                 <TendenciasCorners
                   corners={filtrados}
                   ocultarPateadores={!!pateador}
+                  pies={pies}
                 />
               </div>
               <div className="max-w-4xl mx-auto">
@@ -249,6 +253,7 @@ export default function BalonParadoPage() {
                 corners={corners}
                 seleccionado={pateador}
                 onSelect={setPateador}
+                pies={pies}
               />
             </section>
 

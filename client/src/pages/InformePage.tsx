@@ -609,7 +609,7 @@ export default function InformePage() {
         </>
       )}
 
-      <BalonParadoInforme data={rival.balonParado} />
+      <BalonParadoInforme data={rival.balonParado} players={rival.players} />
 
       {leagueStats && rival.codigoLdp && (
         <section className="informe-section informe-page mb-6">

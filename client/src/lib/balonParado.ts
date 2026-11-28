@@ -9,7 +9,7 @@
 //   - Flags: lado de lanzamiento y perfil (ej. "Izquierda, Cerrado"). El lado
 //     es según el equipo que ataca (mirando al arco rival).
 
-import type { BalonParadoArchivo, BalonParadoData, CornerBP, LadoCorner, PerfilCorner, ZonaCorner } from '../types';
+import type { BalonParadoArchivo, BalonParadoData, CornerBP, LadoCorner, PerfilCorner, Player, ZonaCorner } from '../types';
 
 export const ZONAS_CORNER: { codigo: ZonaCorner; nombre: string }[] = [
   { codigo: 'C', nombre: 'Corto' },
@@ -235,6 +235,8 @@ const FRASE_ZONA: Record<ZonaCorner, string> = {
 
 export interface Tendencia {
   texto: string;
+  // Dato secundario al lado del texto (ej. el pie del pateador).
+  detalle?: string;
   n: number;
   // % sobre los córners de la vista.
   p: number;
@@ -253,9 +255,77 @@ export function tendenciasPerfilZona(corners: CornerBP[], k = 2): Tendencia[] {
   return out.sort((a, b) => b.n - a.n).slice(0, k);
 }
 
-export function pateadoresFrecuentes(corners: CornerBP[], k = 2): Tendencia[] {
+export function pateadoresFrecuentes(corners: CornerBP[], k = 2, pies?: Map<string, PiePateador>): Tendencia[] {
   return resumenPorPateador(corners)
     .filter((f) => f.pateador !== 'Sin pateador')
     .slice(0, k)
-    .map((f) => ({ texto: f.pateador, n: f.total, p: pct(f.total, corners.length) }));
+    .map((f) => ({ texto: f.pateador, detalle: pies?.get(f.pateador)?.pie ?? undefined, n: f.total, p: pct(f.total, corners.length) }));
+}
+
+// --- Pie hábil del pateador ---
+
+export type Pie = 'Diestro' | 'Zurdo' | 'Ambidiestro';
+
+export interface PiePateador {
+  pie: Pie | null;
+  // Plantel = pie hábil cargado en la ficha del jugador; inferido = deducido
+  // del lado y perfil de sus córners.
+  fuente: 'plantel' | 'inferido' | null;
+  // Explicación corta para mostrar (ej. "inferido 5/6", "plantel").
+  detalle: string;
+  // El plantel dice una cosa y los córners sugieren otra.
+  discrepa?: string;
+}
+
+// Pie con que se patea un córner según lado y perfil: desde la izquierda,
+// el abierto (se aleja del arco) es de zurdo y el cerrado de diestro; desde
+// la derecha, al revés.
+export function pieDelCorner(c: CornerBP): 'Diestro' | 'Zurdo' | null {
+  if (!c.lado || !c.perfil) return null;
+  const zurdo = (c.lado === 'Izquierda') === (c.perfil === 'Abierto');
+  return zurdo ? 'Zurdo' : 'Diestro';
+}
+
+const PIE_PLANTEL: Record<string, Pie> = { Derecho: 'Diestro', Izquierdo: 'Zurdo', Ambidiestro: 'Ambidiestro' };
+
+// Jugador del plantel que corresponde al nombre del pateador del CSV (suele
+// ser solo el apellido): todas sus palabras deben estar en el nombre del
+// jugador. Si hay más de uno (ej. dos Gutiérrez), no se asume ninguno.
+export function jugadorDelPateador(pateador: string, players: Player[]): Player | null {
+  const palabras = (s: string) => norm(s).replace(/[.]/g, ' ').split(/\s+/).filter(Boolean);
+  const buscadas = palabras(pateador);
+  if (buscadas.length === 0) return null;
+  const candidatos = players.filter((p) => {
+    const delJugador = palabras(p.nombre);
+    return buscadas.every((w) => delJugador.includes(w) || (w.length === 1 && delJugador.some((d) => d.startsWith(w))));
+  });
+  return candidatos.length === 1 ? candidatos[0] : null;
+}
+
+export function piesPateadores(corners: CornerBP[], players: Player[]): Map<string, PiePateador> {
+  const out = new Map<string, PiePateador>();
+  for (const nombre of pateadores(corners)) {
+    const delPateador = corners.filter((c) => c.pateador === nombre);
+    const diestro = delPateador.filter((c) => pieDelCorner(c) === 'Diestro').length;
+    const zurdo = delPateador.filter((c) => pieDelCorner(c) === 'Zurdo').length;
+    const conDato = diestro + zurdo;
+    const inferido: Pie | null = conDato === 0 ? null : diestro > 0 && zurdo > 0 ? (diestro === zurdo ? 'Ambidiestro' : diestro > zurdo ? 'Diestro' : 'Zurdo') : diestro > 0 ? 'Diestro' : 'Zurdo';
+    const detalleInferido =
+      diestro > 0 && zurdo > 0 ? `inferido: ${diestro} de diestro, ${zurdo} de zurdo` : `inferido ${conDato}/${delPateador.length}`;
+
+    const jugador = jugadorDelPateador(nombre, players);
+    const delPlantel = jugador?.pie ? PIE_PLANTEL[jugador.pie] : null;
+    if (delPlantel) {
+      const discrepa =
+        inferido && delPlantel !== 'Ambidiestro' && inferido !== delPlantel
+          ? `El plantel dice ${delPlantel.toLowerCase()}, pero sus córners sugieren ${inferido.toLowerCase()} (${
+              diestro > 0 && zurdo > 0 ? `${diestro} de diestro y ${zurdo} de zurdo` : `${conDato} de ${delPateador.length} córners`
+            }).`
+          : undefined;
+      out.set(nombre, { pie: delPlantel, fuente: 'plantel', detalle: 'plantel', discrepa });
+    } else {
+      out.set(nombre, { pie: inferido, fuente: inferido ? 'inferido' : null, detalle: inferido ? detalleInferido : 'sin datos' });
+    }
+  }
+  return out;
 }

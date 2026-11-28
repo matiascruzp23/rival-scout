@@ -1,4 +1,4 @@
-import type { BalonParadoData, CornerBP, ZonaCorner } from '../types';
+import type { BalonParadoData, CornerBP, Player, ZonaCorner } from '../types';
 import { CornerZonesPitch } from './CornerZonesPitch';
 import {
   ZONAS_CORNER,
@@ -6,7 +6,9 @@ import {
   nombreZona,
   pateadoresFrecuentes,
   pct,
+  piesPateadores,
   resumenPorPateador,
+  type PiePateador,
   tendenciasPerfilZona,
   type Tendencia,
 } from '../lib/balonParado';
@@ -25,6 +27,7 @@ function ListaTendencias({ titulo, items }: { titulo: string; items: Tendencia[]
               <span className="text-slate-800">
                 <span className="text-emerald-700 font-semibold mr-1.5">{i + 1}.</span>
                 {t.texto}
+                {t.detalle && <span className="text-slate-500 text-xs ml-1.5">· {t.detalle}</span>}
               </span>
               <span className="text-slate-500 whitespace-nowrap">
                 {t.n} <span className="text-[11px]">({t.p}%)</span>
@@ -39,12 +42,33 @@ function ListaTendencias({ titulo, items }: { titulo: string; items: Tendencia[]
 
 // Las 2 tendencias perfil + zona y los 2 pateadores más frecuentes de los
 // córners recibidos. Con un pateador ya filtrado se omite esa lista.
-export function TendenciasCorners({ corners, ocultarPateadores }: { corners: CornerBP[]; ocultarPateadores?: boolean }) {
+export function TendenciasCorners({
+  corners,
+  ocultarPateadores,
+  pies,
+}: {
+  corners: CornerBP[];
+  ocultarPateadores?: boolean;
+  pies?: Map<string, PiePateador>;
+}) {
   return (
     <div className={`grid gap-3 ${ocultarPateadores ? 'grid-cols-1' : 'grid-cols-2'}`}>
       <ListaTendencias titulo="Tendencias más repetidas" items={tendenciasPerfilZona(corners)} />
-      {!ocultarPateadores && <ListaTendencias titulo="Pateadores más frecuentes" items={pateadoresFrecuentes(corners)} />}
+      {!ocultarPateadores && <ListaTendencias titulo="Pateadores más frecuentes" items={pateadoresFrecuentes(corners, 2, pies)} />}
     </div>
+  );
+}
+
+function CeldaPie({ pie }: { pie: PiePateador | undefined }) {
+  if (!pie?.pie) return <span className="text-slate-300">–</span>;
+  return (
+    <span title={pie.discrepa}>
+      <span className={pie.discrepa ? 'text-amber-700 font-medium' : ''}>
+        {pie.pie}
+        {pie.discrepa ? ' ⚠' : ''}
+      </span>{' '}
+      <span className="text-slate-400 text-[11px]">({pie.detalle})</span>
+    </span>
   );
 }
 
@@ -54,8 +78,10 @@ export function CornersPorPateadorTable({
   corners,
   seleccionado,
   onSelect,
+  pies,
 }: {
   corners: CornerBP[];
+  pies?: Map<string, PiePateador>;
   seleccionado?: string;
   onSelect?: (pateador: string) => void;
 }) {
@@ -84,6 +110,9 @@ export function CornersPorPateadorTable({
         }`}
       >
         <td className="whitespace-nowrap">{f.pateador}</td>
+        {pies && (
+          <td className="whitespace-nowrap">{esTotal ? '' : <CeldaPie pie={pies.get(f.pateador)} />}</td>
+        )}
         <td className="text-center">{f.total}</td>
         <td className="text-center">{f.izquierda || <span className="text-slate-300">–</span>}</td>
         <td className="text-center">{f.derecha || <span className="text-slate-300">–</span>}</td>
@@ -107,6 +136,7 @@ export function CornersPorPateadorTable({
         <thead>
           <tr>
             <th className="text-left">Pateador</th>
+            {pies && <th className="text-left">Pie</th>}
             <th>Córners</th>
             <th>Izq.</th>
             <th>Der.</th>
@@ -130,9 +160,18 @@ export function CornersPorPateadorTable({
 }
 
 // Bloque del Informe: total, por lado, por pateador y la tabla.
-export function BalonParadoInforme({ data, rivalNombre }: { data: BalonParadoData | null | undefined; rivalNombre?: string }) {
+export function BalonParadoInforme({
+  data,
+  rivalNombre,
+  players,
+}: {
+  data: BalonParadoData | null | undefined;
+  rivalNombre?: string;
+  players: Player[];
+}) {
   const corners = todosLosCorners(data);
   if (corners.length === 0) return null;
+  const pies = piesPateadores(corners, players);
   const partidos = (data?.archivos ?? []).map((a) => a.partido);
   const izq = filtrarCorners(corners, { lado: 'Izquierda' });
   const der = filtrarCorners(corners, { lado: 'Derecha' });
@@ -148,14 +187,14 @@ export function BalonParadoInforme({ data, rivalNombre }: { data: BalonParadoDat
           {corners.length} córners en {partidos.length} partido{partidos.length === 1 ? '' : 's'}: {partidos.join(' · ')}
         </p>
         <div className="mb-4">
-          <TendenciasCorners corners={corners} />
+          <TendenciasCorners corners={corners} pies={pies} />
         </div>
         <div className="grid grid-cols-3 gap-4 mb-4">
           <CornerZonesPitch corners={corners} lado="" titulo="Total" subtitulo={`${corners.length} córners`} />
           <CornerZonesPitch corners={izq} lado="Izquierda" titulo="Desde la izquierda" subtitulo={`${izq.length} córners`} />
           <CornerZonesPitch corners={der} lado="Derecha" titulo="Desde la derecha" subtitulo={`${der.length} córners`} />
         </div>
-        <CornersPorPateadorTable corners={corners} />
+        <CornersPorPateadorTable corners={corners} pies={pies} />
       </section>
       {pateadores.length > 0 && (
         <section className="informe-section informe-page card p-4 mb-6">
@@ -168,7 +207,15 @@ export function BalonParadoInforme({ data, rivalNombre }: { data: BalonParadoDat
               return (
                 <div key={f.pateador} className="informe-section">
                   <div className="flex items-baseline justify-between border-b border-slate-200 pb-1 mb-2">
-                    <span className="font-semibold text-slate-800">{f.pateador}</span>
+                    <span className="font-semibold text-slate-800">
+                      {f.pateador}
+                      {pies.get(f.pateador)?.pie && (
+                        <span className="font-normal text-slate-500 text-sm ml-1.5">
+                          · {pies.get(f.pateador)!.pie}{' '}
+                          <span className="text-[11px] text-slate-400">({pies.get(f.pateador)!.detalle})</span>
+                        </span>
+                      )}
+                    </span>
                     <span className="text-xs text-slate-500">
                       {f.total} córners · {f.abierto} ab. / {f.cerrado} ce.
                     </span>
