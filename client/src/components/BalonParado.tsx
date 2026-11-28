@@ -62,12 +62,10 @@ export function TendenciasCorners({
 function CeldaPie({ pie }: { pie: PiePateador | undefined }) {
   if (!pie?.pie) return <span className="text-slate-300">–</span>;
   return (
-    <span title={pie.discrepa}>
-      <span className={pie.discrepa ? 'text-amber-700 font-medium' : ''}>
-        {pie.pie}
-        {pie.discrepa ? ' ⚠' : ''}
-      </span>{' '}
-      <span className="text-slate-400 text-[11px]">({pie.detalle})</span>
+    // El origen (plantel / inferido) queda solo en el tooltip.
+    <span title={pie.discrepa ?? `Según ${pie.detalle}`} className={pie.discrepa ? 'text-amber-700 font-medium' : ''}>
+      {pie.pie}
+      {pie.discrepa ? ' ⚠' : ''}
     </span>
   );
 }
@@ -211,8 +209,7 @@ export function BalonParadoInforme({
                       {f.pateador}
                       {pies.get(f.pateador)?.pie && (
                         <span className="font-normal text-slate-500 text-sm ml-1.5">
-                          · {pies.get(f.pateador)!.pie}{' '}
-                          <span className="text-[11px] text-slate-400">({pies.get(f.pateador)!.detalle})</span>
+                          · {pies.get(f.pateador)!.pie}
                         </span>
                       )}
                     </span>
