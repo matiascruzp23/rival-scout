@@ -90,7 +90,20 @@ tr:hover td {
   }
 }
 
+/* Contenido que solo existe al imprimir (p. ej. el PDF de balón parado
+   desde su pestaña, ver BalonParadoPage). */
+.print-only {
+  display: none;
+}
+
 @media print {
+  .print-only {
+    display: block;
+  }
+  /* La primera página del bloque no debe forzar una hoja en blanco antes. */
+  .print-only > .informe-page:first-child {
+    break-before: auto;
+  }
   /*
    * @page anidado dentro de @media print (en vez de @page suelto a nivel de
    * hoja de estilos) y ancho x alto explícitos (A4 apaisado) en vez del

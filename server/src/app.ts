@@ -178,6 +178,7 @@ function toRival(row: any, reglasTorneo: TorneoRegla[]): Rival {
     graficoPersonalizado: row.grafico_personalizado?.length ? row.grafico_personalizado : undefined,
     claves: Array.isArray(row.claves) ? row.claves : [],
     capturas: row.capturas && typeof row.capturas === 'object' ? row.capturas : {},
+    balonParado: row.balon_parado && Array.isArray(row.balon_parado.archivos) ? row.balon_parado : null,
     xiManual: Array.isArray(row.xi_manual) && row.xi_manual.length ? row.xi_manual : undefined,
     createdBy: row.created_by || undefined,
     visibleUserIds: row.visible_user_ids ?? undefined,
@@ -543,6 +544,10 @@ app.put('/api/rivals/:id', async (req, res) => {
   if (b.notaXI !== undefined) patch.nota_xi = b.notaXI || null;
   if (b.codigoLdp !== undefined) patch.codigo_ldp = b.codigoLdp?.trim() || null;
   if (Array.isArray(b.claves)) patch.claves = b.claves;
+  if (b.balonParado !== undefined) {
+    const archivos = Array.isArray(b.balonParado?.archivos) ? b.balonParado.archivos : [];
+    patch.balon_parado = archivos.length ? { archivos } : null;
+  }
   // null o [] vuelve al XI estimado automáticamente.
   if (b.xiManual !== undefined) {
     const entries = Array.isArray(b.xiManual)

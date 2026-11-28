@@ -223,6 +223,9 @@ export interface Rival {
   graficoPersonalizado?: string[];
   claves?: ClaveRival[];
   capturas?: Partial<Record<BloqueVideo, CapturaMomento>>;
+  // Córners a favor cargados aparte en la pestaña "Balón parado" (los parsea
+  // el cliente, ver client/src/lib/balonParado.ts). null en un PUT lo borra.
+  balonParado?: { archivos: unknown[] } | null;
   // XI del próximo partido ajustado a mano cuando el analista no está de
   // acuerdo con el estimado automático (estimateNextXI). Sin definir = usar
   // el estimado; null/[] en un PUT lo borra.

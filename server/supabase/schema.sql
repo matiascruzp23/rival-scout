@@ -49,6 +49,9 @@ create table if not exists rivals (
   -- Capturas del Informe por momento del video ({ bloque: { url, path,
   -- completa } }); las imágenes viven en el bucket "capturas" de Storage.
   capturas jsonb not null default '{}',
+  -- Córners a favor cargados aparte en la pestaña "Balón parado"
+  -- ({ archivos: [{ nombre, partido, subidoEn, corners }] }).
+  balon_parado jsonb,
   -- Id (auth.users) de quien creó este rival — siempre puede verlo, incluso
   -- si después se restringe con visible_user_ids.
   created_by text,
@@ -253,3 +256,6 @@ alter table rivals add column if not exists xi_manual jsonb;
 
 -- Migración (nov 2026): capturas del Informe guardadas en Storage.
 alter table rivals add column if not exists capturas jsonb not null default '{}';
+
+-- Migración (nov 2026): córners a favor de la pestaña "Balón parado".
+alter table rivals add column if not exists balon_parado jsonb;

@@ -59,6 +59,7 @@ import {
 } from '../components/InformeSlides';
 import { UserSharePicker } from '../components/UserSharePicker';
 import { IndividualStatsBoard } from '../components/IndividualStatsBoard';
+import { BalonParadoInforme } from '../components/BalonParado';
 import { type PitchToken } from '../components/Pitch';
 import { RotationCard } from '../components/RotationCard';
 import { MatchReportCard, outcomeRowClass, outcomeTextClass } from '../components/MatchReportCard';
@@ -607,6 +608,8 @@ export default function InformePage() {
           )}
         </>
       )}
+
+      <BalonParadoInforme data={rival.balonParado} />
 
       {leagueStats && rival.codigoLdp && (
         <section className="informe-section informe-page mb-6">

@@ -11,6 +11,7 @@ import LineupsPage from './pages/LineupsPage';
 import SubstitutionsPage from './pages/SubstitutionsPage';
 import CsvAnalysisPage from './pages/CsvAnalysisPage';
 import GraficosPage from './pages/GraficosPage';
+import BalonParadoPage from './pages/BalonParadoPage';
 import InformePage from './pages/InformePage';
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="xi-rotaciones" element={<LineupsPage />} />
             <Route path="sustituciones" element={<SubstitutionsPage />} />
             <Route path="analisis-csv" element={<CsvAnalysisPage />} />
+            <Route path="balon-parado" element={<BalonParadoPage />} />
             <Route path="graficos" element={<GraficosPage />} />
             <Route path="informe" element={<InformePage />} />
           </Route>

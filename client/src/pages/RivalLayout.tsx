@@ -17,6 +17,7 @@ const tabs = [
   { to: 'xi-rotaciones', label: 'XI y Rotaciones' },
   { to: 'sustituciones', label: 'Sustituciones' },
   { to: 'analisis-csv', label: 'Análisis' },
+  { to: 'balon-parado', label: 'Balón parado' },
   { to: 'graficos', label: 'Gráficos y estadísticas' },
   { to: 'informe', label: 'Informe' },
 ];

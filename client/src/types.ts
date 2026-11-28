@@ -270,6 +270,9 @@ export interface Rival {
   graficoPersonalizado?: string[];
   claves?: ClaveRival[];
   capturas?: Partial<Record<BloqueVideo, CapturaMomento>>;
+  // Córners a favor cargados aparte en la pestaña "Balón parado" (ver
+  // lib/balonParado.ts). null en un PUT lo borra.
+  balonParado?: BalonParadoData | null;
   // XI del próximo partido ajustado a mano cuando el analista no está de
   // acuerdo con el estimado automático (estimateNextXI). Sin definir = usar
   // el estimado; null/[] en un PUT lo borra.
@@ -318,4 +321,35 @@ export interface RivalDetail extends Rival {
   players: Player[];
   matches: Match[];
   individualStats: IndividualStatsImport | null;
+}
+
+// --- Balón parado (pestaña "Balón parado", ver lib/balonParado.ts) ---
+
+// Zonas de destino del córner: Corto, 1er palo, Área chica central, 2º palo,
+// Punto penal y Rebote. "1er palo" es siempre el palo cercano al lanzamiento.
+export type ZonaCorner = 'C' | '1P' | 'ACH' | '2P' | 'PP' | 'R';
+// Lado según el equipo que ataca (mirando al arco rival).
+export type LadoCorner = 'Izquierda' | 'Derecha';
+export type PerfilCorner = 'Abierto' | 'Cerrado';
+
+export interface CornerBP {
+  inicio: number; // segundos (Start time del CSV)
+  pateador: string;
+  zona: ZonaCorner | '';
+  // Lo que venía en Notes cuando no es un código reconocido.
+  zonaOriginal?: string;
+  lado: LadoCorner | '';
+  perfil: PerfilCorner | '';
+  resultado: string;
+}
+
+export interface BalonParadoArchivo {
+  nombre: string; // nombre del archivo subido
+  partido: string; // Timeline del CSV (ej. "F27 ULC vs HUA")
+  subidoEn: string;
+  corners: CornerBP[];
+}
+
+export interface BalonParadoData {
+  archivos: BalonParadoArchivo[];
 }
